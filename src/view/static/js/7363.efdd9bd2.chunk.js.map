@@ -1,0 +1,1 @@
+{"version":3,"file":"static/js/7363.efdd9bd2.chunk.js","mappings":"4KAEe,SAASA,IACtB,OACEC,EAAAA,EAAAA,KAAA,OAAAC,SAAK,iBAET,C","sources":["feautures/Admin/Reference/Branch.tsx"],"sourcesContent":["import React from 'react'\n\nexport default function Branch() {\n  return (\n    <div>Branch sadasd</div>\n  )\n}\n"],"names":["Branch","_jsx","children"],"sourceRoot":""}

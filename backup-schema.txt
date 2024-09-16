@@ -1,0 +1,1212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model policy_account {
+  Account     String   @unique @db.VarChar(225)
+  Description String   @db.Text
+  AccountCode String   @db.VarChar(225)
+  COM         Boolean
+  TPL         Boolean
+  MAR         Boolean
+  FIRE        Boolean
+  G02         Boolean
+  G13         Boolean
+  G16         Boolean
+  MSPR        Boolean
+  PA          Boolean
+  CGL         Boolean
+  Inactive    Boolean
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+model bank {
+  Bank_Code String  @id @db.VarChar(10)
+  Bank      String  @db.VarChar(50)
+  Inactive  Boolean
+}
+
+model mortgagee {
+  Policy    String   @db.VarChar(100)
+  Mortgagee String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model subline {
+  ID          Int      @id @default(autoincrement())
+  Line        String   @db.Text
+  SublineName String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+model subline_line {
+  LineId String @id @default(uuid())
+  Line   String @db.VarChar(255)
+}
+
+model rates {
+  ID        Int      @id @default(autoincrement())
+  Account   String?  @db.VarChar(250)
+  Line      String?  @db.VarChar(250)
+  Type      String?  @db.VarChar(250)
+  Rate      String?  @db.VarChar(250)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model ctplregistration {
+  ctplId        Int      @id @default(autoincrement())
+  Prefix        String?  @db.VarChar(50)
+  NumSeriesFrom Int?
+  NumSeriesTo   Int?
+  Cost          String?  @db.VarChar(150)
+  CreatedBy     String?  @db.VarChar(50)
+  createdAt     DateTime @default(now())
+  update        DateTime @default(now())
+  ctplType      String?  @db.VarChar(250)
+}
+
+model ctplprefix {
+  prefixId   Int      @id @default(autoincrement())
+  prefixName String   @db.VarChar(50)
+  createdAt  DateTime @default(now())
+  update     DateTime @default(now())
+}
+
+model ctpltype {
+  typeId    Int      @id @default(autoincrement())
+  typeName  String   @db.VarChar(50)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model vpolicy {
+  PolicyNo         String    @id @db.VarChar(20)
+  Account          String?   @db.VarChar(20)
+  PolicyType       String?   @db.VarChar(4)
+  CoverNo          String?   @db.VarChar(10)
+  ORNo             String?   @db.VarChar(10)
+  DateFrom         DateTime? @db.DateTime(6)
+  DateTo           DateTime? @db.DateTime(6)
+  Model            String?   @db.VarChar(20)
+  Make             String?   @db.VarChar(100)
+  BodyType         String?   @db.VarChar(100)
+  Color            String?   @db.VarChar(20)
+  BLTFileNo        String?   @db.VarChar(20)
+  PlateNo          String?   @db.VarChar(10)
+  ChassisNo        String?   @db.VarChar(20)
+  MotorNo          String?   @db.VarChar(20)
+  AuthorizedCap    String?   @db.VarChar(10)
+  UnladenWeight    String?   @db.VarChar(10)
+  TPL              String?   @db.VarChar(100)
+  TPLLimit         Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  PremiumPaid      Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  EstimatedValue   Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Aircon           Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Stereo           Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Magwheels        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Others           String?   @db.VarChar(20)
+  OthersAmount     Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Deductible       Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Towing           Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  RepairLimit      Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  BodilyInjury     Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  PropertyDamage   Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  PersonalAccident Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  SecI             Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  SecIIPercent     Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  ODamage          Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Theft            Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Sec4A            Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Sec4B            Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Sec4C            Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  AOG              Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  MortgageeForm    Boolean?
+  Mortgagee        String?   @db.VarChar(100)
+  Denomination     String?   @db.VarChar(150)
+}
+
+model journal {
+  Branch_Code   String? @db.Text
+  Date_Entry    String? @db.Text
+  Source_Type   String? @db.Text
+  Source_No     String? @db.Text
+  Explanation   String? @db.Text
+  Particulars   String? @db.Text
+  Payto         String? @db.Text
+  Address       String? @db.Text
+  Check_Date    String? @db.Text
+  Check_No      String? @db.Text
+  Check_Bank    String? @db.Text
+  Check_Return  String? @db.Text
+  Check_Collect String? @db.Text
+  Check_Deposit String? @db.Text
+  Check_Reason  String? @db.Text
+  GL_Acct       String? @db.Text
+  Sub_Acct      String? @db.Text
+  ID_No         String? @db.Text
+  cGL_Acct      String? @db.Text
+  cSub_Acct     String? @db.Text
+  cID_No        String? @db.Text
+  Debit         Float?
+  Credit        Float?
+  TC            String? @db.Text
+  Remarks       String? @db.Text
+  AutoNo        Int     @unique
+  VAT_Type      String? @db.Text
+  OR_Invoice_No String? @db.Text
+  VATItemNo     Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model bankaccounts {
+  Account_No   String? @db.VarChar(50)
+  Account_Name String? @db.VarChar(50)
+  Account_Type String? @db.VarChar(50)
+  Desc         String? @db.VarChar(50)
+  Option       Int?
+  Account_ID   String? @map("Account ID") @db.VarChar(50)
+  Inactive     Boolean
+  Auto         Int
+  IDNo         String? @db.VarChar(50)
+  Identity     String? @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model booklet {
+  Account       String  @db.VarChar(20)
+  DateEntry     String  @db.VarChar(10)
+  PolicyType    String  @db.VarChar(4)
+  PolicyBooklet String  @db.VarChar(4)
+  PolicyNoFrom  String  @db.VarChar(20)
+  PolicyNoTo    String  @db.VarChar(20)
+  COCFrom       String  @db.VarChar(20)
+  COCTo         String  @db.VarChar(20)
+  ORFrom        String  @db.VarChar(20)
+  ORTo          String  @db.VarChar(20)
+  Done          Boolean
+
+  @@ignore
+}
+
+model books {
+  Code       String  @id @db.VarChar(5)
+  Number     BigInt
+  Book_Code  String  @map("Book Code") @db.VarChar(5)
+  Books_Desc String  @map("Books Desc") @db.VarChar(50)
+  Hide_Code  String  @map("Hide Code") @db.VarChar(5)
+  Default    Boolean
+  Hide       Boolean
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model bpolicy {
+  PolicyNo       String   @db.VarChar(20)
+  Account        String   @db.VarChar(20)
+  PolicyType     String?  @db.VarChar(20)
+  Percentage     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  BidDate        DateTime @db.DateTime(6)
+  BidTime        DateTime @db.DateTime(6)
+  Obligee        String   @db.VarChar(255)
+  UnitDetail     String   @db.VarChar(200)
+  BondValue      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  NotaryName     String   @db.VarChar(100)
+  TaxCerNo       String   @db.VarChar(20)
+  IssuedLocation String   @db.VarChar(50)
+  NIssued        DateTime @db.DateTime(6)
+  CapacityAs     String   @db.VarChar(20)
+  TaxCerNoCorp   String   @db.VarChar(20)
+  IssuedLoctCorp String   @db.VarChar(50)
+  CIssued        DateTime @db.DateTime(6)
+  Officer        String   @default("") @db.VarChar(100)
+  OPosition      String   @default("") @db.VarChar(100)
+  Validity       String   @default("") @db.VarChar(255)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model cash_disbursement {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(20)
+  Explanation   String?   @db.VarChar(700)
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(100)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(100)
+  Debit         Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Credit        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.VarChar(255)
+  AutoNo        BigInt
+  VAT_Type      String?   @db.VarChar(50)
+  OR_Invoice_No String?   @db.VarChar(100)
+  VATItemNo     Int?
+
+  @@map("cash disbursement")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model cash_breakdown {
+  Slip_Code String? @db.VarChar(50)
+  Pap_1000  Int?
+  Pap_500   Int?
+  Pap_100   Int?
+  Pap_50    Int?
+  Pap_20    Int?
+  Pap_10    Int?
+  Pap_5     Int?
+  Coin_5    Int?
+  Coin_2    Int?
+  Coin_1    Int?
+  Cnt_50    Int?
+  Cnt_25    Int?
+  Cnt_10    Int?
+  Cnt_05    Int?
+  Cnt_01    Int?
+  Pap_200   Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model cglpolicy {
+  PolicyNo   String   @db.VarChar(20)
+  Account    String   @db.VarChar(100)
+  PeriodFrom DateTime @db.DateTime(6)
+  PeriodTo   DateTime @db.DateTime(6)
+  Location   String   @db.VarChar(255)
+  LimitA     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  LimitB     Decimal  @default(0.0000) @db.Decimal(19, 4)
+
+  @@ignore
+}
+
+model chart_account {
+  Acct_Code  String  @id @db.VarChar(10)
+  Acct_Title String  @db.VarChar(100)
+  Short      String  @db.VarChar(50)
+  Account    String  @db.VarChar(20)
+  Acct_Type  String  @db.VarChar(20)
+  IDNo       Boolean
+  SubAccnt   Boolean
+  Inactive   Boolean
+
+  @@map("chart account")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model closed {
+  FStatement String   @db.VarChar(20)
+  Date_Time  DateTime @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model collection {
+  Date             DateTime? @db.DateTime(6)
+  ORNo             String?   @db.VarChar(50)
+  IDNo             String?   @db.VarChar(50)
+  Name             String?   @db.VarChar(500)
+  Payment          String?   @db.VarChar(50)
+  Bank             String?   @db.VarChar(150)
+  Check_Date       DateTime? @db.DateTime(6)
+  Check_No         String?   @db.VarChar(50)
+  DRCode           String?   @db.VarChar(50)
+  DRTitle          String?   @db.VarChar(50)
+  DRRemarks        String?   @db.LongText
+  Debit            Decimal?  @db.Decimal(19, 4)
+  Purpose          String?   @db.LongText
+  CRCode           String?   @db.VarChar(50)
+  CRTitle          String?   @db.VarChar(50)
+  Credit           Decimal?  @db.Decimal(19, 4)
+  CRRemarks        String?   @db.LongText
+  ID_No            String?   @db.VarChar(50)
+  Official_Receipt String?   @db.VarChar(50)
+  Temp_OR          String?   @db.VarChar(50)
+  Date_OR          DateTime? @db.DateTime(6)
+  Short            String?   @db.VarChar(500)
+  SlipCode         String?   @db.VarChar(50)
+  Status           String?   @db.VarChar(50)
+  CRLoanID         String?   @db.VarChar(50)
+  CRLoanName       String?   @db.VarChar(150)
+  CRRemarks2       String?   @db.LongText
+  CRVATType        String?   @db.VarChar(50)
+  CRInvoiceNo      String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model company {
+  Branch_Code   String @db.VarChar(3)
+  Branch_Name   String @db.VarChar(100)
+  Location_Code String @db.VarChar(3)
+  Location_Name String @db.VarChar(100)
+  Series_Code   String @db.VarChar(3)
+  Company_Code  String @db.VarChar(3)
+  Company_Name  String @db.VarChar(100)
+  Address       String @db.VarChar(255)
+  Contact       String @db.VarChar(20)
+  Email         String @db.VarChar(50)
+
+  @@ignore
+}
+
+model company_list {
+  CompanyCode String  @id @db.VarChar(8)
+  Company     String  @db.VarChar(100)
+  ShortName   String  @db.VarChar(50)
+  Inactive    Boolean
+
+  @@map("company list")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model deposit {
+  Date_Deposit  DateTime? @db.DateTime(6)
+  Slip_Code     String?   @db.VarChar(50)
+  Account_ID    String?   @map("Account ID") @db.VarChar(50)
+  Account_Name  String?   @map("Account Name") @db.VarChar(250)
+  Debit         Decimal?  @db.Decimal(19, 4)
+  Credit        Decimal?  @db.Decimal(19, 4)
+  Check_Date    String?   @db.VarChar(50)
+  Check_No      String?   @db.VarChar(50)
+  Check_Ctr     String?   @db.VarChar(50)
+  Check_Remarks String?   @db.VarChar(50)
+  Bank          String?   @db.VarChar(150)
+  Type          String?   @db.VarChar(50)
+  Ref_No        String?   @db.VarChar(50)
+  IDNo          String?   @db.VarChar(250)
+  Temp_SlipCode String?   @db.VarChar(50)
+  Temp_SlipCntr String?   @db.VarChar(50)
+  Temp_SlipDate DateTime? @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model deposit_slip {
+  Date         DateTime? @db.DateTime(6)
+  SlipCode     String?   @db.VarChar(50)
+  Slip         String?   @db.VarChar(250)
+  BankAccount  String?   @db.VarChar(250)
+  AccountName  String?   @db.VarChar(250)
+  CheckDeposit Decimal?  @db.Decimal(19, 4)
+  CashDeposit  Decimal?  @db.Decimal(19, 4)
+  IDNo         String?   @db.VarChar(250)
+
+  @@map("deposit slip")
+  @@ignore
+}
+
+model dtproperties {
+  id       Int
+  objectid Int?
+  property String  @db.VarChar(64)
+  value    String? @db.VarChar(255)
+  uvalue   String? @db.VarChar(255)
+  lvalue   Bytes?
+  version  Int     @default(0)
+
+  @@id([id, property])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model endorsement {
+  EndorseNo        String   @db.VarChar(20)
+  PolicyNo         String   @db.VarChar(20)
+  DateEndorse      DateTime @db.DateTime(6)
+  Title            String   @db.VarChar(50)
+  TPLLimit         Decimal  @db.Decimal(19, 4)
+  PremiumPaid      Decimal  @db.Decimal(19, 4)
+  Aircon           Decimal  @db.Decimal(19, 4)
+  Stereo           Decimal  @db.Decimal(19, 4)
+  Magwheels        Decimal  @db.Decimal(19, 4)
+  AOG              Decimal  @db.Decimal(19, 4)
+  Deductible       Decimal  @db.Decimal(19, 4)
+  Towing           Decimal  @db.Decimal(19, 4)
+  RepairLimit      Decimal  @db.Decimal(19, 4)
+  EstimatedValue   Decimal  @db.Decimal(19, 4)
+  BodilyInjury     Decimal  @db.Decimal(19, 4)
+  PropertyDamage   Decimal  @db.Decimal(19, 4)
+  PersonalAccident Decimal  @db.Decimal(19, 4)
+  SecIIPercent     Decimal  @db.Decimal(19, 4)
+  Sec4A            Decimal  @db.Decimal(19, 4)
+  Sec4B            Decimal  @db.Decimal(19, 4)
+  Sec4C            Decimal  @db.Decimal(19, 4)
+  ODamage          Decimal  @db.Decimal(19, 4)
+  Shortname        String   @db.VarChar(100)
+  Address          String   @db.VarChar(250)
+  Model            String   @db.VarChar(50)
+  Make             String   @db.VarChar(50)
+  BodyType         String   @db.VarChar(50)
+  Color            String   @db.VarChar(50)
+  PlateNo          String   @db.VarChar(50)
+  ChassisNo        String   @db.VarChar(50)
+  MotorNo          String   @db.VarChar(50)
+  AuthorizedCap    String   @db.VarChar(50)
+  UnladenWeight    String   @db.VarChar(50)
+  Mortgagee        String   @db.VarChar(100)
+  MortgageeClause  String   @db.VarChar(250)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model fpolicy {
+  PolicyNo        String   @db.VarChar(20)
+  Account         String   @db.VarChar(20)
+  DateFrom        DateTime @db.DateTime(6)
+  DateTo          DateTime @db.DateTime(6)
+  BillNo          String   @db.VarChar(50)
+  Percentage      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Location        String   @db.VarChar(100)
+  InsuredValue    Decimal  @default(0.0000) @db.Decimal(19, 4)
+  PropertyInsured String   @db.VarChar(255)
+  Constraction    String   @db.VarChar(3000)
+  Occupancy       String   @db.VarChar(255)
+  Boundaries      String   @db.VarChar(3000)
+  Mortgage        String   @db.VarChar(255)
+  Warranties      String   @db.VarChar(3000)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model holidays {
+  ID   Int
+  Name String?   @db.VarChar(250)
+  Date DateTime? @db.Date
+
+  @@ignore
+}
+
+model id_entry {
+  IDNo       String  @id @db.VarChar(20)
+  IDType     String  @db.VarChar(12)
+  Sub_Acct   String  @db.VarChar(3)
+  Firstname  String  @db.VarChar(100)
+  Middle     String  @db.VarChar(100)
+  Lastname   String  @db.VarChar(100)
+  Individual Boolean
+  UnitNo     String  @default("") @db.VarChar(300)
+  Street     String  @default("") @db.VarChar(100)
+  City       String  @default("") @db.VarChar(100)
+  Address    String  @db.VarChar(500)
+  Contact    String  @db.VarChar(20)
+  Shortname  String  @db.VarChar(150)
+  Inactive   Boolean
+  TINNo      String? @db.VarChar(50)
+  VatType    String? @db.VarChar(50)
+
+  @@map("id entry")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model journal_partial {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(10)
+  Explanation   String?   @db.VarChar(255)
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(100)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(100)
+  Debit         Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Credit        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.VarChar(255)
+
+  @@map("journal partial")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model journal_voucher {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(20)
+  Explanation   String?   @db.VarChar(255)
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(100)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(100)
+  Debit         Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Credit        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.VarChar(255)
+  AutoNo        BigInt
+  VAT_Type      String?   @db.VarChar(50)
+  OR_Invoice_No String?   @db.VarChar(100)
+  VATItemNo     Int?
+
+  @@map("journal voucher")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model journal_voucher2 {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(20)
+  Explanation   String?   @db.VarChar(255)
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(100)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(100)
+  Debit         Decimal?  @db.Decimal(19, 4)
+  Credit        Decimal?  @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.VarChar(255)
+  AutoNo        BigInt
+
+  @@map("journal voucher2")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model journal2 {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(20)
+  Explanation   String?   @db.VarChar(255)
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(100)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(100)
+  Debit         Decimal?  @db.Decimal(19, 4)
+  Credit        Decimal?  @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.VarChar(255)
+  AutoNo        BigInt
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model journal3 {
+  Branch_Code   String?   @db.VarChar(3)
+  Date_Entry    DateTime? @db.DateTime(6)
+  Source_Type   String?   @db.VarChar(3)
+  Source_No     String?   @db.VarChar(20)
+  Explanation   String?   @db.LongText
+  Particulars   String?   @db.LongText
+  Payto         String?   @db.VarChar(500)
+  Address       String?   @db.VarChar(255)
+  Check_Date    DateTime? @db.DateTime(6)
+  Check_No      String?   @db.VarChar(100)
+  Check_Bank    String?   @db.VarChar(100)
+  Check_Return  DateTime? @db.DateTime(6)
+  Check_Collect DateTime? @db.DateTime(6)
+  Check_Deposit DateTime? @db.DateTime(6)
+  Check_Reason  String?   @db.VarChar(255)
+  GL_Acct       String?   @db.VarChar(10)
+  Sub_Acct      String?   @db.VarChar(3)
+  ID_No         String?   @db.VarChar(20)
+  cGL_Acct      String?   @db.VarChar(50)
+  cSub_Acct     String?   @db.VarChar(100)
+  cID_No        String?   @db.VarChar(500)
+  Debit         Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Credit        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  TC            String?   @db.VarChar(3)
+  Remarks       String?   @db.LongText
+  AutoNo        BigInt
+  VAT_Type      String?   @db.VarChar(50)
+  OR_Invoice_No String?   @db.VarChar(100)
+  VATItemNo     Int?
+
+  @@ignore
+}
+
+model ledger {
+  PolicyNo  String  @id @db.VarChar(20)
+  Agent     String  @db.VarChar(100)
+  Commision Decimal @default(0.0000) @db.Decimal(19, 4)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mpolicy {
+  PolicyNo           String   @db.VarChar(20)
+  Account            String   @db.VarChar(20)
+  Location           String   @db.VarChar(100)
+  DateFrom           DateTime @db.DateTime(6)
+  DateTo             DateTime @db.DateTime(6)
+  PointOfOrigin      String   @db.VarChar(500)
+  PointofDestination String   @db.VarChar(500)
+  Vessel             String   @db.VarChar(100)
+  AdditionalInfo     String   @db.VarChar(100)
+  SubjectInsured     String   @db.VarChar(255)
+  Consignee          String   @db.VarChar(255)
+  InsuredValue       Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Percentage         Decimal  @default(0.0000) @db.Decimal(19, 4)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model msprpolicy {
+  PolicyNo         String   @db.VarChar(20)
+  Account          String   @db.VarChar(100)
+  PeriodFrom       DateTime @db.DateTime(6)
+  PeriodTo         DateTime @db.DateTime(6)
+  Location         String   @db.VarChar(255)
+  Saferoom         String   @db.VarChar(255)
+  OriginPoint      String   @db.VarChar(255)
+  DestinationPoint String   @db.VarChar(255)
+  Method           String   @db.VarChar(255)
+  Guard            Int      @db.SmallInt
+  Messenger        Int      @db.SmallInt
+  SecI             Decimal  @db.Decimal(19, 4)
+  SecIPremium      Decimal  @db.Decimal(19, 4)
+  SecIB            Decimal  @db.Decimal(19, 4)
+  SecIPremiumB     Decimal  @db.Decimal(19, 4)
+  SecII            Decimal  @db.Decimal(19, 4)
+  SecIIPremium     Decimal  @db.Decimal(19, 4)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model papolicy {
+  PolicyNo   String   @db.VarChar(20)
+  Account    String   @db.VarChar(100)
+  PeriodFrom DateTime @db.DateTime(6)
+  PeriodTo   DateTime @db.DateTime(6)
+  Location   String   @db.VarChar(255)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model pdc {
+  Ref_No          String?   @db.VarChar(50)
+  PNo             String?   @db.VarChar(50)
+  IDNo            String?   @db.VarChar(50)
+  Date            DateTime? @db.DateTime(6)
+  Name            String?   @db.VarChar(250)
+  Remarks         String?   @db.VarChar(250)
+  Bank            String?   @db.VarChar(250)
+  Branch          String?   @db.VarChar(50)
+  Check_Date      DateTime? @db.DateTime(6)
+  Check_No        String?   @db.VarChar(50)
+  Check_Amnt      Decimal?  @db.Decimal(19, 4)
+  Check_Remarks   String?   @db.VarChar(50)
+  SlipCode        String?   @db.VarChar(50)
+  DateDepo        DateTime? @db.DateTime(6)
+  ORNum           String?   @db.VarChar(50)
+  PDC_Status      String?   @map("PDC Status") @db.VarChar(150)
+  Date_Stored     DateTime? @map("Date Stored") @db.DateTime(6)
+  Date_Endorsed   DateTime? @map("Date Endorsed") @db.DateTime(6)
+  Date_Pulled_Out DateTime? @map("Date Pulled Out") @db.DateTime(6)
+  PDC_Remarks     String?   @map("PDC Remarks") @db.VarChar(250)
+  mark            String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model petty_cash {
+  Branch_Code String?   @db.VarChar(3)
+  PC_Date     DateTime? @db.DateTime(6)
+  PC_No       String?   @db.VarChar(20)
+  Explanation String?   @db.LongText
+  Payee       String?   @db.VarChar(100)
+  DRPurpose   String?   @db.LongText
+  DRAcct_Code String?   @db.VarChar(10)
+  DRShort     String?   @db.VarChar(50)
+  Debit       Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  Sub_Acct    String?   @db.VarChar(3)
+  IDNo        String?   @db.VarChar(20)
+  ShortName   String?   @db.VarChar(50)
+  CRAcct_Code String?   @db.VarChar(10)
+  CRShort     String?   @db.VarChar(50)
+  Credit      Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  DRVATType   String?   @db.VarChar(50)
+  DRInvoiceNo String?   @db.VarChar(100)
+  VATItemNo   Int?
+
+  @@map("petty cash")
+  @@ignore
+}
+
+model petty_log {
+  Purpose   String  @id @db.VarChar(100)
+  Acct_Code String  @db.VarChar(10)
+  Short     String  @db.VarChar(50)
+  Inactive  Boolean
+
+  @@map("petty log")
+}
+
+model policy {
+  IDNo         String   @db.VarChar(20)
+  Account      String   @db.VarChar(20)
+  SubAcct      String   @default("") @db.VarChar(20)
+  PolicyType   String?  @db.VarChar(20)
+  PolicyNo     String   @id @db.VarChar(20)
+  DateIssued   DateTime @db.DateTime(6)
+  TotalPremium Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Vat          Decimal  @default(0.0000) @db.Decimal(19, 4)
+  DocStamp     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  FireTax      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  LGovTax      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Notarial     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Misc         Decimal  @default(0.0000) @db.Decimal(19, 4)
+  TotalDue     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  ExtraDebit   Decimal  @default(0.0000) @db.Decimal(19, 4)
+  ExtraCredit  Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment1     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment2     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment3     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  TotalPaid    Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Discount     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Journal      Boolean
+  Cancelled    Boolean  @default(false)
+  Remarks      String   @default("") @db.VarChar(255)
+  AgentID      String?  @db.VarChar(100)
+  AgentCom     Decimal? @db.Decimal(19, 4)
+  Remitted     Boolean  @default(false)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model postponement {
+  RPCDNo        String    @db.VarChar(30)
+  PNNo          String?   @db.VarChar(30)
+  HoldingFees   Decimal?  @db.Decimal(16, 2)
+  PenaltyCharge Decimal?  @db.Decimal(16, 2)
+  Surplus       Decimal?  @db.Decimal(18, 2)
+  Deducted_to   String?   @db.VarChar(150)
+  PaidVia       String?   @db.VarChar(50)
+  PaidInfo      String?   @db.VarChar(250)
+  Date          DateTime? @db.Date
+  Status        String?   @db.VarChar(30)
+  Branch        String?   @db.VarChar(30)
+  Prepared_by   String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model postponement_auth_codes {
+  RPCD             String?   @db.VarChar(50)
+  For_User         String?   @db.VarChar(500)
+  Approved_Code    String?   @db.VarChar(50)
+  Disapproved_Code String?   @db.VarChar(50)
+  Used_By          String?   @db.VarChar(50)
+  Used_DateTime    DateTime? @db.Date
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model postponement_detail {
+  RPCDNo       String    @db.VarChar(30)
+  CheckNo      String    @db.VarChar(30)
+  OldCheckDate DateTime? @db.Date
+  NewCheckDate DateTime? @db.Date
+  Reason       String?   @db.VarChar(250)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model production {
+  PNNo          String? @db.VarChar(255)
+  IDNo          String? @db.VarChar(255)
+  Short         String? @db.VarChar(100)
+  Insurance     String? @db.VarChar(255)
+  InsuranceName String? @db.VarChar(255)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model pullout_auth_codes {
+  RCPN             String?   @db.VarChar(50)
+  For_User         String?   @db.VarChar(500)
+  Approved_Code    String?   @db.VarChar(50)
+  Disapproved_Code String?   @db.VarChar(50)
+  Used_By          String?   @db.VarChar(50)
+  Used_DateTime    DateTime? @db.Date
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model pullout_request {
+  RCPNo          String    @db.VarChar(30)
+  PNNo           String?   @db.VarChar(30)
+  Reason         String?   @db.VarChar(100)
+  Status         String?   @db.VarChar(30)
+  Branch         String?   @db.VarChar(30)
+  Requested_By   String?   @db.VarChar(30)
+  Requested_Date DateTime? @db.DateTime(6)
+  Approved_By    String?   @db.VarChar(30)
+  Approved_Date  DateTime? @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model pullout_request_details {
+  RCPNo   String? @db.VarChar(30)
+  CheckNo String? @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model reportset {
+  Report_Settings String @map("Report Settings") @db.VarChar(50)
+  Set_Option      String @map("Set Option") @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model resavelog {
+  RecordNo     String   @db.VarChar(500)
+  RecordTable  String   @db.VarChar(500)
+  Username     String   @db.VarChar(200)
+  DateModified DateTime @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model return_checks {
+  Area         String?   @db.VarChar(255)
+  RC_Date      DateTime? @db.DateTime(6)
+  RC_No        String?   @db.VarChar(50)
+  Explanation  String?   @db.VarChar(255)
+  Check_No     String?   @map("Check No") @db.VarChar(255)
+  Date_Deposit DateTime? @map("Date Deposit") @db.DateTime(6)
+  Date_Collect DateTime? @map("Date Collect") @db.DateTime(6)
+  Amount       Decimal?  @db.Decimal(19, 4)
+  Reason       String?   @db.VarChar(50)
+  Bank         String?   @db.VarChar(50)
+  Check_Date   String?   @map("Check Date") @db.VarChar(50)
+  Date_Return  String?   @map("Date Return") @db.VarChar(50)
+  SlipCode     String?   @db.VarChar(50)
+  ORNum        String?   @db.VarChar(50)
+  BankAccnt    String?   @db.VarChar(50)
+  nSort        String?   @db.VarChar(50)
+
+  @@map("return checks")
+  @@ignore
+}
+
+model sysdiagrams {
+  name         String @db.VarChar(160)
+  principal_id Int
+  diagram_id   Int    @id
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}
+
+model table1 {
+  IDNo       String  @id @db.VarChar(20)
+  IDType     String  @db.VarChar(12)
+  Sub_Acct   String  @db.VarChar(3)
+  Firstname  String  @db.VarChar(100)
+  Middle     String  @db.VarChar(2)
+  Lastname   String? @db.VarChar(25)
+  Individual Boolean
+  UnitNo     String  @default("") @db.VarChar(300)
+  Street     String  @default("") @db.VarChar(100)
+  City       String  @default("") @db.VarChar(100)
+  Address    String  @db.VarChar(500)
+  Contact    String  @db.VarChar(20)
+  Shortname  String  @db.VarChar(150)
+  Inactive   Boolean
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_accrual_request {
+  ReqId         String?   @db.VarChar(50)
+  Nature        String?   @db.VarChar(1000)
+  Acct_Code     String?   @db.VarChar(500)
+  Date_From     DateTime? @db.Date
+  Date_To       DateTime? @db.Date
+  Amount        Decimal?  @db.Decimal(19, 4)
+  VAT           String?   @db.VarChar(50)
+  C_ID          String?   @db.VarChar(50)
+  Req_By        String?   @db.VarChar(50)
+  Req_Date      DateTime? @db.DateTime(6)
+  Req_Status    String?   @db.VarChar(50)
+  Approved_By   String?   @db.VarChar(50)
+  Approved_Date DateTime? @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_accrual_request_income {
+  ReqId         String?   @db.VarChar(50)
+  Nature        String?   @db.VarChar(1000)
+  Acct_Code     String?   @db.VarChar(500)
+  Date_From     DateTime? @db.Date
+  Date_To       DateTime? @db.Date
+  NetAmount     Decimal?  @db.Decimal(19, 4)
+  GrossAmount   Decimal?  @db.Decimal(19, 4)
+  VAT           String?   @db.VarChar(50)
+  C_ID          String?   @db.VarChar(50)
+  Req_By        String?   @db.VarChar(50)
+  Req_Date      DateTime? @db.DateTime(6)
+  Req_Status    String?   @db.VarChar(50)
+  Approved_By   String?   @db.VarChar(50)
+  Approved_Date DateTime? @db.DateTime(6)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model transaction_code {
+  Code        String  @db.VarChar(3)
+  Description String  @db.VarChar(100)
+  Acct_Code   String  @db.VarChar(10)
+  Inactive    Boolean
+
+  @@map("transaction code")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model words {
+  Wordings String  @db.VarChar(20)
+  SType    Boolean
+  Phrase   String  @db.VarChar(8000)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model xid_entry {
+  ID        String? @db.VarChar(255)
+  ID_No     String? @db.VarChar(255)
+  cID_No    String? @db.VarChar(255)
+  Sub_Acct  String? @db.VarChar(255)
+  cSub_Acct String? @db.VarChar(255)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model xsubsidiary {
+  Date_Entry  DateTime? @db.DateTime(6)
+  Sort_Number Float?
+  Source_Type String?   @db.VarChar(20)
+  Source_No   String?   @db.VarChar(20)
+  Explanation String?   @db.VarChar(255)
+  Particulars String?   @db.VarChar(255)
+  Payto       String?   @db.VarChar(100)
+  Address     String?   @db.VarChar(100)
+  Check_Date  DateTime? @db.DateTime(6)
+  Check_No    String?   @db.VarChar(100)
+  Check_Bank  String?   @db.VarChar(100)
+  GL_Acct     String?   @db.VarChar(10)
+  Sub_Acct    String?   @db.VarChar(25)
+  ID_No       String?   @db.VarChar(25)
+  cGL_Acct    String?   @db.VarChar(150)
+  cSub_Acct   String?   @db.VarChar(150)
+  cID_No      String?   @db.VarChar(150)
+  Debit       Decimal?  @db.Decimal(19, 4)
+  Credit      Decimal?  @db.Decimal(19, 4)
+  Bal         Decimal?  @db.Decimal(19, 4)
+  Balance     Decimal?  @db.Decimal(19, 4)
+
+  @@ignore
+}
+
+model contact_details {
+  contact_details_id String          @id @default(uuid())
+  email              String          @default("") @db.VarChar(225)
+  mobile             String          @default("") @db.VarChar(225)
+  telephone          String          @default("") @db.VarChar(225)
+  entry_agent        entry_agent?
+  entry_client       entry_client?
+  entry_supplier     entry_supplier?
+}
+
+model entry_agent {
+  entry_agent_id           String          @id
+  firstname                String          @default("") @db.VarChar(225)
+  lastname                 String          @default("") @db.VarChar(225)
+  middlename               String          @default("") @db.VarChar(225)
+  address                  String          @db.Text
+  agent_contact_details_id String          @unique(map: "Entry_Agent_agent_contact_details_id_key")
+  createdAt                DateTime        @default(now())
+  update                   DateTime        @default(now())
+  contact_details          contact_details @relation(fields: [agent_contact_details_id], references: [contact_details_id], map: "Entry_Agent_agent_contact_details_id_fkey")
+}
+
+model entry_client {
+  entry_client_id           String          @id
+  firstname                 String          @default("") @db.VarChar(225)
+  lastname                  String          @default("") @db.VarChar(225)
+  middlename                String          @default("") @db.VarChar(225)
+  company                   String          @default("") @db.VarChar(225)
+  address                   String          @default("") @db.VarChar(225)
+  option                    String          @default("") @db.VarChar(225)
+  sub_account               String          @default("") @db.VarChar(225)
+  createdAt                 DateTime        @default(now())
+  update                    DateTime        @default(now())
+  client_contact_details_id String          @unique(map: "Entry_Client_client_contact_details_id_key")
+  contact_details           contact_details @relation(fields: [client_contact_details_id], references: [contact_details_id], map: "Entry_Client_client_contact_details_id_fkey")
+}
+
+model entry_employee {
+  entry_employee_id String   @id
+  firstname         String   @default("") @db.VarChar(225)
+  middlename        String   @default("") @db.VarChar(225)
+  lastname          String   @default("") @db.VarChar(225)
+  sub_account       String   @default("") @db.VarChar(225)
+  address           String   @db.Text
+  createdAt         DateTime @default(now())
+  update            DateTime @default(now())
+}
+
+model entry_fixed_assets {
+  entry_fixed_assets_id String   @id
+  description           String   @db.Text
+  remarks               String   @db.Text
+  fullname              String   @db.VarChar(225)
+  createdAt             DateTime @default(now())
+  update                DateTime @default(now())
+}
+
+model entry_others {
+  entry_others_id String   @id
+  description     String   @db.Text
+  createdAt       DateTime @default(now())
+  update          DateTime @default(now())
+}
+
+model entry_supplier {
+  entry_supplier_id           String          @id
+  supplier_contact_details_id String          @unique(map: "Entry_Supplier_supplier_contact_details_id_key")
+  firstname                   String          @default("") @db.VarChar(225)
+  lastname                    String          @default("") @db.VarChar(225)
+  middlename                  String          @default("") @db.VarChar(225)
+  company                     String          @default("") @db.VarChar(225)
+  address                     String          @default("") @db.VarChar(225)
+  VAT_Type                    String          @default("") @db.VarChar(225)
+  option                      String          @default("") @db.VarChar(225)
+  tin_no                      String          @db.Text
+  createdAt                   DateTime        @default(now())
+  update                      DateTime        @default(now())
+  contact_details             contact_details @relation(fields: [supplier_contact_details_id], references: [contact_details_id], map: "Entry_Supplier_supplier_contact_details_id_fkey")
+}
+
+model id_sequence {
+  seq_id     String @id @default(uuid())
+  type       String @unique(map: "Id_Sequence_type_key") @db.VarChar(100)
+  last_count String @db.VarChar(100)
+  year       String @db.VarChar(2)
+  month      String @db.VarChar(2)
+}
+
+model sub_account {
+  Sub_Acct    String   @id @default(uuid())
+  Description String   @db.Text
+  ShortName   String   @db.VarChar(225)
+  Acronym     String   @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+model users {
+  UserId        String            @id @default(uuid())
+  Username      String            @unique(map: "Users_Username_key") @db.VarChar(50)
+  Password      String            @db.VarChar(500)
+  AccountType   users_AccountType
+  REFRESH_TOKEN String?           @db.Text
+  CreatedAt     DateTime          @default(now())
+}
+
+enum users_AccountType {
+  PRODUCTION
+  ACCOUNTING
+  ADMIN
+}

@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkupward=self.webpackChunkupward||[]).push([[8966],{78966:function(n,u,t){t.r(u),t.d(u,{default:function(){return r}});t(72791);var e=t(80184);function r(){return(0,e.jsx)("div",{children:"Statement Account"})}}}]);
+//# sourceMappingURL=8966.92774b2c.chunk.js.map

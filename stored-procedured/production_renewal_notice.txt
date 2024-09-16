@@ -1,0 +1,74 @@
+CREATE DEFINER=`root`@`localhost` PROCEDURE `production_renewal_notice`(
+IN ExpirationDate DATE
+)
+BEGIN
+
+declare selectClient TEXT;
+
+
+set selectClient = '
+		SELECT 
+            aa.entry_client_id AS IDNo,
+			aa.sub_account,
+		   if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname
+        FROM
+            upward_insurance.entry_client aa
+            union all
+      SELECT 
+            aa.entry_agent_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname
+        FROM
+            upward_insurance.entry_agent aa
+            union all
+      SELECT 
+            aa.entry_employee_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname
+        FROM
+            upward_insurance.entry_employee aa
+      union all
+      SELECT 
+            aa.entry_supplier_id AS IDNo,
+			aa.sub_account,
+			if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname
+        FROM
+            upward_insurance.entry_supplier aa
+            union all
+      SELECT 
+            aa.entry_fixed_assets_id AS IDNo,
+			aa.sub_account,
+			aa.fullname AS Shortname
+        FROM
+            upward_insurance.entry_fixed_assets aa
+            union all
+      SELECT 
+            aa.entry_others_id AS IDNo,
+			aa.sub_account,
+			aa.description AS Shortname
+        FROM
+            upward_insurance.entry_others aa';
+            
+	SET @sql_query = concat('
+	SELECT 
+		 Policy.PolicyNo,
+		 client.Shortname AS AssuredName,
+		 Policy.PolicyType
+
+	FROM Policy LEFT JOIN BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo 
+	LEFT JOIN VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
+	LEFT JOIN MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo 
+	LEFT JOIN PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo 
+	LEFT JOIN CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo 
+	LEFT JOIN MSPRPolicy ON Policy.PolicyNo = MSPRPolicy.PolicyNo 
+	LEFT JOIN FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo 
+	LEFT JOIN (
+	   ',selectClient,'
+	) client ON Policy.IDNo = client.IDNo'); 
+		
+    
+    
+	PREPARE dynamic_statement FROM @sql_query;
+	EXECUTE dynamic_statement;
+	DEALLOCATE PREPARE dynamic_statement;
+END

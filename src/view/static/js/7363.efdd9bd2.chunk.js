@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkupward=self.webpackChunkupward||[]).push([[7363],{67363:function(n,u,r){r.r(u),r.d(u,{default:function(){return e}});r(72791);var a=r(80184);function e(){return(0,a.jsx)("div",{children:"Branch sadasd"})}}}]);
+//# sourceMappingURL=7363.efdd9bd2.chunk.js.map

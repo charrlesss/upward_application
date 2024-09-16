@@ -1,0 +1,1 @@
+{"version":3,"file":"static/js/7016.9c9bbd94.chunk.js","mappings":"4KAEe,SAASA,IACtB,OACEC,EAAAA,EAAAA,KAAA,OAAAC,SAAK,WAET,C","sources":["feautures/Admin/Reference/Booklet.tsx"],"sourcesContent":["import React from 'react'\n\nexport default function Booklet() {\n  return (\n    <div>Booklet</div>\n  )\n}\n"],"names":["Booklet","_jsx","children"],"sourceRoot":""}

@@ -1,0 +1,71 @@
+###
+GET http://localhost:4000/testing-query
+
+
+###
+GET http://localhost:4400/api/get-user-details
+
+###
+POST http://localhost:4400/api/search-client
+Content-Type: application/json
+
+{
+    "search":"charles",
+    "password":"charles"
+}
+
+###
+POST http://localhost:4000/api/login
+Content-Type: application/json
+
+{
+    "username":"charles",
+    "password":"charles"
+}
+
+###
+POST http://localhost:4000/api/reference/add-ctpl
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIxNmNmMWQyYy0zN2NmLTQzYzYtODI4Ny1kYzUxNzIwZTE2NDAiLCJpYXQiOjE2OTc0MjQ1OTQsImV4cCI6MTY5NzUxMDk5NH0.lbx4VyE2BTvGPvY4GZgOKskXmdjhkkyuXcp45e60k2Y
+Content-Type: application/json
+
+{
+    "Prefix": "TRT",
+    "NumSeriesFrom": "920",
+    "NumSeriesTo": "930",
+    "Cost": "500",
+    "CreatedBy": "charles"
+}
+
+###
+POST http://localhost:4000/api/reference/add-ctpl
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIxNmNmMWQyYy0zN2NmLTQzYzYtODI4Ny1kYzUxNzIwZTE2NDAiLCJpYXQiOjE2OTc0MjQ1OTQsImV4cCI6MTY5NzUxMDk5NH0.lbx4VyE2BTvGPvY4GZgOKskXmdjhkkyuXcp45e60k2Y
+Content-Type: application/json
+
+{
+    "Prefix": "",
+    "NumSeriesFrom": "0120",
+    "NumSeriesTo": "0130",
+    "Cost": "500",
+    "CreatedBy": "charles"
+}
+
+###
+POST http://localhost:4000/api/reference/delete-ctpl
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIxNmNmMWQyYy0zN2NmLTQzYzYtODI4Ny1kYzUxNzIwZTE2NDAiLCJpYXQiOjE2OTc0MjQ1OTQsImV4cCI6MTY5NzUxMDk5NH0.lbx4VyE2BTvGPvY4GZgOKskXmdjhkkyuXcp45e60k2Y
+Content-Type: application/json
+
+{
+    "ctplId": "0772af06-4f46-48c6-8c75-50ac310d9c69"
+}
+
+
+###
+GET http://localhost:4000/api/reports/report-vehicle-policy
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIxNmNmMWQyYy0zN2NmLTQzYzYtODI4Ny1kYzUxNzIwZTE2NDAiLCJpYXQiOjE2OTc4NjYxOTQsImV4cCI6MTY5Nzk1MjU5NH0.F3yz-n2y35DeX4duXUa6kV1Iu-liBD6XhI_7LHgfGzs
+Content-Type: application/json
+
+{
+    "ctplId": "0772af06-4f46-48c6-8c75-50ac310d9c69"
+}
+
+
