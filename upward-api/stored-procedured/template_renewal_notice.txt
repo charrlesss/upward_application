@@ -1,0 +1,107 @@
+CREATE DEFINER=`root`@`localhost` PROCEDURE `template_renewal_notice`(
+IN PolicyType TEXT,  
+IN PolicyNo TEXT
+)
+BEGIN
+
+declare selectClient TEXT;
+
+set selectClient = "
+	SELECT 
+			aa.entry_client_id AS IDNo,
+            aa.sub_account,
+            iF(aa.company <> '',aa.company,CONCAT(aa.lastname, ',', aa.firstname)) AS Shortname,
+            aa.address
+    FROM
+        upward_insurance.entry_client aa ";
+            
+IF(PolicyType ='COM') THEN
+	set @select_query = concat("
+    SELECT 
+		client.Shortname,
+        client.address,
+		Policy.PolicyNo,
+        VPolicy.PlateNo,
+		VPolicy.ChassisNo,
+		VPolicy.MotorNo,
+        VPolicy.DateTo,
+        concat(VPolicy.Model,' ',VPolicy.Make,' ',VPolicy.BodyType) as unitInsuredu,
+        VPolicy.Mortgagee,
+        FORMAT(VPolicy.EstimatedValue, 4) as tl_prev_insured,
+		FORMAT(VPolicy.EstimatedValue, 4) as acn_prev_insured,
+		FORMAT(VPolicy.BodilyInjury,4) as injury_prev_insured,
+		FORMAT(VPolicy.PropertyDamage,4) as damage_prev_insured,
+		FORMAT(VPolicy.PersonalAccident,4) as accident_prev_insured,
+        
+        FORMAT(VPolicy.ODamage,4) as tl_prev_premium,
+        FORMAT(VPolicy.AOG,4) as acn_prev_premium,
+		VPolicy.Sec4A as injury_prev_premium,
+		VPolicy.Sec4B as damage_prev_premium,
+		VPolicy.Sec4C	as accident_prev_premium,
+        FORMAT(Policy.TotalPremium,4)  as prev_sub_total,
+		FORMAT(Policy.DocStamp,4)	as prev_doc_stamp,
+		FORMAT(Policy.Vat,4) as prev_evat,
+		FORMAT(Policy.LGovTax,4) as prev_lgt,
+        FORMAT(Policy.TotalDue,4) as prev_gross,
+        SecIIPercent,
+        VPolicy.Remarks
+    FROM
+	(SELECT * FROM Policy WHERE Policy.PolicyType = 'COM') AS Policy
+		LEFT JOIN 
+	(SELECT * FROM VPolicy WHERE VPolicy.PolicyType <> 'TPL') AS VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
+        LEFT JOIN 
+	(",selectClient,") as  client on Policy.IDNo = client.IDNo
+    ");
+END IF;
+
+
+IF(PolicyType ='MAR') THEN
+	set @select_query = concat("
+    SELECT * FROM
+	(SELECT * FROM Policy WHERE Policy.PolicyType = 'MAR') AS Policy
+		LEFT JOIN 
+	MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo
+		LEFT JOIN 
+	(",selectClient,") as  client on Policy.IDNo = client.IDNo
+    ");
+END IF;
+
+IF(PolicyType ='PA') THEN
+	set @select_query = concat("
+    SELECT * FROM
+	(SELECT * FROM Policy WHERE Policy.PolicyType = 'PA') AS Policy
+		LEFT JOIN 
+	PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo
+		LEFT JOIN 
+	(",selectClient,") as  client on Policy.IDNo = client.IDNo
+    ");
+END IF;
+
+IF(PolicyType ='FIRE') THEN
+	set @select_query = concat("
+    SELECT * FROM
+	(SELECT * FROM Policy WHERE Policy.PolicyType = 'FIRE') AS Policy
+		LEFT JOIN 
+	FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo
+		LEFT JOIN 
+	(",selectClient,") as  client on Policy.IDNo = client.IDNo
+    ");
+END IF;
+
+IF(PolicyType ='CGL') THEN
+	set @select_query = concat("
+    SELECT * FROM
+	(SELECT * FROM Policy WHERE Policy.PolicyType = 'CGL') AS Policy
+		LEFT JOIN 
+	CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo
+		LEFT JOIN 
+	(",selectClient,") as  client on Policy.IDNo = client.IDNo
+    ");
+END IF;
+
+set @select_query  = concat(@select_query," WHERE Policy.PolicyNo = '",PolicyNo,"'");
+
+PREPARE dynamic_statement FROM @select_query;
+EXECUTE dynamic_statement;
+DEALLOCATE PREPARE dynamic_statement;
+END

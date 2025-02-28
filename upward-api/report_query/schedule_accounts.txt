@@ -1,0 +1,155 @@
+
+SELECT 
+    LEFT(a.GL_Acct,1) AS `Group Header`, 
+    LEFT(a.GL_Acct,4) AS Header,
+    a.GL_Acct,
+    b.Short AS `mShort`,
+    '' AS `Sub_Acct`,
+    COALESCE(a.ID_No,'') AS `ID_No`,
+    COALESCE(d.Shortname,'') AS `mID`,
+    SUM(Debit) AS `Debit`,
+    SUM(Credit) AS `Credit`,
+    IF(CAST(LEFT(a.GL_Acct,1) AS SIGNED)<=3 OR CAST(LEFT(a.GL_Acct,1) AS SIGNED)=7,SUM(Debit)-SUM(Credit),SUM(Credit)-SUM(Debit)) AS `Balance`
+FROM upward_insurance.journal a 
+INNER JOIN upward_insurance.chart_account b ON  a.GL_Acct  = b.Acct_Code 
+LEFT JOIN upward_insurance.sub_account c ON  a.Sub_Acct =   c.Sub_Acct
+LEFT JOIN (
+    SELECT 
+        IDNO,
+        Shortname 
+    FROM (
+        SELECT 
+            (PolicyNo) AS `IDNO`,
+            bb.Shortname AS `shortname` 
+        FROM upward_insurance.policy aa 
+        LEFT JOIN (
+			SELECT 
+			"Client" as IDType,
+			aa.entry_client_id AS IDNo,
+			aa.sub_account,
+			if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname,
+			aa.entry_client_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_client aa
+            union all
+      SELECT 
+			"Agent" as IDType,
+            aa.entry_agent_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname,
+            aa.entry_agent_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_agent aa
+            union all
+      SELECT 
+			"Employee" as IDType,
+            aa.entry_employee_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname,
+            aa.entry_employee_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_employee aa
+      union all
+      SELECT 
+			"Supplier" as IDType,
+            aa.entry_supplier_id AS IDNo,
+			aa.sub_account,
+			if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname,
+             aa.entry_supplier_id as client_id,
+             aa.address
+        FROM
+            upward_insurance.entry_supplier aa
+            union all
+      SELECT 
+			"Fixed Assets" as IDType,
+            aa.entry_fixed_assets_id AS IDNo,
+			aa.sub_account,
+			aa.fullname AS Shortname,
+            aa.entry_fixed_assets_id as client_id,
+           CONCAT(aa.description, " - ", aa.remarks) AS address
+        FROM
+            upward_insurance.entry_fixed_assets aa
+            union all
+      SELECT 
+			"Others" as IDType,
+            aa.entry_others_id AS IDNo,
+			aa.sub_account,
+			aa.description AS Shortname,
+            aa.entry_others_id as client_id,
+            CONCAT(aa.description, " - ", aa.remarks) AS address
+        FROM
+            upward_insurance.entry_others aa
+        ) bb ON aa.IDNo = bb.IDNo 
+        UNION ALL 
+        SELECT 
+            IDNo,
+            Shortname 
+        FROM (SELECT 
+			"Client" as IDType,
+			aa.entry_client_id AS IDNo,
+			aa.sub_account,
+			if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname,
+			aa.entry_client_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_client aa
+            union all
+      SELECT 
+			"Agent" as IDType,
+            aa.entry_agent_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname,
+            aa.entry_agent_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_agent aa
+            union all
+      SELECT 
+			"Employee" as IDType,
+            aa.entry_employee_id AS IDNo,
+			aa.sub_account,
+			CONCAT(aa.lastname, ",", aa.firstname) AS Shortname,
+            aa.entry_employee_id as client_id,
+            aa.address
+        FROM
+            upward_insurance.entry_employee aa
+      union all
+      SELECT 
+			"Supplier" as IDType,
+            aa.entry_supplier_id AS IDNo,
+			aa.sub_account,
+			if(aa.company = "", CONCAT(aa.lastname, ",", aa.firstname), aa.company) as Shortname,
+             aa.entry_supplier_id as client_id,
+             aa.address
+        FROM
+            upward_insurance.entry_supplier aa
+            union all
+      SELECT 
+			"Fixed Assets" as IDType,
+            aa.entry_fixed_assets_id AS IDNo,
+			aa.sub_account,
+			aa.fullname AS Shortname,
+            aa.entry_fixed_assets_id as client_id,
+           CONCAT(aa.description, " - ", aa.remarks) AS address
+        FROM
+            upward_insurance.entry_fixed_assets aa
+            union all
+      SELECT 
+			"Others" as IDType,
+            aa.entry_others_id AS IDNo,
+			aa.sub_account,
+			aa.description AS Shortname,
+            aa.entry_others_id as client_id,
+            CONCAT(aa.description, " - ", aa.remarks) AS address
+        FROM
+            upward_insurance.entry_others aa) cc
+    ) A
+) d ON  a.ID_No = d.IDNO
+WHERE a.Source_Type NOT IN ('BF','BFD','BFS') 
+AND CAST(Date_Entry AS DATE) <= '2024-03-12' 
+GROUP BY GL_Acct, b.Short, a.ID_No, COALESCE(d.Shortname,'') 
+HAVING IF(CAST(LEFT(a.GL_Acct,1) AS SIGNED) <= 3 OR CAST(LEFT(a.GL_Acct,1) AS SIGNED) = 7, SUM(Debit)-SUM(Credit), SUM(Credit)-SUM(Debit)) <> 0 
+ORDER BY `Group Header`, Header, GL_Acct, mID ASC;

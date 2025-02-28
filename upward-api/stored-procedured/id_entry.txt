@@ -1,0 +1,122 @@
+CREATE DEFINER=`root`@`localhost` PROCEDURE `id_entry`(IN WhereIDEntry Text)
+BEGIN
+	SET @sql_query = 
+    concat(
+    "
+    select * from (SELECT 
+    CONCAT(aa.firstname, ', ', aa.lastname) AS ShortName,
+    aa.entry_client_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    aa.company,
+    aa.address,
+    aa.option AS options,
+    aa.sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.client_contact_details_id AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    upward_insurance.entry_client aa 
+UNION ALL SELECT 
+    CONCAT(aa.firstname, ', ', aa.lastname) AS ShortName,
+    aa.entry_agent_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    NULL AS company,
+    aa.address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.agent_contact_details_id AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    upward_insurance.entry_agent aa 
+UNION ALL SELECT 
+    CONCAT(aa.firstname, ', ', aa.lastname) AS ShortName,
+    aa.entry_employee_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    NULL AS company,
+    aa.address,
+    NULL AS options,
+    aa.sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    upward_insurance.entry_employee aa 
+UNION ALL SELECT 
+    aa.fullname AS ShortName,
+    aa.entry_fixed_assets_id AS IDNo,
+    NULL AS firstname,
+    NULL AS middlename,
+    NULL AS company,
+    NULL AS address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    aa.description,
+    aa.remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    upward_insurance.entry_fixed_assets aa 
+UNION ALL SELECT 
+    aa.description AS ShortName,
+    aa.entry_others_id AS IDNo,
+    NULL AS firstname,
+    NULL AS middlename,
+    NULL AS company,
+    NULL AS address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    upward_insurance.entry_others aa
+ UNION ALL SELECT 
+     CONCAT(aa.firstname, ', ', aa.lastname) AS ShortName,
+    aa.entry_supplier_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    aa.company,
+    aa.address,
+    aa.option as options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.supplier_contact_details_id as  contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+    aa.VAT_Type,
+    aa.tin_no
+FROM
+    upward_insurance.entry_supplier aa) id_entry",
+    " ",
+    IF(WhereIDEntry IS Null OR WhereIDEntry = '' ,"LIMIT 100" ,WhereIDEntry)
+    );
+    
+PREPARE dynamic_statement FROM @sql_query;
+EXECUTE dynamic_statement;
+DEALLOCATE PREPARE dynamic_statement;
+
+END

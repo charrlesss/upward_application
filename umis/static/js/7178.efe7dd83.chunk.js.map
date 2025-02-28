@@ -1,0 +1,1 @@
+{"version":3,"file":"static/js/7178.efe7dd83.chunk.js","mappings":"4KAEe,SAASA,IACtB,OACEC,EAAAA,EAAAA,KAAA,OAAAC,SAAK,UAET,C","sources":["feautures/Admin/Help/Search.tsx"],"sourcesContent":["import React from 'react'\n\nexport default function Search() {\n  return (\n    <div>Search</div>\n  )\n}\n"],"names":["Search","_jsx","children"],"sourceRoot":""}

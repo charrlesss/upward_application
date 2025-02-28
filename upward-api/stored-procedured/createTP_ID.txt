@@ -1,0 +1,17 @@
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createTP_ID`()
+BEGIN
+select
+  concat(
+  'TP-',
+  right('000000',6 - LENGTH(CAST(CAST(substring(IF(
+      a.PolicyNo = '' OR a.PolicyNo IS NULL,'1',a.PolicyNo), 4) as SIGNED) + 1 As SIGNED))),
+  IF(
+     a.PolicyNo = '' OR a.PolicyNo IS NULL,
+      '1',
+    CAST(substring(a.PolicyNo,4) as SIGNED) +1
+    )
+  ) AS tempPolicy_No
+   from (
+    SELECT  MAX(PolicyNo) as PolicyNo FROM upward.vpolicy a where left(a.PolicyNo ,2) = 'TP' and a.PolicyType = 'COM' ORDER BY a.PolicyNo ASC
+  ) a;
+END
