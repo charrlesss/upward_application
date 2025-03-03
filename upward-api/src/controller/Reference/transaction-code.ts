@@ -12,29 +12,6 @@ import { VerifyToken } from "../Authentication";
 
 const TransactionCode = express.Router();
 
-TransactionCode.get(
-  "/get-transaction-code",
-  async (req: Request, res: Response) => {
-    const { transactionCodeSearch } = req.query;
-    try {
-      res.send({
-        message: "Get Transaction Code Successfully!",
-        success: true,
-        transactionCode: await getTransactionCode(
-          transactionCodeSearch as string,
-          req
-        ),
-      });
-    } catch (err: any) {
-      console.log(err.message);
-      res.send({
-        success: false,
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      });
-    }
-  }
-);
-
 TransactionCode.post(
   "/add-transaction-code",
   async (req: Request, res: Response) => {
@@ -158,24 +135,21 @@ TransactionCode.post(
   }
 );
 
-TransactionCode.get(
+TransactionCode.post(
   "/search-transaction-code",
   async (req: Request, res: Response) => {
-    const { transactionCodeSearch } = req.query;
     try {
       res.send({
         message: "Get Transacation Code Successfully!",
         success: true,
-        transactionCode: await getTransactionCode(
-          transactionCodeSearch as string,
-          req
-        ),
+        data: await getTransactionCode(req.body.search),
       });
     } catch (err: any) {
       console.log(err.message);
       res.send({
         success: false,
         message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        data: [],
       });
     }
   }

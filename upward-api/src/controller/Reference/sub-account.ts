@@ -44,52 +44,22 @@ SubAccount.post("/add-sub-account", async (req: Request, res: Response) => {
     });
   }
 });
-
-SubAccount.get("/get-sub-account", async (req: Request, res: Response) => {
-  const { subaccountSearch } = req.query;
-
+SubAccount.post("/search-sub-account", async (req: Request, res: Response) => {
   try {
-    const subaccount = await searchSubAccount(
-      subaccountSearch as string,
-      false,
-      req
-    );
-    res.send({
-      message: "Get Sub Account Successfully!",
-      success: true,
-      subaccount,
-    });
-  } catch (err: any) {
-    console.log(err.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
-
-SubAccount.get("/search-sub-account", async (req: Request, res: Response) => {
-  const { subaccountSearch } = req.query;
-  try {
-    const subaccount = await searchSubAccount(
-      subaccountSearch as string,
-      false,
-      req
-    );
     res.send({
       message: "Search Sub Account Successfully!",
       success: true,
-      subaccount,
+      data: await searchSubAccount(req.body.search),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });
-
 SubAccount.post("/update-sub-account", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -159,48 +129,4 @@ SubAccount.post("/delete-sub-account", async (req: Request, res: Response) => {
   }
 });
 
-SubAccount.get("/export-sub-account", async (req, res) => {
-  try {
-    const subAccountHeaders: any = {
-      SubAccount: {
-        header: [
-          "Sub Account ID",
-          "Acronym",
-          "Short Name",
-          "Description",
-          "Created At",
-        ],
-        row: ["Sub_Acct", "Acronym", "ShortName", "Description", "createdAt"],
-      },
-    };
-    const { policySearch, isAll } = req.query;
-
-    let data = [];
-    if (JSON.parse(isAll as string)) {
-      data = mapDataBasedOnHeaders(
-        (await searchSubAccount("", true, req)) as Array<any>,
-        subAccountHeaders,
-        "SubAccount"
-      );
-    } else {
-      data = mapDataBasedOnHeaders(
-        (await searchSubAccount(
-          policySearch as string,
-          false,
-          req
-        )) as Array<any>,
-        subAccountHeaders,
-        "SubAccount"
-      );
-    }
-
-    ExportToExcel(data, res);
-  } catch (err: any) {
-    console.log(err.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
 export default SubAccount;

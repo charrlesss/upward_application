@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { prisma } from "../../controller/index";
 
-
 interface PolicyAccountType {
   Account: string;
   Description: string;
@@ -19,21 +18,24 @@ interface PolicyAccountType {
   Inactive: boolean;
 }
 
-export async function checkedAccountIsExisting(Account: string,req: Request) {
+export async function checkedAccountIsExisting(AccountCode: any) {
 
-  return await prisma.policy_account.findUnique({ where: { Account } });
+  return await prisma.$queryRawUnsafe(
+    `select * from policy_account where AccountCode = ?`, AccountCode
+  );
 }
 
-export async function createPolicyAccount(policyAccount: PolicyAccountType,req: Request) {
-
+export async function createPolicyAccount(
+  policyAccount: PolicyAccountType,
+  req: Request
+) {
   return await prisma.policy_account.create({ data: policyAccount });
 }
 
 export async function searchPolicy(
   policySearch: string,
   hasLimit: boolean = false
-,req: Request) {
-
+) {
   const query = ` SELECT 
   a.Account,
   a.Description,
@@ -47,6 +49,7 @@ export async function searchPolicy(
   a.G16,
   a.MSPR,
   a.CGL,
+    a.Inactive,
   (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) as createdAt
 FROM
   policy_account a
@@ -60,18 +63,50 @@ ${hasLimit ? "" : "limit 500"}`;
 }
 
 export async function updatePolicyAccount(
-  policyAccount: PolicyAccountType,
-  Account: string
-,req: Request) {
-
-  return await prisma.policy_account.update({
-    data: policyAccount,
-    where: { Account },
-  });
+  data:any
+) {
+  const qry = `
+  UPDATE \`policy_account\`
+  SET
+  \`Account\` = ?,
+  \`Description\` = ?,
+  \`AccountCode\` = ?,
+  \`COM\` = ?,
+  \`TPL\` = ?,
+  \`MAR\` = ?,
+  \`FIRE\` = ?,
+  \`G02\` = ?,
+  \`G13\` = ?,
+  \`G16\` = ?,
+  \`MSPR\` = ?,
+  \`PA\` = ?,
+  \`CGL\` = ?,
+  \`Inactive\` = ?
+  WHERE \`AccountCode\` = ?;
+  
+  `;
+    return await prisma.$queryRawUnsafe(
+      qry,
+      data.Account,
+      data.Description,
+      data.AccountCode,
+      data.COM,
+      data.TPL,
+      data.MAR,
+      data.FIRE,
+      data.G02,
+      data.G13,
+      data.G16,
+      data.MSPR,
+      data.PA,
+      data.CGL,
+      data.Inactive,
+      data.AccountCode
+    );
 }
-export async function deletePolicyAccount(Account: string,req: Request) {
-
-  return await prisma.policy_account.delete({
-    where: { Account },
-  });
+export async function deletePolicyAccount(Account: string, req: Request) {
+  console.log(`delete from policy_account where Account='${Account}'`);
+  return await prisma.$queryRawUnsafe(
+    `delete from policy_account where AccountCode='${Account}'`
+  );
 }

@@ -18,30 +18,19 @@ import { VerifyToken } from "../Authentication";
 
 const Rates = express.Router();
 
-Rates.get("/get-rates", async (req: Request, res: Response) => {
-  const { ratesSearch } = req.query;
+Rates.post("/get-accounts-from-rates", async (req: Request, res: Response) => {
   try {
-    const rate = await searchRate(ratesSearch as string, false, req);
-    const line = await getline(req);
-    const policy = await getPolicyAccounts(req);
     res.send({
       message: "Get Rates Successfully!",
       success: true,
-      rate: {
-        rate,
-        line,
-        policy,
-        type: {
-          Bonds: await getBonds(req),
-          Fire: await getFire(req),
-        },
-      },
+      data: await getPolicyAccounts(),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });
@@ -140,55 +129,19 @@ Rates.post("/delete-rates", async (req: Request, res: Response) => {
   }
 });
 
-Rates.get("/search-rates", async (req: Request, res: Response) => {
-  const { ratesSearch } = req.query;
+Rates.post("/search-rates", async (req: Request, res: Response) => {
   try {
-    const rates: any = await searchRate(ratesSearch as string, false, req);
     res.send({
       message: "Search Policy Account Successfuly",
       success: true,
-      rates,
+      data: await searchRate(req.body.search),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
-
-Rates.get("/export-rates", async (req: Request, res: Response) => {
-  try {
-    const subAccountHeaders: any = {
-      Rates: {
-        header: ["ID", "Account", "Type", "Rate", "Created At"],
-        row: ["ID", "Account", "Type", "Rate", "createdAt"],
-      },
-    };
-    const { ratesSearch, isAll } = req.query;
-
-    let data = [];
-    if (JSON.parse(isAll as string)) {
-      data = mapDataBasedOnHeaders(
-        (await searchRate("", true, req)) as Array<any>,
-        subAccountHeaders,
-        "Rates"
-      );
-    } else {
-      data = mapDataBasedOnHeaders(
-        (await searchRate(ratesSearch as string, false, req)) as Array<any>,
-        subAccountHeaders,
-        "Rates"
-      );
-    }
-
-    ExportToExcel(data, res);
-  } catch (err: any) {
-    console.log(err.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });

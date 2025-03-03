@@ -11,12 +11,7 @@ interface CTPLType {
   ctplId: any;
 }
 
-export async function searchCTPL(
-  ctplSearch: string,
-  hasLimit: boolean = false,
-  req: Request
-) {
-
+export async function searchCTPL(search: string) {
   const query = `
       SELECT 
           a.ctplId,
@@ -30,10 +25,10 @@ export async function searchCTPL(
       FROM
             ctplregistration a
           where 
-          a.Prefix like '%${ctplSearch}%'
-          OR  a.Cost like '%${ctplSearch}%'
-          OR  a.NumSeriesFrom like '%${ctplSearch}%'
-          OR  a.NumSeriesTo like '%${ctplSearch}%'
+          a.Prefix like '%${search}%'
+          OR  a.Cost like '%${search}%'
+          OR  a.NumSeriesFrom like '%${search}%'
+          OR  a.NumSeriesTo like '%${search}%'
           ORDER BY a.Prefix asc
           limit 100
       `;
@@ -49,19 +44,15 @@ export async function searchCTPL(
   return convertCostToFixed(data);
 }
 export async function getPrefix(req: Request) {
-
   return await prisma.ctplprefix.findMany({ select: { prefixName: true } });
 }
 export async function getType(req: Request) {
-
   return await prisma.ctpltype.findMany({ select: { typeName: true } });
 }
 export async function addCTPL(data: CTPLType, req: Request) {
-
   return await prisma.ctplregistration.create({ data });
 }
 export async function updateCTPL(data: CTPLType, ctplId: string, req: Request) {
-
   return await prisma.ctplregistration.update({
     data: {
       Prefix: data.Prefix,
@@ -71,12 +62,10 @@ export async function updateCTPL(data: CTPLType, ctplId: string, req: Request) {
   });
 }
 export async function deleteCTPL(ctplId: string, req: Request) {
-
   return await prisma.ctplregistration.delete({ where: { ctplId } });
 }
 
 export async function findCtplById(ctplId: string, req: Request) {
-
   return await prisma.ctplregistration.findUnique({ where: { ctplId } });
 }
 export async function findCtplfExist(
@@ -87,7 +76,6 @@ export async function findCtplfExist(
   },
   req: Request
 ) {
-
   return await prisma.$queryRawUnsafe(`
       SELECT 
         *

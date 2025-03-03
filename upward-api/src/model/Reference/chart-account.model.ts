@@ -23,12 +23,12 @@ export async function deleteChartAccount(data: any, req:Request) {
   });
 }
 
-export async function getChartAccount(chartAccountSearch: string, req:Request) {
+export async function getChartAccount(search: string) {
   const qry = `
     SELECT 
-    IF(a.IDNo = 0, 'NO', 'YES') AS IDNo,
-    IF(a.SubAccnt = 0, 'NO', 'YES') AS SubAccnt,
-    IF(a.Inactive = 0, 'NO', 'YES') AS Inactive,
+    IF(a.IDNo = 0, '', 'YES') AS IDNo,
+    IF(a.SubAccnt = 0, '', 'YES') AS SubAccnt,
+    IF(a.Inactive = 0, '', 'YES') AS Inactive,
     a.Acct_Code,
     a.Acct_Title,
     a.Short,
@@ -37,9 +37,9 @@ export async function getChartAccount(chartAccountSearch: string, req:Request) {
     FROM
       chart_account a
     WHERE
-        a.Acct_Code LIKE '%${chartAccountSearch}%'
-        OR a.Acct_Title LIKE '%${chartAccountSearch}%'
-        OR a.Short LIKE '%${chartAccountSearch}%'
+        a.Acct_Code LIKE '%${search}%'
+        OR a.Acct_Title LIKE '%${search}%'
+        OR a.Short LIKE '%${search}%'
     `
     console.log(qry)
   return await prisma.$queryRawUnsafe(qry);

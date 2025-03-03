@@ -4,6 +4,7 @@ import {
   deletePettyCashTransaction,
   getPettyCashTransaction,
   updatePettyCashTransaction,
+  searchChartAccountPettyCash
 } from "../../model/Reference/petty-cash-transaction..model";
 import generateUniqueUUID from "../../lib/generateUniqueUUID";
 import saveUserLogs from "../../lib/save_user_logs";
@@ -11,29 +12,6 @@ import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import { VerifyToken } from "../Authentication";
 
 const PettyCashTransaction = express.Router();
-
-PettyCashTransaction.get(
-  "/get-petty-cash-transaction",
-  async (req: Request, res: Response) => {
-    const { pettyCashtTransactionSearch } = req.query;
-    try {
-      res.send({
-        message: "Get Petty Cash Transaction Successfully!",
-        success: true,
-        pettyCashTransaction: await getPettyCashTransaction(
-          pettyCashtTransactionSearch as string,
-          req
-        ),
-      });
-    } catch (err: any) {
-      console.log(err.message);
-      res.send({
-        success: false,
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      });
-    }
-  }
-);
 
 PettyCashTransaction.post(
   "/add-petty-cash-transaction",
@@ -147,24 +125,40 @@ PettyCashTransaction.post(
   }
 );
 
-PettyCashTransaction.get(
+PettyCashTransaction.post(
   "/search-petty-cash-transaction",
   async (req: Request, res: Response) => {
-    const { pettyCashtTransactionSearch } = req.query;
     try {
       res.send({
         message: "Get Petty Cash Transaction Successfully!",
         success: true,
-        pettyCashTransaction: await getPettyCashTransaction(
-          pettyCashtTransactionSearch as string,
-          req
-        ),
+        data: await getPettyCashTransaction(req.body.search),
       });
     } catch (err: any) {
       console.log(err.message);
       res.send({
         success: false,
         message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        data: [],
+      });
+    }
+  }
+);
+PettyCashTransaction.post(
+  "/search-petty-cash-transaction-chart-account",
+  async (req: Request, res: Response) => {
+    try {
+      res.send({
+        message: "Get Petty Cash Transaction Successfully!",
+        success: true,
+        data: await searchChartAccountPettyCash(req.body.search),
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        data: [],
       });
     }
   }

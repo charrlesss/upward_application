@@ -1,18 +1,12 @@
 import { Request } from "express";
 import { prisma } from "../../controller/index";
 
-
 interface SublineType {
   Line: string;
   SublineName: string;
 }
 
-export async function searchSubline(
-  sublineSearch: string,
-  hasLimit: boolean = false,
-  req: Request
-) {
-
+export async function searchSubline(search: string) {
   const query2 = `
     SELECT 
         a.ID,
@@ -22,10 +16,10 @@ export async function searchSubline(
     FROM 
           subline a
     where 
-        a.Line like '%${sublineSearch}%'
-        OR a.SublineName like '%${sublineSearch}%'
-    ORDER BY a.SublineName asc
-    ${hasLimit ? "" : "limit 500"}
+        a.Line like '%${search}%'
+        OR a.SublineName like '%${search}%'
+    ORDER BY a.SublineName asc limit 500
+
     `;
   return await prisma.$queryRawUnsafe(query2);
 }
@@ -35,11 +29,9 @@ export async function findSubline(
   SublineName: string,
   req: Request
 ) {
-
   return await prisma.subline.findMany({ where: { Line, SublineName } });
 }
 export async function getline(req: Request) {
-
   const query1 = `
       SELECT
           a.Line
@@ -51,7 +43,6 @@ export async function getline(req: Request) {
 }
 
 export async function addSubline(data: SublineType, req: Request) {
-
   return await prisma.subline.create({
     data,
   });
@@ -67,7 +58,6 @@ export async function updateSubline(
   },
   req: Request
 ) {
-
   return await prisma.subline.update({
     data: {
       SublineName,
@@ -79,12 +69,10 @@ export async function updateSubline(
 }
 
 export async function deletesubline(ID: string, req: Request) {
-
   return await prisma.subline.delete({ where: { ID } });
 }
 
 export async function getNextId(tablename: string, req: Request) {
-
   const result: any = await prisma.$queryRawUnsafe(`
     SELECT AUTO_INCREMENT
     FROM information_schema.TABLES

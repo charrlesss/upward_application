@@ -34,7 +34,7 @@ export async function updateMortgagee(
     },
   });
 }
-export async function getMortgageePolicy(req: Request) {
+export async function getMortgageePolicy() {
 
   const query1 = `
     SELECT 
@@ -45,10 +45,18 @@ export async function getMortgageePolicy(req: Request) {
     `;
   return await prisma.$queryRawUnsafe(query1);
 }
+export async function getMortgagee() {
+
+  const query1 = `
+    SELECT 
+        a.Mortgagee
+    FROM
+          Mortgagee a
+    `;
+  return await prisma.$queryRawUnsafe(query1);
+}
 export async function searchMortgagee(
   mortgageeSearch: string,
-  hasLimit: boolean = false,
-  req: Request
 ) {
 
   const query2 = `

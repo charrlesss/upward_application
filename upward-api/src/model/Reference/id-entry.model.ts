@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { prisma } from "../../controller/index";
 
-
 interface DataEntryClientTypes {
   entry_client_id: string;
   sub_account: string;
@@ -45,7 +44,6 @@ interface EntryAgentType {
   address: string;
   sub_account: string;
   suffix?: string;
-
 }
 
 interface EntryFixedAssetsType {
@@ -146,7 +144,7 @@ const queryList: any = {
   },
   Agent: {
     query: (search: string, hasLimit: boolean = false) => `
-      SELECT 
+    SELECT 
       a.entry_agent_id,
       a.firstname,
       a.lastname,
@@ -159,11 +157,14 @@ const queryList: any = {
       b.telephone,
       a.sub_account,
       a.suffix,
-      a.position
+      a.position,
+      c.ShortName
     FROM
       entry_agent a
       LEFT JOIN
       contact_details b ON a.agent_contact_details_id = b.contact_details_id
+           LEFT JOIN
+      sub_account c ON a.sub_account = c.sub_acct
     where 
     a.entry_agent_id like '%${search}%'
     OR a.firstname like '%${search}%'
@@ -174,15 +175,17 @@ const queryList: any = {
   },
   "Fixed Assets": {
     query: (search: string, hasLimit: boolean = false) => `
-    SELECT 
+  SELECT 
       a.entry_fixed_assets_id,
       a.fullname,
       a.description,
       a.remarks,
       (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) as createdAt,
-      a.sub_account
+      a.sub_account,
+      b.ShortName
     FROM
       entry_fixed_assets a 
+      left join sub_account b on a.sub_account = b.Sub_Acct
     where
     a.entry_fixed_assets_id like '%${search}%'
     OR a.fullname like '%${search}%'
@@ -243,7 +246,6 @@ export async function CreateClientEntry(
   data: DataEntryClientTypes,
   req: Request
 ) {
-
   const { email, telephone, mobile, ...rest } = data;
   await prisma.entry_client.create({
     data: {
@@ -258,17 +260,12 @@ export async function CreateClientEntry(
     },
   });
 }
-export async function CreateEmployeeEntry(
-  data: EntryEmployeeType,
-  req: Request
-) {
-
+export async function CreateEmployeeEntry(data: EntryEmployeeType) {
   await prisma.entry_employee.create({
     data,
   });
 }
-export async function CreateAgentEntry(data: EntryAgentType, req: Request) {
-
+export async function CreateAgentEntry(data: EntryAgentType) {
   const { email, telephone, mobile, ...rest } = data;
 
   await prisma.entry_agent.create({
@@ -286,9 +283,7 @@ export async function CreateAgentEntry(data: EntryAgentType, req: Request) {
 }
 export async function CreateFixedAssetstEntry(
   data: EntryFixedAssetsType,
-  req: Request
 ) {
-
   await prisma.entry_fixed_assets.create({
     data,
   });
@@ -297,7 +292,6 @@ export async function CreateSupplierEntry(
   data: EntrySupplierType,
   req: Request
 ) {
-
   const { email, telephone, mobile, ...rest } = data;
 
   await prisma.entry_supplier.create({
@@ -314,13 +308,11 @@ export async function CreateSupplierEntry(
   });
 }
 export async function CreateOtherEntry(data: EntryOthersType, req: Request) {
-
   await prisma.entry_others.create({
     data,
   });
 }
 export async function getAllSubAccount(req: Request) {
-
   const query = `
     SELECT 
         a.Sub_Acct,
@@ -332,7 +324,6 @@ export async function getAllSubAccount(req: Request) {
   return await prisma.$queryRawUnsafe(query);
 }
 async function updateClient(data: DataEntryClientTypes, req: Request) {
-
   const getEntryClient = await prisma.entry_client.findUnique({
     where: { entry_client_id: data.entry_client_id },
   });
@@ -387,7 +378,6 @@ async function updateClient(data: DataEntryClientTypes, req: Request) {
   ]);
 }
 async function updateEmployee(data: EntryEmployeeType, req: Request) {
-
   const query = `
   update 
       \`entry_employee\`
@@ -406,7 +396,6 @@ async function updateEmployee(data: EntryEmployeeType, req: Request) {
 }
 
 async function updateAgent(data: EntryAgentType, req: Request) {
-
   const getEntryClient = await prisma.entry_agent.findUnique({
     where: { entry_agent_id: data.entry_agent_id },
   });
@@ -440,7 +429,6 @@ async function updateAgent(data: EntryAgentType, req: Request) {
   ]);
 }
 async function updateFixedAssets(data: EntryFixedAssetsType, req: Request) {
-
   const query = `
   update 
       \`entry_fixed_assets\`
@@ -457,7 +445,6 @@ async function updateFixedAssets(data: EntryFixedAssetsType, req: Request) {
   await prisma.$queryRawUnsafe(query);
 }
 async function updateOthers(data: EntryOthersType, req: Request) {
-
   const query = `
   update 
       \`entry_others\`
@@ -472,7 +459,6 @@ async function updateOthers(data: EntryOthersType, req: Request) {
   await prisma.$queryRawUnsafe(query);
 }
 async function updateSupplier(data: EntrySupplierType, req: Request) {
-
   const getEntryClient = await prisma.entry_supplier.findUnique({
     where: { entry_supplier_id: data.entry_supplier_id },
   });
@@ -528,7 +514,6 @@ export async function searchEntry(
   hasLimit: boolean = false,
   req: Request
 ) {
-
   return await prisma.$queryRawUnsafe(
     queryList[`${entry}`].query(search, hasLimit)
   );
@@ -556,7 +541,6 @@ export async function updateEntry(entry: string, data: any, req: Request) {
   }
 }
 export async function deleteEntry(entry: string, id: string, req: Request) {
-
   switch (entry) {
     case "Client":
       await prisma.entry_client.delete({
@@ -614,11 +598,9 @@ export async function deleteEntry(entry: string, id: string, req: Request) {
   }
 }
 export async function getClientInIdEntry(where: string, req: Request) {
-
   return await prisma.$queryRawUnsafe(`call id_entry('${where}')`);
 }
 export async function getSubAccounts(req: Request) {
-
   return await prisma.$queryRawUnsafe(` 
   SELECT 
     a.Sub_Acct,
@@ -629,7 +611,6 @@ export async function getSubAccounts(req: Request) {
 }
 
 export async function IDGenerator(sign: string, type: string, req: Request) {
-
   const lastSeq = await prisma.id_sequence.findFirst({ where: { type } });
   const newCount = incrementLastCount(lastSeq?.last_count as string);
   const newMonth = getMonth();
@@ -643,7 +624,6 @@ export async function UpdateId(
   newYear: string,
   req: Request
 ) {
-
   await prisma.id_sequence.update({
     where: {
       type,
@@ -681,7 +661,8 @@ export async function deleteClientById(client_id: string, req: Request) {
   const contactId: any = await prisma.$queryRawUnsafe(` 
    SELECT client_contact_details_id FROM entry_client where entry_client_id = '${client_id}' ;
 `);
-const contact_details_id = contactId[0].client_contact_details_id;
+
+  const contact_details_id = contactId[0].client_contact_details_id;
   await prisma.$queryRawUnsafe(` 
 delete FROM entry_client where entry_client_id = '${client_id}' ;
 `);
@@ -690,4 +671,21 @@ delete FROM entry_client where entry_client_id = '${client_id}' ;
 WHERE
     contact_details_id = '${contact_details_id}' ;
   `);
+}
+
+export async function deleteEmployeeById(client_id: string) {
+  await prisma.$queryRawUnsafe(` 
+    delete FROM entry_employee where entry_employee_id = '${client_id}' ;
+`);
+}
+
+export async function deleteAgentById(agent_id: string) {
+  await prisma.$queryRawUnsafe(` 
+    delete FROM entry_agent where entry_agent_id = '${agent_id}' ;
+`);
+}
+export async function deleteFixedAssetsById(entry_fixed_assets_id: string) {
+  await prisma.$queryRawUnsafe(` 
+    delete FROM entry_fixed_assets where entry_fixed_assets_id = '${entry_fixed_assets_id}' ;
+`);
 }

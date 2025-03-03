@@ -14,10 +14,10 @@ import {
   updateEntry,
   UpdateId,
   deleteClientById,
+  deleteEmployeeById,
+  deleteAgentById,
+  deleteFixedAssetsById,
 } from "../../model/Reference/id-entry.model";
-// import { IDGenerator, UpdateId } from "../../model/StoredProcedure";
-import { ExportToExcel } from "../../lib/exporttoexcel";
-import { mapDataBasedOnHeaders } from "../../lib/mapbaseonheader";
 import saveUserLogs from "../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import { VerifyToken } from "../Authentication";
@@ -80,7 +80,7 @@ ID_Entry.post("/id-entry-employee", async (req: Request, res: Response) => {
   delete req.body.mode;
   delete req.body.search;
   try {
-    await CreateEmployeeEntry(req.body, req);
+    await CreateEmployeeEntry(req.body);
     await UpdateId("entry employee", newCount, newMonth, newYear, req);
     await saveUserLogs(
       req,
@@ -120,7 +120,7 @@ ID_Entry.post("/id-entry-agent", async (req: Request, res: Response) => {
   delete req.body.mode;
   delete req.body.search;
   try {
-    await CreateAgentEntry(req.body, req);
+    await CreateAgentEntry(req.body);
     await UpdateId("entry agent", newCount, newMonth, newYear, req);
     await saveUserLogs(req, req.body.entry_agent_id, "add", "Entry Agent");
 
@@ -155,7 +155,7 @@ ID_Entry.post("/id-entry-fixed-assets", async (req: Request, res: Response) => {
   delete req.body.mode;
   delete req.body.search;
   try {
-    await CreateFixedAssetstEntry(req.body, req);
+    await CreateFixedAssetstEntry(req.body);
     await UpdateId("entry fixed assets", newCount, newMonth, newYear, req);
     await saveUserLogs(
       req,
@@ -330,9 +330,6 @@ ID_Entry.post(
 
     await deleteClientById(req.body.entry_client_id, req);
 
-    const [s, ym, newCount] = req.body.entry_client_id.split("-");
-    const newMonth = ym.substring(0, 2);
-    const newYear = ym.substring(2);
     req.body.createdAt = new Date();
     delete req.body.mode;
     delete req.body.search;
@@ -341,6 +338,156 @@ ID_Entry.post(
       await CreateClientEntry(req.body, req);
       // await UpdateId("entry client", newCount, newMonth, newYear, req);
       await saveUserLogs(req, req.body.entry_client_id, "add", "Entry Client");
+
+      res.send({
+        message: "Successfully Create New Client ID Entry",
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      });
+    }
+  }
+);
+ID_Entry.post(
+  "/id-entry-employee-update",
+  async (req: Request, res: Response) => {
+    const { userAccess }: any = await VerifyToken(
+      req.cookies["up-ac-login"] as string,
+      process.env.USER_ACCESS as string
+    );
+    if (userAccess.includes("ADMIN")) {
+      return res.send({
+        message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+        success: false,
+      });
+    }
+
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "edit",
+        JSON.stringify(req.body),
+        "employee"
+      ))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    delete req.body.userCodeConfirmation;
+
+    await deleteEmployeeById(req.body.entry_employee_id);
+
+    req.body.createdAt = new Date();
+    delete req.body.mode;
+    delete req.body.search;
+    try {
+      delete req.body.NewShortName;
+      await CreateEmployeeEntry(req.body);
+      // await UpdateId("entry client", newCount, newMonth, newYear, req);
+      await saveUserLogs(
+        req,
+        req.body.entry_employee_id,
+        "add",
+        "Entry Employee"
+      );
+
+      res.send({
+        message: "Successfully Create New Client ID Entry",
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      });
+    }
+  }
+);
+
+ID_Entry.post("/id-entry-agent-update", async (req: Request, res: Response) => {
+  const { userAccess }: any = await VerifyToken(
+    req.cookies["up-ac-login"] as string,
+    process.env.USER_ACCESS as string
+  );
+  if (userAccess.includes("ADMIN")) {
+    return res.send({
+      message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+      success: false,
+    });
+  }
+
+  if (
+    !(await saveUserLogsCode(req, "edit", JSON.stringify(req.body), "agent"))
+  ) {
+    return res.send({ message: "Invalid User Code", success: false });
+  }
+
+  delete req.body.userCodeConfirmation;
+
+  await deleteAgentById(req.body.entry_agent_id);
+
+  req.body.createdAt = new Date();
+  delete req.body.mode;
+  delete req.body.search;
+  try {
+    delete req.body.NewShortName;
+    await CreateAgentEntry(req.body);
+    // await UpdateId("entry client", newCount, newMonth, newYear, req);
+    await saveUserLogs(req, req.body.entry_agent_id, "add", "Entry Agent");
+
+    res.send({
+      message: "Successfully Create New Client ID Entry",
+      success: true,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+    });
+  }
+});
+
+ID_Entry.post(
+  "/id-entry-fixed-assets-update",
+  async (req: Request, res: Response) => {
+    const { userAccess }: any = await VerifyToken(
+      req.cookies["up-ac-login"] as string,
+      process.env.USER_ACCESS as string
+    );
+    if (userAccess.includes("ADMIN")) {
+      return res.send({
+        message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+        success: false,
+      });
+    }
+
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "edit",
+        JSON.stringify(req.body),
+        "Fixed Assets"
+      ))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    delete req.body.userCodeConfirmation;
+
+    await deleteFixedAssetsById(req.body.entry_fixed_assets_id);
+
+    req.body.createdAt = new Date();
+    delete req.body.mode;
+    delete req.body.search;
+    try {
+      delete req.body.NewShortName;
+      await CreateFixedAssetstEntry(req.body);
 
       res.send({
         message: "Successfully Create New Client ID Entry",
@@ -404,158 +551,6 @@ ID_Entry.post("/search-entry", async (req, res) => {
   } catch (err: any) {
     res.send({ success: false, message: err.message, entry: [] });
   }
-});
-
-ID_Entry.get("/export-entry", async (req, res) => {
-  const entryHeaders: any = {
-    Client: {
-      header: [
-        "Entry Client ID",
-        "Company",
-        "Firstname",
-        "Middlename",
-        "Lastname",
-        "Email",
-        "Mobile",
-        "Telephone",
-        "Address",
-        "Sub Account",
-        "Option",
-        "Created At",
-      ],
-      row: [
-        "entry_client_id",
-        "company",
-        "firstname",
-        "middlename",
-        "lastname",
-        "email",
-        "mobile",
-        "telephone",
-        "address",
-        "NewShortName",
-        "option",
-        "createdAt",
-      ],
-    },
-    Employee: {
-      header: [
-        "Entry Employee ID",
-        "Firstname",
-        "Middlename",
-        "Lastname",
-        "Sub Account",
-        "Created At",
-        "Address",
-      ],
-      row: [
-        "entry_employee_id",
-        "firstname",
-        "middlename",
-        "lastname",
-        "NewShortName",
-        "createdAt",
-        "address",
-      ],
-    },
-    Agent: {
-      header: [
-        "Entry Agent ID",
-        "Firstname",
-        "Middlename",
-        "Lastname",
-        "Email",
-        "Mobile",
-        "Telephone",
-        "Created At",
-        "Address",
-      ],
-      row: [
-        "entry_agent_id",
-        "firstname",
-        "middlename",
-        "lastname",
-        "email",
-        "mobile",
-        "telephone",
-        "createdAt",
-        "address",
-      ],
-    },
-    "Fixed Assets": {
-      header: [
-        "Entry Fixed Assets ID",
-        "Fullname",
-        "Description",
-        "Remarks",
-        "Created At",
-      ],
-      row: [
-        "entry_fixed_assets_id",
-        "fullname",
-        "description",
-        "remarks",
-        "createdAt",
-      ],
-    },
-    Supplier: {
-      header: [
-        "Entry Supplier ID",
-        "Company",
-        "Firstname",
-        "Middlename",
-        "Lastname",
-        "Email",
-        "Mobile",
-        "Telephone",
-        "Address",
-        "TIN NO",
-        "VAT Type",
-        "Option",
-        "Created At",
-      ],
-      row: [
-        "entry_supplier_id",
-        "company",
-        "firstname",
-        "middlename",
-        "lastname",
-        "email",
-        "mobile",
-        "telephone",
-        "address",
-        "tin_no",
-        "VAT_Type",
-        "option",
-        "createdAt",
-      ],
-    },
-    Others: {
-      header: ["Entry Others ID", "Description", "Created At"],
-      row: ["entry_others_id", "description", "createdAt"],
-    },
-  };
-  const { entry, entrySearch, isAll } = req.query;
-  let data = [];
-  if (JSON.parse(isAll as string)) {
-    data = mapDataBasedOnHeaders(
-      (await searchEntry(entry as string, "", true, req)) as Array<any>,
-      entryHeaders,
-      entry as string
-    );
-  } else {
-    data = mapDataBasedOnHeaders(
-      (await searchEntry(
-        entry as string,
-        entrySearch as string,
-        false,
-        req
-      )) as Array<any>,
-      entryHeaders,
-      entry as string
-    );
-  }
-  ExportToExcel(data, res);
 });
 
 ID_Entry.post("/entry-delete", async (req, res) => {

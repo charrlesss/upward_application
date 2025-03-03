@@ -9,15 +9,9 @@ interface RateType {
 }
 
 export async function addRate(data: RateType, req: Request) {
-
   return await prisma.rates.create({ data });
 }
-export async function searchRate(
-  mortgageeSearch: string,
-  hasLimit: boolean = false,
-  req: Request
-) {
-
+export async function searchRate(search: string) {
   const query = `
   SELECT 
     a.ID,
@@ -29,18 +23,17 @@ export async function searchRate(
   FROM
     rates a
     where
-        a.ID like '%${mortgageeSearch}%'
-        OR a.Account like '%${mortgageeSearch}%'
-        OR a.Line like '%${mortgageeSearch}%'
-        OR a.Type like '%${mortgageeSearch}%'
-        OR a.Rate like '%${mortgageeSearch}%'
+        a.ID like '%${search}%'
+        OR a.Account like '%${search}%'
+        OR a.Line like '%${search}%'
+        OR a.Type like '%${search}%'
+        OR a.Rate like '%${search}%'
     ORDER BY a.Account asc
     limit 500
     `;
   return await prisma.$queryRawUnsafe(query);
 }
-export async function getPolicyAccounts(req: Request) {
-
+export async function getPolicyAccounts() {
   const query = ` 
     SELECT 
         a.Account
@@ -50,7 +43,6 @@ export async function getPolicyAccounts(req: Request) {
   return await prisma.$queryRawUnsafe(query);
 }
 export async function getBonds(req: Request) {
-
   const query = ` 
     SELECT 
         a.SublineName
@@ -62,7 +54,6 @@ export async function getBonds(req: Request) {
   return await prisma.$queryRawUnsafe(query);
 }
 export async function getFire(req: Request) {
-
   const query = ` 
       SELECT 
           a.SublineName
@@ -79,13 +70,11 @@ export async function updateRate(
   Rate: string,
   req: Request
 ) {
-
   return await prisma.rates.update({ where: { ID }, data: { Type, Rate } });
 }
 export async function addRates(data: RateType, req: Request) {
   await prisma.rates.create({ data });
 }
 export async function deleteRate(ID: string, req: Request) {
-
   await prisma.rates.delete({ where: { ID } });
 }

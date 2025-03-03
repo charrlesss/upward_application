@@ -8,6 +8,7 @@ import {
   getMortgageePolicy,
   updateMortgagee,
   searchMortgagee,
+  getMortgagee,
 } from "../../model/Reference/mortgagee.model";
 import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import saveUserLogs from "../../lib/save_user_logs";
@@ -15,31 +16,41 @@ import { VerifyToken } from "../Authentication";
 
 const Mortgagee = express.Router();
 
-Mortgagee.get("/get-mortgagee", async (req: Request, res: Response) => {
-  const { mortgageeSearch } = req.query;
+Mortgagee.post("/get-mortgagee", async (req: Request, res: Response) => {
   try {
-    const mortgagee = await searchMortgagee(
-      mortgageeSearch as string,
-      false,
-      req
-    );
-    const policy = await getMortgageePolicy(req);
     res.send({
       message: "Get Mortgagee Successfully!",
       success: true,
-      mortgagee: {
-        mortgagee,
-        policy,
-      },
+      data: await getMortgagee(),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });
+Mortgagee.post(
+  "/get-policy-from-mortgagee",
+  async (req: Request, res: Response) => {
+    try {
+      res.send({
+        message: "Get Mortgagee Successfully!",
+        success: true,
+        data: await getMortgageePolicy(),
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        data: [],
+      });
+    }
+  }
+);
 
 Mortgagee.post("/add-mortgagee", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
@@ -96,7 +107,7 @@ Mortgagee.post("/delete-mortgagee", async (req: Request, res: Response) => {
     if (!(await saveUserLogsCode(req, "delete", Mortgagee, "Mortgagee"))) {
       return res.send({ message: "Invalid User Code", success: false });
     }
-
+    console.log(req.body)
     await deleteMortgagee(Mortgagee, req);
     res.send({
       message: "Delete Mortgagee Successfully!",
@@ -146,24 +157,19 @@ Mortgagee.post("/update-mortgagee", async (req: Request, res: Response) => {
   }
 });
 
-Mortgagee.get("/search-mortgagee", async (req: Request, res: Response) => {
-  const { mortgageeSearch } = req.query;
+Mortgagee.post("/search-mortgagee", async (req: Request, res: Response) => {
   try {
-    const mortgagee: any = await searchMortgagee(
-      mortgageeSearch as string,
-      false,
-      req
-    );
     res.send({
       message: "Search Policy Account Successfuly",
       success: true,
-      mortgagee,
+      data: await searchMortgagee(req.body.search),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });
@@ -180,7 +186,7 @@ Mortgagee.get("/export-mortgagee", async (req, res) => {
   let data = [];
   if (JSON.parse(isAll as string)) {
     data = mapDataBasedOnHeaders(
-      (await searchMortgagee("", true, req)) as Array<any>,
+      (await searchMortgagee("")) as Array<any>,
       subAccountHeaders,
       "Mortgagee"
     );
@@ -188,8 +194,7 @@ Mortgagee.get("/export-mortgagee", async (req, res) => {
     data = mapDataBasedOnHeaders(
       (await searchMortgagee(
         mortgageeSearch as string,
-        false,
-        req
+
       )) as Array<any>,
       subAccountHeaders,
       "Mortgagee"

@@ -36,30 +36,6 @@ function getZeroFirstInput(data: string) {
   }
   return addZeroFromSeries;
 }
-CTPL.get("/get-ctpl", async (req: Request, res: Response) => {
-  const { ctplSearch } = req.query;
-  try {
-    const ctpl = await searchCTPL(ctplSearch as string, false, req);
-    const prefix = await getPrefix(req);
-    const type = await getType(req);
-
-    res.send({
-      message: "Get CTPL Successfully!",
-      success: true,
-      ctpl: {
-        ctpl,
-        prefix,
-        type,
-      },
-    });
-  } catch (err: any) {
-    console.log(err.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
 
 CTPL.post("/add-ctpl", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
@@ -256,63 +232,23 @@ CTPL.post("/update-ctpl", async (req: Request, res: Response) => {
   }
 });
 
-CTPL.get("/search-ctpl", async (req: Request, res: Response) => {
-  const { ctplSearch } = req.query;
+CTPL.post("/search-ctpl", async (req: Request, res: Response) => {
   try {
-    const ctpl: any = await searchCTPL(ctplSearch as string, false, req);
     res.send({
       message: "Search Policy Account Successfuly",
       success: true,
-      ctpl,
+      data:await searchCTPL(req.body.search)
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data:[]
     });
   }
 });
 
-CTPL.get("/export-ctpl", async (req, res) => {
-  const subAccountHeaders: any = {
-    CTPL: {
-      header: [
-        "Prefix",
-        "Number SeriesFrom",
-        "Number SeriesTo",
-        "Cost",
-        "Created By",
-        "Created At",
-      ],
-      row: [
-        "Prefix",   
-        "NumSeriesFrom",
-        "NumSeriesTo",
-        "Cost",
-        "CreatedBy",
-        "createdAt",
-      ],
-    },
-  };
-  const { ctplSearch, isAll } = req.query;
 
-  let data = [];
-  if (JSON.parse(isAll as string)) {
-    data = mapDataBasedOnHeaders(
-      (await searchCTPL("", true, req)) as Array<any>,
-      subAccountHeaders,
-      "CTPL"
-    );
-  } else {
-    data = mapDataBasedOnHeaders(
-      (await searchCTPL(ctplSearch as string, false, req)) as Array<any>,
-      subAccountHeaders,
-      "CTPL"
-    );
-  }
-
-  ExportToExcel(data, res);
-});
 
 export default CTPL;

@@ -1,19 +1,15 @@
 import { Request } from "express";
 import { prisma } from "../../controller/index";
 
-
 export async function findTransactionCode(Code: string, req: Request) {
-
   return await prisma.transaction_code.findUnique({ where: { Code } });
 }
 
 export async function addTransactionCode(data: any, req: Request) {
-
   return await prisma.transaction_code.create({ data });
 }
 
 export async function updateTransactionCode(data: any, req: Request) {
-
   return await prisma.transaction_code.update({
     data,
     where: { Code: data.Code },
@@ -21,15 +17,10 @@ export async function updateTransactionCode(data: any, req: Request) {
 }
 
 export async function deleteTransactionCode(data: any, req: Request) {
-
   return await prisma.transaction_code.delete({ where: { Code: data.Code } });
 }
 
-export async function getTransactionCode(
-  transactionCodeSearch: any,
-  req: Request
-) {
-
+export async function getTransactionCode(search: any) {
   return await prisma.$queryRawUnsafe(`
     SELECT 
     IF(a.Inactive = 0, 'NO', 'YES') AS Inactive,
@@ -39,7 +30,7 @@ export async function getTransactionCode(
     FROM
       transaction_code a
     WHERE
-    a.Acct_Code LIKE '%${transactionCodeSearch}%'
-        OR a.Code LIKE '%${transactionCodeSearch}%'
+    a.Acct_Code LIKE '%${search}%'
+        OR a.Code LIKE '%${search}%'
     `);
 }

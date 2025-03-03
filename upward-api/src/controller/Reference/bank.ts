@@ -12,18 +12,7 @@ import { VerifyToken } from "../Authentication";
 
 const Bank = express.Router();
 
-Bank.get("/get-banks", async (req: Request, res: Response) => {
-  const { bankSearch } = req.query;
-  try {
-    res.send({
-      message: "Get Rates Successfully!",
-      success: true,
-      bank: await getBanks(bankSearch as string, req),
-    });
-  } catch (err: any) {
-    res.send({ message: err.message, success: false });
-  }
-});
+
 
 Bank.post("/add-bank", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
@@ -123,19 +112,20 @@ Bank.post("/delete-bank", async (req: Request, res: Response) => {
   }
 });
 
-Bank.get("/search-bank", async (req: Request, res: Response) => {
+Bank.post("/search-bank", async (req: Request, res: Response) => {
   const { bankSearch } = req.query;
   try {
     res.send({
       message: "Search Bank Successfuly",
       success: true,
-      bank: await getBanks(bankSearch as string, req),
+      data: await getBanks(req.body.search),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data: [],
     });
   }
 });

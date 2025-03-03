@@ -5,12 +5,83 @@ import {
   removeBankAccount,
   updateBankAccount,
   searchClient,
+  searchBankModel,
+  searchChartAccountModel,
+  searchClientModel,
+  searchBankAccountsModel
 } from "../../model/Reference/bank-account";
 import saveUserLogs from "../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import { VerifyToken } from "../Authentication";
 
 const BankAccount = express.Router();
+
+BankAccount.post("/search-bank-accounts", async (req: Request, res: Response) => {
+  try {
+
+    res.send({
+      message: "Get Bank Account Successfully!",
+      success: true,
+      data: await searchBankAccountsModel(req.body.search),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data:[]
+    });
+  }
+});
+BankAccount.post("/search-bank-from-bank-account", async (req: Request, res: Response) => {
+  try {
+    res.send({
+      message: "Get Bank Account Successfully!",
+      success: true,
+      data: await searchBankModel(req.body.search),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data:[]
+    });
+  }
+});
+BankAccount.post("/search-chart-account-from-bank-account", async (req: Request, res: Response) => {
+  try {
+    res.send({
+      message: "Get Bank Account Successfully!",
+      success: true,
+      data: await searchChartAccountModel(req.body.search),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data:[]
+    });
+  }
+});
+BankAccount.post("/search-client-from-bank-account", async (req: Request, res: Response) => {
+  try {
+    res.send({
+      message: "Get Bank Account Successfully!",
+      success: true,
+      data: await searchClientModel(req.body.search),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      data:[]
+    });
+  }
+});
+
 BankAccount.get("/get-bank-account", async (req: Request, res: Response) => {
   const { bankAccountSearch } = req.query;
   try {
@@ -91,7 +162,7 @@ BankAccount.post(
 
     try {
       if (
-        !(await saveUserLogsCode(req, "edit", req.body.Auto, "Bank-Account"))
+        !(await saveUserLogsCode(req, "edit", req.body.Account_No, "Bank-Account"))
       ) {
         return res.send({ message: "Invalid User Code", success: false });
       }

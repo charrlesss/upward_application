@@ -32,7 +32,7 @@ PolicyAccount.post(
       delete req.body.mode;
       delete req.body.search;
       req.body.createdAt = new Date();
-      if (await checkedAccountIsExisting(req.body.Account as string, req)) {
+      if (await checkedAccountIsExisting(req.body.Account)) {
         return res.send({
           message: "This account is already exist",
           success: false,
@@ -69,7 +69,7 @@ PolicyAccount.post(
         !(await saveUserLogsCode(
           req,
           "edit",
-          req.body.Account,
+          req.body.AccountCode,
           "Policy Account"
         ))
       ) {
@@ -80,10 +80,7 @@ PolicyAccount.post(
       delete req.body.search;
       delete req.body.userCodeConfirmation;
 
-      const findAccount = await checkedAccountIsExisting(
-        req.body.Account as string,
-        req
-      );
+      const findAccount = await checkedAccountIsExisting(req.body.AccountCode);
       if (findAccount == null) {
         return res.send({
           message: "Update Failed Account not Found!",
@@ -92,7 +89,7 @@ PolicyAccount.post(
       }
       delete req.body.createdAt;
       updateValues(req.body);
-      await updatePolicyAccount(req.body, findAccount.Account, req);
+      await updatePolicyAccount(req.body);
       res.send({ message: "Update Policy Account Successfuly", success: true });
     } catch (err: any) {
       console.log(err.message);
@@ -138,61 +135,32 @@ PolicyAccount.post(
     }
   }
 );
-PolicyAccount.get(
-  "/get-policy-account",
-  async (req: Request, res: Response) => {
-    try {
-      const { policySearch } = req.query;
-      const policy: any = await searchPolicy(
-        policySearch as string,
-        false,
-        req
-      );
-      policy.map((obj: any) => {
-        return updateValues(obj);
-      });
-      res.send({
-        message: "Get Policy Account Successfuly",
-        success: true,
-        policy,
-      });
-    } catch (err: any) {
-      console.log(err.message);
-      res.send({
-        success: false,
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      });
-    }
-  }
-);
-PolicyAccount.get(
+PolicyAccount.post(
   "/search-policy-account",
   async (req: Request, res: Response) => {
     try {
-      const { policySearch } = req.query;
-      const policy: any = await searchPolicy(
-        policySearch as string,
-        false,
-        req
-      );
-
-      policy.map((obj: any) => {
-        return updateValues(obj);
+      let data: any = await searchPolicy(req.body.search, false);
+      data = data.map((itm: any) => {
+        itm.Inactive = itm.Inactive === 1;
+        return { ...itm, _Inactive: itm.Inactive === true ? "YES" : "" };
       });
+
       res.send({
-        message: "Search Policy Account Successfuly",
+        message: "Get Policy Account Successfuly",
         success: true,
-        policy,
+        data,
       });
     } catch (err: any) {
       console.log(err.message);
       res.send({
         success: false,
         message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        data: [],
       });
     }
   }
 );
+
 function updateValues(obj: any) {
   const valueMappings: any = {
     1: true,
@@ -219,13 +187,13 @@ PolicyAccount.get("/export-policy-account", async (req, res) => {
     let data = [];
     if (JSON.parse(isAll as string)) {
       data = mapDataBasedOnHeaders(
-        (await searchPolicy("", true, req)) as Array<any>,
+        (await searchPolicy("", true)) as Array<any>,
         entryHeaders,
         "Policy"
       );
     } else {
       data = mapDataBasedOnHeaders(
-        (await searchPolicy(policySearch as string, false, req)) as Array<any>,
+        (await searchPolicy(policySearch as string, false)) as Array<any>,
         entryHeaders,
         "Policy"
       );

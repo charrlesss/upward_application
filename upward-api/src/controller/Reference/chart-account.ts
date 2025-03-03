@@ -12,23 +12,6 @@ import { VerifyToken } from "../Authentication";
 
 const ChartAccount = express.Router();
 
-ChartAccount.get("/get-chart-accounts", async (req: Request, res: Response) => {
-  const { chartAccountSearch } = req.query;
-  try {
-    res.send({
-      message: "Get Chart Account Successfully!",
-      success: true,
-      chartAccount: await getChartAccount(chartAccountSearch as string, req),
-    });
-  } catch (err: any) {
-    console.log(err.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
-
 ChartAccount.post("/add-chart-account", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -150,19 +133,19 @@ ChartAccount.post(
   }
 );
 
-ChartAccount.get(
+ChartAccount.post(
   "/search-chart-account",
   async (req: Request, res: Response) => {
-    const { chartAccountSearch } = req.query;
     try {
       res.send({
         message: "Get Chart Account Successfully!",
         success: true,
-        chartAccount: await getChartAccount(chartAccountSearch as string, req),
+        data: await getChartAccount(req.body.search),
       });
     } catch (err: any) {
       console.log(err.message);
       res.send({
+        data: [],
         success: false,
         message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       });
