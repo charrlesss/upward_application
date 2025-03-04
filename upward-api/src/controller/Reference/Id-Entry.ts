@@ -17,10 +17,14 @@ import {
   deleteEmployeeById,
   deleteAgentById,
   deleteFixedAssetsById,
+  deleteOthersById,
+  deleteSupplierById,
 } from "../../model/Reference/id-entry.model";
 import saveUserLogs from "../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import { VerifyToken } from "../Authentication";
+import { drawExcel } from "../../lib/excel-generator";
+import { prisma } from "../../controller";
 
 const ID_Entry = express.Router();
 
@@ -195,7 +199,7 @@ ID_Entry.post("/id-entry-supplier", async (req: Request, res: Response) => {
   delete req.body.mode;
   delete req.body.search;
   try {
-    await CreateSupplierEntry(req.body, req);
+    await CreateSupplierEntry(req.body);
     await UpdateId("entry supplier", newCount, newMonth, newYear, req);
     await saveUserLogs(
       req,
@@ -236,7 +240,7 @@ ID_Entry.post("/id-entry-others", async (req: Request, res: Response) => {
   delete req.body.mode;
   delete req.body.search;
   try {
-    await CreateOtherEntry(req.body, req);
+    await CreateOtherEntry(req.body);
     await UpdateId("entry others", newCount, newMonth, newYear, req);
     await saveUserLogs(req, req.body.entry_others_id, "add", "Entry Others");
 
@@ -340,7 +344,7 @@ ID_Entry.post(
       await saveUserLogs(req, req.body.entry_client_id, "add", "Entry Client");
 
       res.send({
-        message: "Successfully Create New Client ID Entry",
+        message: "Successfully Update Client ID Entry",
         success: true,
       });
     } catch (err: any) {
@@ -396,7 +400,7 @@ ID_Entry.post(
       );
 
       res.send({
-        message: "Successfully Create New Client ID Entry",
+        message: "Successfully Update Employee ID Entry",
         success: true,
       });
     } catch (err: any) {
@@ -441,7 +445,7 @@ ID_Entry.post("/id-entry-agent-update", async (req: Request, res: Response) => {
     await saveUserLogs(req, req.body.entry_agent_id, "add", "Entry Agent");
 
     res.send({
-      message: "Successfully Create New Client ID Entry",
+      message: "Successfully Update Agent  ID Entry",
       success: true,
     });
   } catch (err: any) {
@@ -490,7 +494,7 @@ ID_Entry.post(
       await CreateFixedAssetstEntry(req.body);
 
       res.send({
-        message: "Successfully Create New Client ID Entry",
+        message: "Successfully Update Fixed Assets  ID Entry",
         success: true,
       });
     } catch (err: any) {
@@ -502,7 +506,111 @@ ID_Entry.post(
     }
   }
 );
+ID_Entry.post(
+  "/id-entry-others-update",
+  async (req: Request, res: Response) => {
+    const { userAccess }: any = await VerifyToken(
+      req.cookies["up-ac-login"] as string,
+      process.env.USER_ACCESS as string
+    );
+    if (userAccess.includes("ADMIN")) {
+      return res.send({
+        message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+        success: false,
+      });
+    }
 
+    if (
+      !(await saveUserLogsCode(req, "edit", JSON.stringify(req.body), "others"))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    delete req.body.userCodeConfirmation;
+
+    await deleteOthersById(req.body.entry_others_id);
+
+    req.body.createdAt = new Date();
+    delete req.body.mode;
+    delete req.body.search;
+    try {
+      delete req.body.NewShortName;
+      await CreateOtherEntry(req.body);
+      await saveUserLogs(
+        req,
+        req.body.entry_others_id,
+        "update",
+        "Entry Others"
+      );
+
+      res.send({
+        message: "Successfully Update Others ID Entry",
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      });
+    }
+  }
+);
+ID_Entry.post(
+  "/id-entry-supplier-update",
+  async (req: Request, res: Response) => {
+    const { userAccess }: any = await VerifyToken(
+      req.cookies["up-ac-login"] as string,
+      process.env.USER_ACCESS as string
+    );
+    if (userAccess.includes("ADMIN")) {
+      return res.send({
+        message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+        success: false,
+      });
+    }
+
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "edit",
+        JSON.stringify(req.body),
+        "supplier"
+      ))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    delete req.body.userCodeConfirmation;
+
+    await deleteSupplierById(req.body.entry_supplier_id);
+
+    req.body.createdAt = new Date();
+    delete req.body.mode;
+    delete req.body.search;
+    try {
+      delete req.body.NewShortName;
+      await CreateSupplierEntry(req.body);
+      await saveUserLogs(
+        req,
+        req.body.entry_supplier_id,
+        "update",
+        "Entry Supplier"
+      );
+
+      res.send({
+        message: "Successfully Update  Supplier ID Entry",
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err.message);
+      res.send({
+        success: false,
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      });
+    }
+  }
+);
 ID_Entry.post("/id-entry-generate-id", async (req: Request, res: Response) => {
   res.send({
     success: false,
@@ -606,6 +714,109 @@ ID_Entry.get("/sub-account", async (req: Request, res: Response) => {
   } catch (err: any) {
     res.send({ success: false, message: err.message });
   }
+});
+
+ID_Entry.post("/export-client-record", async (req: Request, res: Response) => {
+  const title = req.body.title;
+  const data = (await prisma.$queryRawUnsafe(
+    `
+    SELECT 
+    a.*, 
+    b.*,
+    c.ShortName
+FROM
+    entry_client a
+        LEFT JOIN
+      contact_details b ON a.client_contact_details_id = b.contact_details_id
+    LEFT JOIN
+    sub_account c ON a.sub_account = c.Sub_Acct
+    `
+  )) as Array<any>;
+  drawExcel(res, {
+    columns: [
+      { key: "entry_client_id", width: 22 },
+      { key: "firstname", width: 30 },
+      { key: "middlename", width: 30 },
+      { key: "lastname", width: 30 },
+      { key: "company", width: 55 },
+      { key: "ShortName", width: 17 },
+      { key: "client_mortgagee", width: 30 },
+      { key: "mobile", width: 15 },
+      { key: "address", width: 55 },
+      { key: "createdAt", width: 17 },
+    ],
+    data: data,
+    beforeDraw: (props: any, worksheet: any) => {
+      title.split("\n").forEach((t: string, idx: number) => {
+        const tt = worksheet.addRow([t]);
+        props.mergeCells(
+          idx + 1,
+          props.alphabet[0],
+          props.alphabet[props.columns.length - 1]
+        );
+        const alignColumns = props.alphabet.slice(0, props.columns.length);
+        props.setAlignment(1, alignColumns, {
+          horizontal: "left",
+          vertical: "middle",
+        });
+        tt.font = { bolder: true };
+      });
+      props.setFontSize([1, 2, 3], 12);
+
+      worksheet.addRow([]);
+      worksheet.addRow([]);
+      // Now, insert the column header row after the custom rows (row 3)
+      const headerRow = worksheet.addRow([
+        "CLIENT ID",
+        "FIRST NAME",
+        "MIDDLE NAME",
+        "LAST NAME",
+        "COMPANY",
+        "SUB ACCOUNT",
+        "CLIENT MORTGAGEE",
+        "CONTACT NUMBER",
+        "ADDRESS",
+        "DATE CREATED",
+      ]);
+      headerRow.font = { bold: true };
+      props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
+        bottom: { style: "thin" },
+      });
+    },
+    onDraw: (props: any, rowItm: any, rowIdx: number) => {
+      props.setAlignment(rowIdx + 6, ["G"], {
+        horizontal: "right",
+        vertical: "middle",
+      });
+    },
+    afterDraw: (props: any, worksheet: any) => {
+      // props.boldText(1, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+      // props.boldText(2, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+      // props.boldText(3, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+
+     
+
+      // props.mergeCells(data.length - 1 + 7, "A", "C");
+      // props.mergeCells(data.length - 1 + 7, "D", "F");
+      // props.boldText(data.length - 1 + 7, [
+      //   "A",
+      //   "B",
+      //   "C",
+      //   "D",
+      //   "E",
+      //   "F",
+      //   "G",
+      //   "H",
+      // ]);
+      // props.addBorder(data.length - 1 + 7, ["G"], {
+      //   top: { style: "thin" },
+      // });
+      // props.setAlignment(data.length - 1 + 7, ["G"], {
+      //   horizontal: "right",
+      //   vertical: "middle",
+      // });
+    },
+  });
 });
 
 function capitalizeFirstLetter(string: string) {

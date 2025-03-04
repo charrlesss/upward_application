@@ -127,7 +127,7 @@ const queryList: any = {
         a.lastname,
         a.address,
          a.suffix,
-        CONCAT(b.Acronym, '-', b.ShortName) AS NewShortName,
+        b.ShortName AS NewShortName,
         (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) as createdAt,
         b.Sub_Acct as sub_account
     FROM
@@ -195,7 +195,7 @@ const queryList: any = {
   },
   Supplier: {
     query: (search: string, hasLimit: boolean = false) => `
-    SELECT  
+  SELECT  
       a.entry_supplier_id,
       a.firstname,
       a.lastname,
@@ -209,18 +209,21 @@ const queryList: any = {
       b.email,
       b.mobile,
       b.telephone,
-      a.sub_account
+      a.sub_account,
+      c.ShortName
     FROM
       entry_supplier a
       LEFT JOIN
       contact_details b ON a.supplier_contact_details_id = b.contact_details_id
+       LEFT JOIN
+      sub_account c ON a.sub_account = c.Sub_Acct
     where 
     a.entry_supplier_id like '%${search}%'
     OR a.firstname like '%${search}%'
     OR a.lastname like '%${search}%'
     OR a.company like '%${search}%'
     ORDER BY a.createdAt desc 
-   limit 500
+   limit 100
   `,
   },
   Others: {
@@ -230,9 +233,11 @@ const queryList: any = {
       a.description,
       (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) AS createdAt,
       a.sub_account,
-      a.remarks
+      a.remarks,
+      b.ShortName
     FROM
       entry_others a
+       left join sub_account b on a.sub_account = b.Sub_Acct
     where
     a.entry_others_id like '%${search}%'
     OR a.description like '%${search}%'
@@ -281,17 +286,12 @@ export async function CreateAgentEntry(data: EntryAgentType) {
     },
   });
 }
-export async function CreateFixedAssetstEntry(
-  data: EntryFixedAssetsType,
-) {
+export async function CreateFixedAssetstEntry(data: EntryFixedAssetsType) {
   await prisma.entry_fixed_assets.create({
     data,
   });
 }
-export async function CreateSupplierEntry(
-  data: EntrySupplierType,
-  req: Request
-) {
+export async function CreateSupplierEntry(data: EntrySupplierType) {
   const { email, telephone, mobile, ...rest } = data;
 
   await prisma.entry_supplier.create({
@@ -307,7 +307,7 @@ export async function CreateSupplierEntry(
     },
   });
 }
-export async function CreateOtherEntry(data: EntryOthersType, req: Request) {
+export async function CreateOtherEntry(data: EntryOthersType) {
   await prisma.entry_others.create({
     data,
   });
@@ -684,8 +684,31 @@ export async function deleteAgentById(agent_id: string) {
     delete FROM entry_agent where entry_agent_id = '${agent_id}' ;
 `);
 }
+
 export async function deleteFixedAssetsById(entry_fixed_assets_id: string) {
   await prisma.$queryRawUnsafe(` 
     delete FROM entry_fixed_assets where entry_fixed_assets_id = '${entry_fixed_assets_id}' ;
 `);
+}
+
+export async function deleteOthersById(agent_id: string) {
+  await prisma.$queryRawUnsafe(` 
+    delete FROM entry_others where entry_others_id = '${agent_id}' ;
+`);
+}
+
+export async function deleteSupplierById(supplier_id: string) {
+  const contactId: any = await prisma.$queryRawUnsafe(` 
+   SELECT supplier_contact_details_id FROM entry_supplier where entry_supplier_id = '${supplier_id}' ;
+`);
+
+  const contact_details_id = contactId[0].client_contact_details_id;
+  await prisma.$queryRawUnsafe(` 
+    delete FROM entry_supplier where entry_supplier_id = '${supplier_id}' ;
+`);
+  await prisma.$queryRawUnsafe(` 
+  DELETE FROM contact_details 
+  WHERE
+      contact_details_id = '${contact_details_id}' ;
+  `);
 }
