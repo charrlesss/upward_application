@@ -14,7 +14,7 @@ import {
   deletePulloutRequestAutoCodes,
   checkApprovedCodeIsUsed,
   updateCode,
-  approved
+  approved,
 } from "../../../model/Task/Accounting/pullout.model";
 import { getUserById } from "../../../model/StoredProcedure";
 import generateUniqueUUID from "../../../lib/generateUniqueUUID";
@@ -28,128 +28,157 @@ import { defaultFormat } from "../../../lib/defaultDateFormat";
 const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
-const EmailToSend = [
+
+const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
-  "encoder.upward@yahoo.com",
-  "charlespalencia21@gmail.com",
 ];
-PulloutRequest.post(`/pullout/reqeust/save-pullout-request`, async (req, res) => {
-  try {
+const UCSMIEmailToSend = ["upward.csmi@yahoo.com", "upward.csmi@gmail.com"];
 
-    const { userAccess }: any = await VerifyToken(
-      req.cookies["up-ac-login"] as string,
-      process.env.USER_ACCESS as string
-    );
-    if (userAccess.includes("ADMIN")) {
-      return res.send({
-        message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
-        success: false,
-      });
-    }
+PulloutRequest.post(
+  `/pullout/reqeust/save-pullout-request`,
+  async (req, res) => {
+    try {
+      const department = req.cookies["up-dpm-login"];
+      const { userAccess }: any = await VerifyToken(
+        req.cookies["up-ac-login"] as string,
+        process.env.USER_ACCESS as string
+      );
+      if (userAccess.includes("ADMIN")) {
+        return res.send({
+          message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+          success: false,
+        });
+      }
 
-    const subtitle = `
+      const subtitle = `
     <h3>Check storage pullout</h3>
     <h3>Pullout Request</h3>
     `;
-    const { rcpn: RCPNo, ppno: PNNo, name: Name, reason, data: selected, flag: requestMode } = req.body;
-    const user = await getUserById((req.user as any).UserId);
-    let text = "";
-    const Requested_By = user?.Username;
-    const Requested_Date = new Date();
-    text = getSelectedCheck(selected);
-
-    if (requestMode === "edit") {
-      await deletePulloutRequest(req, RCPNo);
-      await deletePulloutRequestDetails(req, RCPNo);
-    }
-    await deletePulloutRequestAutoCodes(req, RCPNo)
-
-    await createPulloutRequest(
-      {
-        RCPNo: RCPNo,
-        PNNo: PNNo,
-        Reason: reason,
-        Status: "PENDING",
-        Requested_By: user?.Username,
-        Branch: "HO",
-        Requested_Date: defaultFormat(new Date()),
-      },
-      req
-    );
-    const status = requestMode === "edit" ? ["APPROVED", "CANCEL", "DISAPPROVED"] : ["APPROVED", "PENDING", "CANCEL", "DISAPPROVED"]
-    await createPulloutRequestDetailsFunc(selected, RCPNo, req, status);
-    await updateAnyId("pullout", req);
-
-
-    const approvalCode = generateRandomNumber(6);
-
-    for (const toEmail of EmailToSend) {
-      await sendRequestEmail({
-        RCPNo: RCPNo,
-        PNNo: PNNo,
+      const {
+        rcpn: RCPNo,
+        ppno: PNNo,
+        name: Name,
         reason,
-        client: Name,
-        text,
-        Requested_By,
-        Requested_Date,
-        approvalCode,
-        subtitle,
-        toEmail,
+        data: selected,
+        flag: requestMode,
+      } = req.body;
+      const user = await getUserById((req.user as any).UserId);
+      let text = "";
+      const Requested_By = user?.Username;
+      const Requested_Date = new Date();
+      text = getSelectedCheck(selected);
+
+      if (requestMode === "edit") {
+        await deletePulloutRequest(req, RCPNo);
+        await deletePulloutRequestDetails(req, RCPNo);
+      }
+      await deletePulloutRequestAutoCodes(req, RCPNo);
+
+      await createPulloutRequest(
+        {
+          RCPNo: RCPNo,
+          PNNo: PNNo,
+          Reason: reason,
+          Status: "PENDING",
+          Requested_By: user?.Username,
+          Branch: "HO",
+          Requested_Date: defaultFormat(new Date()),
+        },
+        req
+      );
+      const status =
+        requestMode === "edit"
+          ? ["APPROVED", "CANCEL", "DISAPPROVED"]
+          : ["APPROVED", "PENDING", "CANCEL", "DISAPPROVED"];
+      await createPulloutRequestDetailsFunc(selected, RCPNo, req, status);
+      await updateAnyId("pullout", req);
+
+      const approvalCode = generateRandomNumber(6);
+
+      if (department === "UMIS") {
+        for (const toEmail of UMISEmailToSend) {
+          await sendRequestEmail({
+            RCPNo: RCPNo,
+            PNNo: PNNo,
+            reason,
+            client: Name,
+            text,
+            Requested_By,
+            Requested_Date,
+            approvalCode,
+            subtitle,
+            toEmail,
+          });
+        }
+      } else {
+        for (const toEmail of UCSMIEmailToSend) {
+          await sendRequestEmail({
+            RCPNo: RCPNo,
+            PNNo: PNNo,
+            reason,
+            client: Name,
+            text,
+            Requested_By,
+            Requested_Date,
+            approvalCode,
+            subtitle,
+            toEmail,
+          });
+        }
+      }
+
+      const pullout_auth_codes_id = await generateUniqueUUID(
+        "pullout_auth_codes",
+        "pullout_auth_codes_id"
+      );
+      await insertApprovalCode(
+        {
+          pullout_auth_codes_id,
+          RCPN: RCPNo,
+          For_User: `[${UMISEmailToSend.join(",")}]`,
+          Approved_Code: approvalCode.toString(),
+          Disapproved_Code: "",
+        },
+        req
+      );
+
+      await saveUserLogs(req, RCPNo, "add", "Pullout");
+
+      res.send({
+        message: "Save Successfully",
+        success: true,
+      });
+    } catch (error: any) {
+      console.log(error);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
       });
     }
-
-    const pullout_auth_codes_id = await generateUniqueUUID(
-      "pullout_auth_codes",
-      "pullout_auth_codes_id"
-    );
-    await insertApprovalCode(
-      {
-        pullout_auth_codes_id,
-        RCPN: RCPNo,
-        For_User: `[${EmailToSend.join(",")}]`,
-        Approved_Code: approvalCode.toString(),
-        Disapproved_Code: "",
-      },
-      req
-    );
-
-    await saveUserLogs(req, RCPNo, "add", "Pullout");
-
-
-    res.send({
-      message: "Save Successfully",
-      success: true,
-    });
-
-  } catch (error: any) {
-    console.log(error)
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-    });
   }
-
-})
-PulloutApporved.get('/pullout/approved/load-request-number', async (req, res) => {
-  try {
-    res.send({
-      message: "Successfully",
-      success: true,
-      rcpn: await loadRequestNumber(req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      rcpn: [],
-    });
+);
+PulloutApporved.get(
+  "/pullout/approved/load-request-number",
+  async (req, res) => {
+    try {
+      res.send({
+        message: "Successfully",
+        success: true,
+        rcpn: await loadRequestNumber(req),
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        rcpn: [],
+      });
+    }
   }
-})
-PulloutApporved.post('/pullout/approved/load-details', async (req, res) => {
+);
+PulloutApporved.post("/pullout/approved/load-details", async (req, res) => {
   try {
-
     res.send({
       message: "Successfully",
       success: true,
@@ -163,13 +192,13 @@ PulloutApporved.post('/pullout/approved/load-details', async (req, res) => {
       details: [],
     });
   }
-})
-PulloutApporved.post('/pullout/approved/confirm', async (req, res) => {
+});
+PulloutApporved.post("/pullout/approved/confirm", async (req, res) => {
   try {
-    const RCPNo = req.body.RCPNo
-    const code = req.body.code
-    const dt = await checkApprovedCode(req, code) as Array<any>
-    const dt1 = await checkApprovedCodeIsUsed(req, RCPNo) as Array<any>
+    const RCPNo = req.body.RCPNo;
+    const code = req.body.code;
+    const dt = (await checkApprovedCode(req, code)) as Array<any>;
+    const dt1 = (await checkApprovedCodeIsUsed(req, RCPNo)) as Array<any>;
     if (dt.length <= 0) {
       return res.send({
         message: "Invalid Authorization Code",
@@ -195,23 +224,24 @@ PulloutApporved.post('/pullout/approved/confirm', async (req, res) => {
       success: false,
     });
   }
-})
-PulloutApporved.post('/pullout/approved/confirm-code', async (req, res) => {
+});
+PulloutApporved.post("/pullout/approved/confirm-code", async (req, res) => {
   try {
-    const RCPNo = req.body.RCPNo
-    const PNNo = req.body.PNNo
-    const reason = req.body.reason
-    const Name = req.body.Name
-    const code = req.body.code
-    const selected = req.body.selected
+    const department = req.cookies["up-dpm-login"];
 
-    console.log(req.body)
+    const RCPNo = req.body.RCPNo;
+    const PNNo = req.body.PNNo;
+    const reason = req.body.reason;
+    const Name = req.body.Name;
+    const code = req.body.code;
+    const selected = req.body.selected;
+
 
     const user = await getUserById((req.user as any).UserId);
     const Requested_By = user?.Username as string;
     const Requested_Date = new Date();
-    await updateCode(req, Requested_By, code)
-    await approved(req, Requested_By, RCPNo)
+    await updateCode(req, Requested_By, code);
+    await approved(req, Requested_By, RCPNo);
 
     let text = "";
     const subtitle = `
@@ -220,23 +250,42 @@ PulloutApporved.post('/pullout/approved/confirm-code', async (req, res) => {
     `;
     text = getSelectedCheck(selected);
 
-    for (const toEmail of EmailToSend) {
-      await sendApprovedEmail({
-        RCPNo: RCPNo,
-        PNNo: PNNo,
-        reason,
-        client: Name,
-        text,
-        approvedBy:Requested_By,
-        Requested_Date,
-        code,
-        subtitle,
-        toEmail,
-        selected,
-        isApproved:true
-      });
-
+    if (department === "UMIS") {
+      for (const toEmail of UMISEmailToSend) {
+        await sendApprovedEmail({
+          RCPNo: RCPNo,
+          PNNo: PNNo,
+          reason,
+          client: Name,
+          text,
+          approvedBy: Requested_By,
+          Requested_Date,
+          code,
+          subtitle,
+          toEmail,
+          selected,
+          isApproved: true,
+        });
+      }
+    } else {
+      for (const toEmail of UCSMIEmailToSend) {
+        await sendApprovedEmail({
+          RCPNo: RCPNo,
+          PNNo: PNNo,
+          reason,
+          client: Name,
+          text,
+          approvedBy: Requested_By,
+          Requested_Date,
+          code,
+          subtitle,
+          toEmail,
+          selected,
+          isApproved: true,
+        });
+      }
     }
+
     res.send({
       message: "Request has been approved!",
       success: true,
@@ -248,7 +297,7 @@ PulloutApporved.post('/pullout/approved/confirm-code', async (req, res) => {
       success: false,
     });
   }
-})
+});
 
 PulloutApporved.post(
   "/pullout/approved/load-rcpn-approved",
@@ -307,9 +356,7 @@ async function createPulloutRequestDetailsFunc(
       "pullout_request_details",
       "PRD_ID"
     );
-    if (
-      !checkStatus.includes(item.Status)
-    ) {
+    if (!checkStatus.includes(item.Status)) {
       await createPulloutRequestDetails(
         {
           RCPNo: RCPNo,
@@ -420,8 +467,9 @@ async function sendRequestEmail(props: any) {
         >${reason}</strong
       >
     </p>
-    ${approvalCode
-      ? `<p>
+    ${
+      approvalCode
+        ? `<p>
       <strong
         style="${strong1}"
         >Approval Code : </strong
@@ -430,7 +478,7 @@ async function sendRequestEmail(props: any) {
         >${approvalCode}</strong
       >
     </p>`
-      : ""
+        : ""
     }
   </div>
   <table
@@ -480,9 +528,9 @@ async function sendRequestEmail(props: any) {
     <p>Request By:<span style="font-weight: 600; color: #334155;">${Requested_By}</span></p>
     <p style="font-weight: 200">
       Request Date:<span style="font-weight: 600;color: #334155;">${format(
-      Requested_Date,
-      "MM/dd/yyyy"
-    )}</span>
+        Requested_Date,
+        "MM/dd/yyyy"
+      )}</span>
     </p>
     <p>This is a computer generated E-mail</p>
   </div>

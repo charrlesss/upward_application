@@ -202,13 +202,14 @@ SELECT
     LEFT JOIN sub_account b ON a.sub_account = b.Sub_Acct
     LEFT JOIN policy c ON a.IDNo = c.PolicyNo
     LEFT JOIN vpolicy d ON c.PolicyNo = d.PolicyNo
-`
+`;
 export async function checkClientID(id: string, req: Request) {
-  return await prisma.$queryRawUnsafe(` SELECT * FROM (${withPolicy}) a where a.IDNo = '${id}'`);
+  return await prisma.$queryRawUnsafe(
+    ` SELECT * FROM (${withPolicy}) a where a.IDNo = '${id}'`
+  );
 }
 
 export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
-
   const qry = `
  SELECT 
     *
@@ -231,23 +232,184 @@ limit 50
 
   return await prisma.$queryRawUnsafe(qry);
 }
-export async function getPdcBanks(search: string, req: Request) {
 
+export async function getCashPayTo(search: string) {
+  const _withPolicy = `
+SELECT 
+        a.IDType AS Type,
+            a.IDNo,
+            a.sub_account,
+            a.Shortname AS Name,
+            a.client_id,
+            a.ShortName AS sub_shortname,
+            b.ShortName,
+            b.Acronym,
+            IF(a.IDType = 'Policy'
+                AND c.PolicyType = 'COM'
+                OR c.PolicyType = 'TPL', CONCAT('C: ', d.ChassisNo, '  ', 'E: ', d.MotorNo), '') AS remarks,
+            IFNULL(d.ChassisNo, '') AS chassis,
+             a.address
+    FROM
+        (SELECT 
+        *
+    FROM
+        (
+        
+     SELECT 
+        'Client' AS IDType,
+            a.entry_client_id AS IDNo,
+            sub_account,
+            IF(a.option = 'company', a.company, concat(a.firstname ,if(a.lastname is not null and a.lastname <> '' , concat(', ',a.lastname ,' '),' ') ,if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),''))) AS Shortname,
+            a.entry_client_id AS client_id,
+            a.address
+    FROM
+        entry_client a UNION ALL SELECT 
+        'Supplier' AS IDType,
+            a.entry_supplier_id AS IDNo,
+            sub_account,
+           IF(a.option = 'company', a.company, concat(a.firstname ,if(a.lastname is not null and a.lastname <> '' , concat(', ',a.lastname,' '),'') )) AS Shortname,
+
+            a.entry_supplier_id AS client_id,
+            a.address
+    FROM
+        entry_supplier a UNION ALL SELECT 
+        'Employee' AS IDType,
+            a.entry_employee_id AS IDNo,
+            sub_account,
+            IF(a.lastname IS NOT NULL
+                AND TRIM(a.lastname) = '', a.firstname, CONCAT(a.firstname, ' ',a.lastname)) AS Shortname,
+            a.entry_employee_id AS client_id,
+            a.address
+    FROM
+        entry_employee a UNION ALL SELECT 
+        'Fixed Assets' AS IDType,
+            a.entry_fixed_assets_id AS IDNo,
+            sub_account,
+            a.fullname AS Shortname,
+            a.entry_fixed_assets_id AS client_id,
+            a.description AS address
+    FROM
+        entry_fixed_assets a UNION ALL SELECT 
+        'Others' AS IDType,
+            a.entry_others_id AS IDNo,
+            sub_account,
+            a.description AS cID_No,
+            a.entry_others_id AS client_id,
+            a.remarks AS address
+    FROM
+        entry_others a UNION ALL SELECT 
+        'Agent' AS IDType,
+            a.entry_agent_id AS IDNo,
+            sub_account,
+            IF(a.lastname IS NOT NULL
+                AND TRIM(a.lastname) = '', CONCAT(a.firstname), CONCAT(a.firstname, ' ', a.lastname)) AS Shortname,
+            a.entry_agent_id AS client_id,
+            a.address
+    FROM
+        entry_agent a
+        
+        ) id_entry 
+        UNION ALL 
+        
+SELECT 
+        'Policy' AS IDType,
+            a.PolicyNo AS IDNo,
+            b.sub_account,
+            b.Shortname,
+            a.IDNo AS client_id,
+            b.address
+    FROM
+        policy a
+    LEFT JOIN (SELECT 
+        *
+    FROM
+        (
+        SELECT 
+        'Client' AS IDType,
+            a.entry_client_id AS IDNo,
+            sub_account,
+            IF(a.option = 'company', a.company, concat(a.firstname ,if(a.lastname is not null and a.lastname <> '' , concat(', ',a.lastname,' '),' ') ,if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),''))) AS Shortname,
+            a.entry_client_id AS client_id,
+            a.address
+    FROM
+        entry_client a UNION ALL SELECT 
+        'Supplier' AS IDType,
+            a.entry_supplier_id AS IDNo,
+            sub_account,
+           IF(a.option = 'company', a.company, concat(a.firstname ,if(a.lastname is not null and a.lastname <> '' , concat(', ',a.lastname,' '),'') )) AS Shortname,
+
+            a.entry_supplier_id AS client_id,
+            a.address
+    FROM
+        entry_supplier a UNION ALL SELECT 
+        'Employee' AS IDType,
+            a.entry_employee_id AS IDNo,
+            sub_account,
+            IF(a.lastname IS NOT NULL
+                AND TRIM(a.lastname) = '', a.firstname, CONCAT(a.firstname, ' ',a.lastname)) AS Shortname,
+            a.entry_employee_id AS client_id,
+            a.address
+    FROM
+        entry_employee a UNION ALL SELECT 
+        'Fixed Assets' AS IDType,
+            a.entry_fixed_assets_id AS IDNo,
+            sub_account,
+            a.fullname AS Shortname,
+            a.entry_fixed_assets_id AS client_id,
+            a.description AS address
+    FROM
+        entry_fixed_assets a UNION ALL SELECT 
+        'Others' AS IDType,
+            a.entry_others_id AS IDNo,
+            sub_account,
+            a.description AS cID_No,
+            a.entry_others_id AS client_id,
+            a.remarks AS address
+    FROM
+        entry_others a UNION ALL SELECT 
+        'Agent' AS IDType,
+            a.entry_agent_id AS IDNo,
+            sub_account,
+            IF(a.lastname IS NOT NULL
+                AND TRIM(a.lastname) = '', CONCAT(a.firstname), CONCAT(a.firstname, ' ', a.lastname)) AS Shortname,
+            a.entry_agent_id AS client_id,
+            a.address
+    FROM
+        entry_agent a
+        ) id_entry) b ON a.IDNo = b.IDNo) a
+    LEFT JOIN sub_account b ON a.sub_account = b.Sub_Acct
+    LEFT JOIN policy c ON a.IDNo = c.PolicyNo
+    LEFT JOIN vpolicy d ON c.PolicyNo = d.PolicyNo
+  `;
+  const qry = `
+ SELECT 
+    *
+FROM
+    (${_withPolicy}) a
+WHERE
+    a.Name IS NOT NULL AND a.IDNo LIKE '%${search}%'
+        OR a.chassis LIKE '%${search}%'
+        OR a.Name LIKE '%${search}%'
+ORDER BY  a.Name
+limit 50      
+
+  `;
+
+  return await prisma.$queryRawUnsafe(qry);
+}
+export async function getPdcBanks(search: string, req: Request) {
   const query = `
     SELECT a.Bank_Code, a.Bank FROM   bank a where  a.Bank_Code like '%${search}%' OR a.Bank like '%${search}%' limit 50; 
     `;
   return await prisma.$queryRawUnsafe(query);
 }
 export async function findPdc(Ref_No: string, req: Request) {
-
   return await prisma.pdc.findMany({ where: { Ref_No } });
 }
 export async function pdcUploads(data: any, req: Request) {
-
   return await prisma.pdc_uploads.create({ data });
 }
 export async function pdcUploadsUpdate(data: any, req: Request) {
-
   return await prisma.pdc_uploads.updateMany({
     data: {
       upload: data.upload,
@@ -258,7 +420,6 @@ export async function pdcUploadsUpdate(data: any, req: Request) {
   });
 }
 export async function getPdcUpload(ref_no: string, req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   SELECT 
     a.upload
@@ -269,16 +430,15 @@ export async function getPdcUpload(ref_no: string, req: Request) {
   `);
 }
 export async function deletePdcByRefNo(Ref_No: string, req: Request) {
-
   // return await prisma.pdc.deleteMany({ where: { Ref_No } });
- return await prisma.$queryRawUnsafe(`DELETE FROM PDC  where Ref_No ='${Ref_No}' `);
+  return await prisma.$queryRawUnsafe(
+    `DELETE FROM PDC  where Ref_No ='${Ref_No}' `
+  );
 }
 export async function createPDC(data: any, req: Request) {
-
   return await prisma.pdc.create({ data });
 }
 export async function searchPDC(search: any, req: Request) {
-
   return await prisma.$queryRawUnsafe(`
     SELECT 
         a.Ref_No,
@@ -340,7 +500,6 @@ export async function getSearchPDCheck(ref_no: any, req: Request) {
   return await prisma.$queryRawUnsafe(qry);
 }
 export async function pdcIDGenerator(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   SELECT 
         concat(
@@ -360,7 +519,6 @@ export async function pdcIDGenerator(req: Request) {
 `);
 }
 export async function updatePDCIDSequence(data: any, req: Request) {
-
   return await prisma.$queryRawUnsafe(`
       update  id_sequence a
       set a.last_count = '${data.last_count}', a.year= '${data.year}', a.month= '${data.month}'

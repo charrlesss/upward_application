@@ -784,10 +784,7 @@ FROM
       });
     },
     onDraw: (props: any, rowItm: any, rowIdx: number) => {
-      props.setAlignment(rowIdx + 6, ["G"], {
-        horizontal: "right",
-        vertical: "middle",
-      });
+  
     },
     afterDraw: (props: any, worksheet: any) => {
       // props.boldText(1, ["A", "B", "C", "D", "E", "F", "G", "H"]);
