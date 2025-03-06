@@ -3840,6 +3840,7 @@ const depositDataCollection = async (req: Request) => {
     new Date(req.body.date),
     req.body.order
   );
+  console.log(queryJournal)
   const queryCollectionData: Array<any> = await prisma.$queryRawUnsafe(
     queryDeposit
   );
@@ -3871,7 +3872,6 @@ const depositDataCollection = async (req: Request) => {
 };
 async function DepositCollections(req: Request, res: Response) {
   const { data, summary } = await depositDataCollection(req);
-  console.log(data);
 
   const headers = [
     {

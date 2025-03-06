@@ -1351,10 +1351,10 @@ export function DepositedCollections(
   } else if (reportType === "Monthly") {
     if (subAcct === "ALL") {
       sWhere1 = `WHERE CAST(Deposit.Temp_SlipDate AS DATE) >= '${firstDayOfMonth}' AND CAST(Deposit.Temp_SlipDate AS DATE) <= '${lastDay}'`;
-      sWhere2 = `WHERE Journal.Source_Type = 'DC' AND Journal.Date_Entry >= '${firstDayOfMonth}' AND Journal.Date_Entry <= '${lastDay}'`;
+      sWhere2 = `WHERE Journal.Source_Type = 'DC' AND str_to_date(Journal.Date_Entry,'%Y-%m-%d') >= '${firstDayOfMonth}' AND str_to_date(Journal.Date_Entry,'%Y-%m-%d') <= '${lastDay}'`;
     } else {
       sWhere1 = `WHERE CAST(Deposit.Temp_SlipDate AS DATE) >= '${firstDayOfMonth}' AND CAST(Deposit.Temp_SlipDate AS DATE) <= '${lastDay}' AND LTRIM(RTRIM(Deposit.Type)) = '${subAcct.trim()}'`;
-      sWhere2 = `WHERE Journal.Source_Type = 'DC' AND Journal.Date_Entry >= '${firstDayOfMonth}' AND Journal.Date_Entry <= '${lastDay}' AND LTRIM(RTRIM(Journal.Branch_Code)) = '${subAcct.trim()}'`;
+      sWhere2 = `WHERE Journal.Source_Type = 'DC' AND str_to_date(Journal.Date_Entry,'%Y-%m-%d') >= '${firstDayOfMonth}' AND str_to_date(Journal.Date_Entry,'%Y-%m-%d') <= '${lastDay}' AND LTRIM(RTRIM(Journal.Branch_Code)) = '${subAcct.trim()}'`;
     }
   }
 
@@ -1386,7 +1386,7 @@ export function DepositedCollections(
     LEFT JOIN chart_account on Acct_Code = Deposit. Account_ID
     LEFT JOIN bankaccounts c ON Deposit.BankAccount = c.Account_No
     ${sWhere1}
-    ORDER BY Deposit.Temp_SlipCntr, Ref_No ${
+    ORDER BY Deposit.Temp_SlipDate  ${
       order === "Ascending" ? "ASC" : "DESC"
     }
   `;
