@@ -142,7 +142,6 @@ Deposit.post("/add-deposit", async (req, res) => {
       success: false,
     });
   }
-  console.log(req.body);
 
   try {
     if ((await findDepositBySlipCode(req.body.depositSlip, req)).length > 0) {

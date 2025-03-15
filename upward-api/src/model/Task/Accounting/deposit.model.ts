@@ -124,6 +124,7 @@ export async function addJournal(data: any, req: Request) {
 
   return await prisma.journal.create({ data });
 }
+
 export async function updateCollectioSlipCode(
   SlipCode: string,
   Temp_OR: string,

@@ -14,11 +14,8 @@ const corsOptions = {
   origin: [
     "http://localhost:3000",
      "http://localhost:4000", 
-     "http://umis.upwardinsurance.net", 
      "https://umis.upwardinsurance.net", 
-     "http://ucsmi.upwardinsurance.net", 
      "https://ucsmi.upwardinsurance.net", 
-     "http://upwardinsurance.net", 
      "https://upwardinsurance.net", 
     "/", 
     "*"],

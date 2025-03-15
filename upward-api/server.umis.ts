@@ -12,14 +12,10 @@ const PORT = process.env.PORT;
 const corsOptions = {
   origin: [
     "http://localhost:3000",
-     "http://localhost:4000", 
-     "http://umis.upwardinsurance.net", 
-     "https://umis.upwardinsurance.net", 
-     "http://ucsmi.upwardinsurance.net", 
-     "https://ucsmi.upwardinsurance.net", 
-     "http://upwardinsurance.net", 
-     "https://upwardinsurance.net", 
-     "http://192.168.100.220:4400", 
+    "http://localhost:4000", 
+    "https://umis.upwardinsurance.net", 
+    "https://ucsmi.upwardinsurance.net", 
+    "https://upwardinsurance.net", 
     "/", 
     "*"],
   credentials: true,
@@ -27,7 +23,7 @@ const corsOptions = {
 };
 
 async function main() {
-  console.log(hashSync('EMP17008',12))
+  console.log(hashSync('OJT2025',12))
   const app = express();
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json({ limit: "1000mb" }));

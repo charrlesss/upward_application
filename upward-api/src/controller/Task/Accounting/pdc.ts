@@ -390,7 +390,7 @@ PDC.post("/print", async (req, res) => {
       const writeStream = fs.createWriteStream(outputFilePath);
       doc.pipe(writeStream);
       doc.fontSize(9);
-      doc.text("UCSMI", 0, 40, {
+      doc.text(req.body.state.department, 0, 40, {
         align: "center",
         baseline: "middle",
       });
@@ -427,19 +427,39 @@ PDC.post("/print", async (req, res) => {
       return;
     } else {
       const newData = req.body.pdcTableData.map((itm: any, idx: number) => {
-        return { ...itm, seq: idx+ 1 < 10 ? `0${idx +1}`: idx + 1 };
+        return { ...itm, seq: idx + 1 < 10 ? `0${idx + 1}` : idx + 1 };
       });
 
       let PAGE_WIDTH = 612;
       let PAGE_HEIGHT = 792;
 
       const headers = [
-        { label: "CHECK NO", key: "Check_No" ,style:{align:"left",width:60} },
-        { label: "DATE", key: "Check_Date",style:{align:"left",width:60}  },
-        { label: "BANK", key: "BankName" ,style:{align:"left",width:170} },
-        { label: "BRANCH", key: "Branch",style:{align:"left",width:170}  },
-        { label: "AMOUNT", key: "Check_Amnt" ,style:{align:"right",width:80} },
-        { label: "SEQ", key: "seq" ,style:{align:"right",width:30} },
+        {
+          label: "CHECK NO",
+          key: "Check_No",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "DATE",
+          key: "Check_Date",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "BANK",
+          key: "BankName",
+          style: { align: "left", width: 170 },
+        },
+        {
+          label: "BRANCH",
+          key: "Branch",
+          style: { align: "left", width: 170 },
+        },
+        {
+          label: "AMOUNT",
+          key: "Check_Amnt",
+          style: { align: "right", width: 80 },
+        },
+        { label: "SEQ", key: "seq", style: { align: "right", width: 30 } },
       ];
 
       const outputFilePath = "manok.pdf";
@@ -507,71 +527,91 @@ PDC.post("/print", async (req, res) => {
         align: "left",
         width: PAGE_WIDTH - 150,
       });
-      let yAxis = 115 + 35
+      let yAxis = 115 + 35;
 
       doc.font("Helvetica-Bold");
 
-      let hx = 20
-      headers.forEach((colItm:any,colIndex:number) => {
-        doc.text(colItm.label, hx , yAxis , {
-          align: colItm.style.align === 'right' ? "center" : colItm.style.align,
-          width:colItm.style.width
+      let hx = 20;
+      headers.forEach((colItm: any, colIndex: number) => {
+        doc.text(colItm.label, hx, yAxis, {
+          align: colItm.style.align === "right" ? "center" : colItm.style.align,
+          width: colItm.style.width,
         });
-        hx += colItm.style.width
+        hx += colItm.style.width;
       });
-
 
       doc
-      .moveTo(20 , yAxis  + 12)
-      .lineTo(PAGE_WIDTH -20, yAxis + 12)
-      .stroke();
+        .moveTo(20, yAxis + 12)
+        .lineTo(PAGE_WIDTH - 20, yAxis + 12)
+        .stroke();
 
-       yAxis += 17
+      yAxis += 17;
 
+      doc.font("Helvetica");
 
-       doc.font("Helvetica");
-
-      newData.forEach((rowItm:any,rowIndex:number) => {
-        const rowHeight = Math.max(...headers.map((itm:any)=>{
-          return doc.heightOfString(rowItm[itm.key],{
-            width:itm.style.width,
-            align:itm.style.align
+      newData.forEach((rowItm: any, rowIndex: number) => {
+        const rowHeight = Math.max(
+          ...headers.map((itm: any) => {
+            return doc.heightOfString(rowItm[itm.key], {
+              width: itm.style.width,
+              align: itm.style.align,
+            });
           })
-        }))
-        let x = 20
-        headers.forEach((colItm:any,colIndex:number) => {
-          doc.text(rowItm[colItm.key], x , yAxis , {
+        );
+        let x = 20;
+        headers.forEach((colItm: any, colIndex: number) => {
+          doc.text(rowItm[colItm.key], x, yAxis, {
             align: colItm.style.align,
-            width:colItm.style.width
+            width: colItm.style.width,
           });
-          x+= colItm.style.width
+          x += colItm.style.width;
         });
 
-        yAxis += (rowHeight + 3)
+        yAxis += rowHeight + 3;
       });
-      let xs = 10
-      doc.text(`Prepared : _______________________`, 20 + xs, PAGE_HEIGHT - 70, {
-        align: "left",
-        width:200
-      });
+      let xs = 10;
+      doc.text(
+        `Prepared : _______________________`,
+        20 + xs,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
 
-      doc.text(`Checked : _______________________`, (20 + xs) + 200, PAGE_HEIGHT - 70, {
-        align: "left",
-        width:200
-      });
+      doc.text(
+        `Checked : _______________________`,
+        20 + xs + 200,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
 
-      doc.text(`Approved : _______________________`, (20 + xs) + 400, PAGE_HEIGHT - 70, {
-        align: "left",
-        width:200
-      });
+      doc.text(
+        `Approved : _______________________`,
+        20 + xs + 400,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
 
-      doc.text(`Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`, 20, PAGE_HEIGHT - 30, {
-        align: "left",
-      });
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 30,
+        {
+          align: "left",
+        }
+      );
 
       doc.text(`Page 1 of 1`, PAGE_WIDTH - 120, PAGE_HEIGHT - 30, {
         align: "right",
-        width:100
+        width: 100,
       });
 
       doc.end();
