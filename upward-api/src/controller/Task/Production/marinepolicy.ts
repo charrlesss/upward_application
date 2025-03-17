@@ -301,7 +301,7 @@ async function insertMarinePolicy(
     dateIssuedRef,
     insuredValueRef,
     percentageRef,
-    netPremiumRef,
+    totalPremiumRef,
     vatRef,
     docstampRef,
     _localGovTaxRef,
@@ -320,6 +320,7 @@ async function insertMarinePolicy(
   }: any,
   req: Request
 ) {
+  console.log(req.body)
   dateFromRef = defaultFormat(new Date(dateFromRef));
   dateToRef = defaultFormat(new Date(dateToRef));
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));
@@ -332,7 +333,7 @@ async function insertMarinePolicy(
       PolicyType: "MAR",
       PolicyNo: policyNoRef,
       DateIssued: dateIssuedRef,
-      TotalPremium: parseFloat(netPremiumRef.replace(/,/g, "")),
+      TotalPremium: parseFloat(totalPremiumRef.replace(/,/g, "")),
       Vat: parseFloat(vatRef.replace(/,/g, "")).toFixed(2),
       DocStamp: parseFloat(docstampRef.replace(/,/g, "")).toFixed(2),
       FireTax: "0",
