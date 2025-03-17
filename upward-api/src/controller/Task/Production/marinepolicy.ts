@@ -320,6 +320,7 @@ async function insertMarinePolicy(
   }: any,
   req: Request
 ) {
+  console.log(req.body)
   dateFromRef = defaultFormat(new Date(dateFromRef));
   dateToRef = defaultFormat(new Date(dateToRef));
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));

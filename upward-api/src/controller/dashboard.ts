@@ -2,9 +2,10 @@ import express from "express";
 import { PrismaList } from "../model/connection";
 import { qry_id_policy_sub } from "../model/db/views";
 import { __executeQuery } from "../model/Task/Production/policy";
+import { prisma } from ".";
 const Dashboard = express.Router();
 const { CustomPrismaClient } = PrismaList();
-const { IDEntryWithPolicy } = qry_id_policy_sub()
+const { IDEntryWithPolicy } = qry_id_policy_sub();
 
 const cglqry = `
         SELECT
@@ -25,7 +26,7 @@ const cglqry = `
             where
             a.PolicyType = 'CGL' and
             date_format(b.PeriodTo ,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
-`
+`;
 
 const palqry = `
 SELECT
@@ -47,7 +48,7 @@ SELECT
             a.PolicyType = 'PA' and
             date_format(b.PeriodTo ,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
 
-`
+`;
 
 const marqry = `
      SELECT
@@ -68,7 +69,7 @@ const marqry = `
             where
             a.PolicyType = 'MAR' and
             date_format(b.DateTo,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
-`
+`;
 
 const fireqry = `
 
@@ -90,7 +91,7 @@ const fireqry = `
   where
   a.PolicyType = 'FIRE' and
   date_format(b.DateTo,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
-  `
+  `;
 
 const comqry = `
      SELECT
@@ -111,7 +112,7 @@ const comqry = `
             where
             a.PolicyType = 'COM' and
             date_format(b.DateTo,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
-`
+`;
 
 const tplqry = `
 SELECT
@@ -134,43 +135,40 @@ SELECT
             date_format(b.DateTo,'%Y-%m-%d') between DATE_SUB(LAST_DAY(now()), INTERVAL DAY(LAST_DAY(now())) - 1 DAY) and LAST_DAY(DATE_ADD(now(), INTERVAL 1 MONTH))
              
 
-`
-Dashboard.get("/get-renewal-this-month", async (req, res) => {
-  const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
-  const policy = req.query.policy as string
+`;
+Dashboard.post("/get-renewal-this-month", async (req, res) => {
+  const policy = req.body.policy;
   try {
     let qry = "";
-    const policies = ['TPL', 'COM', 'FIRE', 'MAR', 'PA', 'CGL']
+    const policies = ["TPL", "COM", "FIRE", "MAR", "PA", "CGL"];
     if (policies.includes(policy)) {
       if (policy === "TPL") {
-        qry = tplqry
+        qry = tplqry;
       } else if (policy === "COM") {
-        qry = comqry
+        qry = comqry;
       } else if (policy === "FIRE") {
-        qry = fireqry
+        qry = fireqry;
       } else if (policy === "MAR") {
-        qry = marqry
+        qry = marqry;
       } else if (policy === "PA") {
-        qry = palqry
+        qry = palqry;
       } else if (policy === "CGL") {
-        qry = cglqry
+        qry = cglqry;
       }
 
-      const renewal = await __executeQuery(qry, req)
+      const renewal = await prisma.$queryRawUnsafe(qry);
       return res.send({
         message: `Successfully Get Renewal This Month`,
         success: true,
-        renewal
+        renewal,
       });
     } else {
       return res.send({
         message: `Successfully Get Renewal This Month`,
         success: true,
-        renewal: []
+        renewal: [],
       });
-
     }
-
   } catch (err: any) {
     res.send({ message: err.message, success: false });
   }
