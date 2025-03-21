@@ -15,7 +15,7 @@ export async function getClientCheckedList(
         CAST(ROW_NUMBER() OVER () AS CHAR) AS temp_id,
         a.Check_No,
         DATE_FORMAT(a.Check_Date, '%m/%d/%Y') as Check_Date,
-        FORMAT(CAST(REPLACE(a.Check_Amnt, ',', '') AS DECIMAL(10,2)), 2) as  Amount,
+        FORMAT(CAST(REPLACE(a.Check_Amnt, ',', '') AS DECIMAL(20,2)), 2) as  Amount,
         CONCAT(a.Bank, ' / ', a.Branch) as Bank_Branch,
         a.Remarks,
         a.Bank,
@@ -274,7 +274,7 @@ export async function printModel(req: Request, OR_Num: string) {
     DATE_FORMAT(Date_OR, '%M %d, %Y') AS DateOR,
     Amount AS ORAmount 
     FROM 
-    (SELECT Official_Receipt, ID_No, Date_OR, format(SUM(CAST(REPLACE(Debit, ',', '') AS DECIMAL(10,2)) ) , 2) AS Amount 
+    (SELECT Official_Receipt, ID_No, Date_OR, format(SUM(CAST(REPLACE(Debit, ',', '') AS DECIMAL(20,2)) ) , 2) AS Amount 
     FROM collection
     WHERE Official_Receipt = '${OR_Num}' 
     GROUP BY Official_Receipt, ID_No, Date_OR) AS ORCollection 

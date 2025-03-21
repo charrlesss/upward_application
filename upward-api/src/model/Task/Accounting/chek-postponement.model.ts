@@ -143,7 +143,7 @@ FROM
             DATE_FORMAT(Check_Date, '%m/%d/%Y') AS Check_Date,
             Bank,
             Check_No,
-            FORMAT(CAST(REPLACE(Check_Amnt, ',', '') AS DECIMAL(10,2)), 2) as  Check_Amnt,
+            FORMAT(CAST(REPLACE(Check_Amnt, ',', '') AS DECIMAL(20,2)), 2) as  Check_Amnt,
             IFNULL(Status, '--') AS Status,
             PNo,
             reason,

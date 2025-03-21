@@ -60,8 +60,9 @@ PettyCash.post("/add-petty-cash", async (req, res) => {
   );
   if (userAccess.includes("ADMIN")) {
     return res.send({
-      message: `CAN'T ${req.body.hasSelected ? "UPDATE" : "SAVE"
-        }, ADMIN IS FOR VIEWING ONLY!`,
+      message: `CAN'T ${
+        req.body.hasSelected ? "UPDATE" : "SAVE"
+      }, ADMIN IS FOR VIEWING ONLY!`,
       success: false,
     });
   }
@@ -143,6 +144,14 @@ PettyCash.post("/add-petty-cash", async (req, res) => {
         req
       );
     });
+    let ID_No = "O-0125-00031";
+    let cID_No = "Petty Cash Fund";
+
+    if (process.env.DEPARTMENT === "UMIS") {
+      ID_No = "C-1024-04172";
+      cID_No = "Upward Management Insurance Services";
+    }
+    
     await addJournalFromPettyCash(
       {
         Branch_Code: "HO",
@@ -157,8 +166,8 @@ PettyCash.post("/add-petty-cash", async (req, res) => {
         cSub_Acct: "Head Office",
         Credit: totalAmount,
         Remarks: "",
-        ID_No: "UIA-1501-030",
-        cID_No: "UIA EDSA OFFICE",
+        ID_No,
+        cID_No,
         Source_No_Ref_ID: "",
       },
       req
@@ -239,10 +248,8 @@ PettyCash.post("/load-selected-petty-cash", async (req, res) => {
   }
 });
 
-
 PettyCash.get("/load-transcation", async (req, res) => {
   try {
-
     res.send({
       message: "Successfully search petty cash",
       success: true,

@@ -29,7 +29,6 @@ import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { checkClientID } from "../../../model/Task/Accounting/pdc.model";
 import PDFDocument from "pdfkit";
 import fs from "fs";
-import { height } from "pdfkit/js/page";
 import { AmountToWords } from "./cash-disbursement";
 import { getSum } from "../../Reports/Production/production-report";
 

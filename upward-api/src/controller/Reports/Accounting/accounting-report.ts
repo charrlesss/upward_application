@@ -1169,7 +1169,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
   dt = await prisma.$queryRawUnsafe(Qry);
 
   // Processing query results
-  console.log(dt);
+  console.log(Qry);
 
   if (dt.length > 0) {
     let lastAcct = "";
@@ -1193,7 +1193,6 @@ async function SubsidiaryLedger(req: Request, res: Response) {
         //       AND Explanation = 'Balance Forwarded';
 
         let dtBal: any = await prisma.$queryRawUnsafe(balanceQuery);
-        console.log(dtBal);
         if (dtBal.length > 0) {
           Balance = dtBal[0].Balance;
         } else {
@@ -1258,6 +1257,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
     "select * FROM xSubsidiary order by Date_Entry "
   )) as Array<any>;
   let runningBalance = 0;
+
   const data = result.map((itm: any) => {
     itm.Date_Entry = format(new Date(itm.Date_Entry), "MM/dd/yyyy");
     const Debit = parseFloat(itm.Debit.toString().replace(/,/g, ""));
@@ -1271,6 +1271,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
       refs: `${itm.Source_Type}  ${itm.Source_No}`,
     };
   });
+
   const totalDebit = getSum(data, "Debit");
   const totalCredit = getSum(data, "Credit");
 
@@ -2332,7 +2333,6 @@ async function BalanceSheet(req: Request, res: Response) {
       let h1TotalTotalBalance = 0;
       const H2Groups = H1Groups[H1].subGroups;
       for (const H2 in H2Groups) {
-
         newData.push({
           H1: "",
           HT1: "",
@@ -2348,11 +2348,21 @@ async function BalanceSheet(req: Request, res: Response) {
           H: "",
         });
         H2Groups[H2].items.forEach((item: any) => {
-          item.PrevBalance = formatNumber(parseFloat(item.PrevBalance.replace(/,/g,'')))
-          item.CurrDebit = formatNumber(parseFloat(item.CurrDebit.replace(/,/g,'')))
-          item.CurrCredit = formatNumber(parseFloat(item.CurrCredit.replace(/,/g,''))) 
-          item.CurrBalance = formatNumber(parseFloat(item.CurrBalance.replace(/,/g,'')))
-          item.TotalBalance = formatNumber(parseFloat(item.TotalBalance.replace(/,/g,'')))
+          item.PrevBalance = formatNumber(
+            parseFloat(item.PrevBalance.replace(/,/g, ""))
+          );
+          item.CurrDebit = formatNumber(
+            parseFloat(item.CurrDebit.replace(/,/g, ""))
+          );
+          item.CurrCredit = formatNumber(
+            parseFloat(item.CurrCredit.replace(/,/g, ""))
+          );
+          item.CurrBalance = formatNumber(
+            parseFloat(item.CurrBalance.replace(/,/g, ""))
+          );
+          item.TotalBalance = formatNumber(
+            parseFloat(item.TotalBalance.replace(/,/g, ""))
+          );
           newData.push({
             ...item,
             dd: true,
@@ -2784,7 +2794,7 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
   let qry = "";
   let sortQry = "";
   let whereQry = "";
-  if ((req.body.sort === "Name")) {
+  if (req.body.sort === "Name") {
     sortQry = `Order By Name ${
       req.body.order === "Ascending" ? "ASC" : "DESC"
     }`;
@@ -2834,7 +2844,7 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
       break;
   }
 
-  console.log(qry)
+  console.log(qry);
 
   const data_ = (await prisma.$queryRawUnsafe(qry)) as Array<any>;
 
@@ -3840,7 +3850,7 @@ const depositDataCollection = async (req: Request) => {
     new Date(req.body.date),
     req.body.order
   );
-  console.log(queryJournal)
+  console.log(queryJournal);
   const queryCollectionData: Array<any> = await prisma.$queryRawUnsafe(
     queryDeposit
   );
@@ -6031,35 +6041,36 @@ async function GeneralJournalBookGJB(req: Request, res: Response) {
   });
 }
 async function AgingAccouts(req: Request, res: Response) {
-  req.body.date = format(new Date(req.body.date),`yyyy-MM-${format(lastDayOfMonth(new Date(req.body.date)),'dd')}`)
+  req.body.date = format(
+    new Date(req.body.date),
+    `yyyy-MM-${format(lastDayOfMonth(new Date(req.body.date)), "dd")}`
+  );
   const qry = AgingAccountsReport(req.body.date, req.body.policyType);
 
   const _data = (await prisma.$queryRawUnsafe(qry)) as any;
   const CurrentDate: any = new Date(req.body.date);
 
   const data: any = _data.map((itm: any, idx: number) => {
-    const issuedDate:any = new Date(itm.DateIssued); // Directly parse YYYY-MM-DD
+    const issuedDate: any = new Date(itm.DateIssued); // Directly parse YYYY-MM-DD
     // Ensure the date is valid
     if (isNaN(issuedDate.getTime())) {
-        console.log(`Invalid date format for: ${itm.DateIssued}`);
-        return;
+      console.log(`Invalid date format for: ${itm.DateIssued}`);
+      return;
     }
     // Calculate the difference in days
-    const dayDifference = Math.floor((CurrentDate - issuedDate) / (1000 * 60 * 60 * 24));
+    const dayDifference = Math.floor(
+      (CurrentDate - issuedDate) / (1000 * 60 * 60 * 24)
+    );
     // Apply the logic
-    const result = itm.Balance < 0 
-        ? 0 
-        : dayDifference <= 90 
-            ? 0 
-            : dayDifference;
+    const result =
+      itm.Balance < 0 ? 0 : dayDifference <= 90 ? 0 : dayDifference;
 
-    itm.DateIssued = format(new Date(itm.DateIssued),'MM/dd/yyyy')
+    itm.DateIssued = format(new Date(itm.DateIssued), "MM/dd/yyyy");
     return {
       ...itm,
       record: `${idx + 1 < 10 ? `0${idx + 1}` : idx + 1}`,
       SumInsured: itm.EstimatedValue ? itm._EstimatedValue : "Group-PA",
-      agingAccounts :result.toLocaleString("en-US"),
-
+      agingAccounts: result.toLocaleString("en-US"),
     };
   });
 
@@ -6132,18 +6143,22 @@ async function AgingAccouts(req: Request, res: Response) {
   ];
   const summary = [
     {
-      Title:"Past Due :",
-      mDebit:data.length.toLocaleString("en-US"),
-      mCredit:formatNumber(getSum(data,'_Balance')),
-    }
-  ]
+      Title: "Past Due :",
+      mDebit: data.length.toLocaleString("en-US"),
+      mCredit: formatNumber(getSum(data, "_Balance")),
+    },
+  ];
   const summaryHeaders = [
     {
-      label: `${format(new Date(req.body.date),'MMMM dd, yyyy')}`,
+      label: `${format(new Date(req.body.date), "MMMM dd, yyyy")}`,
       key: "Title",
       style: { width: 250, textAlign: "right" },
     },
-    { label: "No. OF ACCOUNTS", key: "mDebit", style: { width: 80, textAlign: "right" } },
+    {
+      label: "No. OF ACCOUNTS",
+      key: "mDebit",
+      style: { width: 80, textAlign: "right" },
+    },
     {
       label: "TOTAL BALANCE",
       key: "mCredit",
@@ -6201,8 +6216,12 @@ async function AgingAccouts(req: Request, res: Response) {
       } else {
         doc.text(itm.label, x, y, {
           width: itm.style.width - 5,
-          align: itm.key === 'Title' ? "right" : 
-            itm.style.textAlign === "right" ? "center" : itm.style.textAlign,
+          align:
+            itm.key === "Title"
+              ? "right"
+              : itm.style.textAlign === "right"
+              ? "center"
+              : itm.style.textAlign,
         });
       }
       x += itm.style.width + 5;
@@ -6293,7 +6312,6 @@ async function AgingAccouts(req: Request, res: Response) {
 
   // ================ SUAMMARY ========================
 
-
   // summaryHeaders
   const totalSumarryHeigth = summary.reduce((container: any, itm: any) => {
     container += getRowHeight(itm, summaryHeaders);
@@ -6313,7 +6331,7 @@ async function AgingAccouts(req: Request, res: Response) {
     drawTitle();
     let yAxis = MARGINS.top;
     yAxis = addPageHeader(summaryHeaders, yAxis, extraX);
-    yAxis += 5
+    yAxis += 5;
     summary.forEach((itm: any, idx: number) => {
       let rowHeight = getRowHeight(itm, summaryHeaders);
 
@@ -6351,10 +6369,15 @@ async function AgingAccouts(req: Request, res: Response) {
 
     doc.font("Helvetica-Bold");
     doc.text("TOTAL :", extraX + 227, yAxis + 5);
-    doc.text(getSum(summary, "mDebit").toLocaleString("en-US"), extraX + 270, yAxis + 5, {
-      width: 80,
-      align: "right",
-    });
+    doc.text(
+      getSum(summary, "mDebit").toLocaleString("en-US"),
+      extraX + 270,
+      yAxis + 5,
+      {
+        width: 80,
+        align: "right",
+      }
+    );
     doc.text(
       formatNumber(getSum(summary, "mCredit")),
       extraX + 270 + 85,
@@ -6378,7 +6401,7 @@ async function AgingAccouts(req: Request, res: Response) {
     doc.text("SUMMARY:", extraX, yAxis);
     yAxis += 30;
     yAxis = addPageHeader(summaryHeaders, yAxis, extraX);
-    yAxis += 5
+    yAxis += 5;
     summary.forEach((itm: any, idx: number) => {
       let rowHeight = getRowHeight(itm, summaryHeaders);
       let x = MARGINS.left;
@@ -6403,10 +6426,15 @@ async function AgingAccouts(req: Request, res: Response) {
 
     doc.font("Helvetica-Bold");
     doc.text("TOTAL :", extraX + 200, yAxis + 5);
-    doc.text(getSum(summary, "mDebit").toLocaleString("en-US"), extraX + 270, yAxis + 5, {
-      width: 80,
-      align: "right",
-    });
+    doc.text(
+      getSum(summary, "mDebit").toLocaleString("en-US"),
+      extraX + 270,
+      yAxis + 5,
+      {
+        width: 80,
+        align: "right",
+      }
+    );
     doc.text(
       formatNumber(getSum(summary, "mCredit")),
       extraX + 270 + 85,

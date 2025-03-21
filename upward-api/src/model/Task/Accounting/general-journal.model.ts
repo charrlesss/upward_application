@@ -3,10 +3,7 @@ import { PrismaList } from "../../connection";
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
-
 export async function GenerateGeneralJournalID(req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
       SELECT 
         concat(DATE_FORMAT(NOW(), '%y%m'),'-',if(concat(a.year,a.month) <> DATE_FORMAT(NOW(), '%y%m'),'001',concat(LEFT(a.last_count ,length(a.last_count) -length(a.last_count + 1)),a.last_count + 1))) as general_journal_id   
@@ -17,8 +14,6 @@ export async function GenerateGeneralJournalID(req: Request) {
 }
 
 export async function getChartOfAccount(search: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
     SELECT 
         a.Acct_Code, a.Acct_Title, a.Short
@@ -36,8 +31,6 @@ export async function getChartOfAccount(search: string, req: Request) {
 }
 
 export async function getPolicyIdClientIdRefId(search: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
   SELECT 
     a.*,
@@ -144,8 +137,6 @@ FROM
 }
 
 export async function getTransactionAccount(search: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
     SELECT 
         a.Code, a.Description
@@ -160,19 +151,13 @@ export async function getTransactionAccount(search: string, req: Request) {
 }
 
 export async function addJournalVoucher(data: any, req: Request) {
-
-
   return prisma.journal_voucher.create({ data });
 }
 export async function addJournalFromJournalVoucher(data: any, req: Request) {
-
-
   return prisma.journal.create({ data });
 }
 
 export async function updateGeneralJournalID(last_count: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
       UPDATE  id_sequence a 
         SET 
@@ -184,8 +169,6 @@ export async function updateGeneralJournalID(last_count: string, req: Request) {
       `);
 }
 export async function deleteGeneralJournal(Source_No: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
     DELETE
     FROM
@@ -200,8 +183,6 @@ export async function deleteJournalFromGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-
-
   return await prisma.$queryRawUnsafe(`
       DELETE
       FROM
@@ -212,15 +193,11 @@ export async function deleteJournalFromGeneralJournal(
         `);
 }
 export async function findeGeneralJournal(Source_No: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(
     `SELECT * FROM  journal_voucher where Source_No = '${Source_No}'`
   );
 }
 export async function voidGeneralJournal(Source_No: string, req: Request) {
-
-
   return await prisma.$queryRawUnsafe(`
         DELETE
         FROM
@@ -235,8 +212,6 @@ export async function insertVoidGeneralJournal(
   dateEntry: string,
   req: Request
 ) {
-
-
   return await prisma.$queryRawUnsafe(`
   INSERT INTO
     journal_voucher 
@@ -252,8 +227,6 @@ export async function voidJournalFromGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-
-
   return await prisma.$queryRawUnsafe(`
     DELETE
     FROM
@@ -269,8 +242,6 @@ export async function insertVoidJournalFromGeneralJournal(
   dateEntry: string,
   req: Request
 ) {
-
-
   return await prisma.$queryRawUnsafe(`
   INSERT INTO
     journal 
@@ -304,8 +275,8 @@ order by Date_Entry desc ,Source_No desc
             OR a.Explanation LIKE '%${search}%')
     LIMIT 50
 
-      `
-  console.log(sql)
+      `;
+  console.log(sql);
   return await prisma.$queryRawUnsafe(sql);
 }
 
@@ -313,8 +284,6 @@ export async function getSelectedSearchGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-
-
   return await prisma.$queryRawUnsafe(`
   SELECT 
         a.Branch_Code as BranchCode,
@@ -325,8 +294,8 @@ export async function getSelectedSearchGeneralJournal(
         a.cGL_Acct as acctName,
         a.cSub_Acct as subAcctName,
         a.cID_No as ClientName,
-        FORMAT(CAST(REPLACE(a.Debit, ',', '') AS DECIMAL(10,2)), 2) as  debit,
-        FORMAT(CAST(REPLACE(a.Credit, ',', '') AS DECIMAL(10,2)), 2) as  credit,
+        FORMAT(CAST(REPLACE(a.Debit, ',', '') AS DECIMAL(20,2)), 2) as  debit,
+        FORMAT(CAST(REPLACE(a.Credit, ',', '') AS DECIMAL(20,2)), 2) as  credit,
         a.TC as TC_Code,
         a.Remarks as remarks,
         a.Sub_Acct as subAcct,
@@ -335,13 +304,13 @@ export async function getSelectedSearchGeneralJournal(
         OR_Invoice_No as invoice,
         a.VATItemNo AS TempID
     FROM
-      journal_voucher a where a.Source_No ='${Source_No}' order by a.VATItemNo
+      journal_voucher a where a.Source_No ='${Source_No}' 
+      order by 
+      a.GL_Acct
       `);
 }
 
 export async function doRPTTransactionLastRow(req: Request) {
-
-
   return prisma.$queryRawUnsafe(`
   SELECT 
     b.ShortName as subAcctName , b.Acronym as BranchCode, a.description as ClientName , a.entry_others_id as IDNo
@@ -359,8 +328,6 @@ export async function doMonthlyProduction(
   year: number,
   req: Request
 ) {
-
-
   return prisma.$queryRawUnsafe(`
   SELECT 
     PolicyNo as IDNo,
@@ -383,8 +350,6 @@ export async function doRPTTransaction(
   Mortgagee: string,
   req: Request
 ) {
-
-
   return prisma.$queryRawUnsafe(`
   SELECT 
       d.ShortName as subAcctName,
@@ -402,7 +367,7 @@ export async function doRPTTransaction(
               LEFT JOIN
           (SELECT 
               IDNo,
-              SUM(CONVERT(REPLACE(debit, ',', ''),DECIMAL(10,2)) ) AS 'TotalPaid'
+              SUM(CONVERT(REPLACE(debit, ',', ''),DECIMAL(20,2)) ) AS 'TotalPaid'
           FROM
                 collection
           GROUP BY IDNo) b ON b.IDNo = a.PolicyNo
