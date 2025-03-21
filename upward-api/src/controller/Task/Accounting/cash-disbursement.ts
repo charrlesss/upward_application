@@ -81,94 +81,95 @@ CashDisbursement.post(
     }
 
     try {
-      if (
-        req.body.hasSelected &&
-        !(await saveUserLogsCode(
-          req,
-          "edit",
-          req.body.refNo,
-          "Cash-Disbursement"
-        ))
-      ) {
-        return res.send({ message: "Invalid User Code", success: false });
-      }
+      console.log(req.body.cashDisbursement);
+      // if (
+      //   req.body.hasSelected &&
+      //   !(await saveUserLogsCode(
+      //     req,
+      //     "edit",
+      //     req.body.refNo,
+      //     "Cash-Disbursement"
+      //   ))
+      // ) {
+      //   return res.send({ message: "Invalid User Code", success: false });
+      // }
 
-      const cashDisbursement = (await findCashDisbursement(
-        req.body.refNo,
-        req
-      )) as Array<any>;
-      if (cashDisbursement.length > 0 && !req.body.hasSelected) {
-        return res.send({
-          message: `${req.body.refNo} already exist!`,
-          success: true,
-        });
-      }
-      await DeleteNewCashDisbursement(req.body.refNo, req);
-      await DeleteNewJournalFromCashDisbursement(req.body.refNo, req);
-      req.body.cashDisbursement.forEach(async (item: any, index: number) => {
-        await AddNewCashDisbursement(
-          {
-            Branch_Code: item.BranchCode,
-            Date_Entry: req.body.dateEntry,
-            Source_Type: "CV",
-            Source_No: req.body.refNo,
-            Explanation: req.body.explanation,
-            Particulars: req.body.particulars,
-            Payto: item.Payto,
-            Address: item.address,
-            GL_Acct: item.code,
-            cGL_Acct: item.acctName,
-            cSub_Acct: item.subAcctName,
-            cID_No: item.ClientName,
-            Debit: parseFloat(item.debit.replace(/,/g, "")),
-            Credit: parseFloat(item.credit.replace(/,/g, "")),
-            Check_No: item.code === "1.01.10" ? item.checkNo : "",
-            Check_Date: item.code === "1.01.10" ? item.checkDate : "",
-            Remarks: item.remarks,
-            Sub_Acct: item.subAcct,
-            ID_No: item.IDNo,
-            TC: item.TC_Code,
-            VAT_Type: item.vatType,
-            OR_Invoice_No: item.invoice,
-            VATItemNo: parseInt(item.TempID),
-          },
-          req
-        );
-        await AddNewJournalFromCashDisbursement(
-          {
-            Branch_Code: "HO",
-            Date_Entry: req.body.dateEntry,
-            Source_Type: "CV",
-            Source_No: req.body.refNo,
-            Explanation: req.body.explanation,
-            Particulars: req.body.particulars,
-            Payto: item.Payto,
-            Address: item.address,
-            GL_Acct: item.code,
-            cGL_Acct: item.acctName,
-            cSub_Acct: item.subAcctName,
-            cID_No: item.ClientName,
-            Debit: parseFloat(item.debit.replace(/,/g, "")),
-            Credit: parseFloat(item.credit.replace(/,/g, "")),
-            Check_No: item.code === "1.01.10" ? item.checkNo : "",
-            Check_Date: item.code === "1.01.10" ? item.checkDate : "",
-            Remarks: item.remarks,
-            Sub_Acct: "HO",
-            ID_No: item.IDNo,
-            TC: item.TC_Code,
-            VAT_Type: item.vatType,
-            OR_Invoice_No: item.invoice,
-            VATItemNo: parseInt(item.TempID),
-            Source_No_Ref_ID: "",
-          },
-          req
-        );
-      });
+      // const cashDisbursement = (await findCashDisbursement(
+      //   req.body.refNo,
+      //   req
+      // )) as Array<any>;
+      // if (cashDisbursement.length > 0 && !req.body.hasSelected) {
+      //   return res.send({
+      //     message: `${req.body.refNo} already exist!`,
+      //     success: true,
+      //   });
+      // }
+      // await DeleteNewCashDisbursement(req.body.refNo, req);
+      // await DeleteNewJournalFromCashDisbursement(req.body.refNo, req);
+      // req.body.cashDisbursement.forEach(async (item: any, index: number) => {
+      //   await AddNewCashDisbursement(
+      //     {
+      //       Branch_Code: item.BranchCode,
+      //       Date_Entry: req.body.dateEntry,
+      //       Source_Type: "CV",
+      //       Source_No: req.body.refNo,
+      //       Explanation: req.body.explanation,
+      //       Particulars: req.body.particulars,
+      //       Payto: item.Payto,
+      //       Address: item.address,
+      //       GL_Acct: item.code,
+      //       cGL_Acct: item.acctName,
+      //       cSub_Acct: item.subAcctName,
+      //       cID_No: item.ClientName,
+      //       Debit: parseFloat(item.debit.replace(/,/g, "")),
+      //       Credit: parseFloat(item.credit.replace(/,/g, "")),
+      //       Check_No: item.code === "1.01.10" ? item.checkNo : "",
+      //       Check_Date: item.code === "1.01.10" ? item.checkDate : "",
+      //       Remarks: item.remarks,
+      //       Sub_Acct: item.subAcct,
+      //       ID_No: item.IDNo,
+      //       TC: item.TC_Code,
+      //       VAT_Type: item.vatType,
+      //       OR_Invoice_No: item.invoice,
+      //       VATItemNo: parseInt(item.TempID),
+      //     },
+      //     req
+      //   );
+      //   await AddNewJournalFromCashDisbursement(
+      //     {
+      //       Branch_Code: "HO",
+      //       Date_Entry: req.body.dateEntry,
+      //       Source_Type: "CV",
+      //       Source_No: req.body.refNo,
+      //       Explanation: req.body.explanation,
+      //       Particulars: req.body.particulars,
+      //       Payto: item.Payto,
+      //       Address: item.address,
+      //       GL_Acct: item.code,
+      //       cGL_Acct: item.acctName,
+      //       cSub_Acct: item.subAcctName,
+      //       cID_No: item.ClientName,
+      //       Debit: parseFloat(item.debit.replace(/,/g, "")),
+      //       Credit: parseFloat(item.credit.replace(/,/g, "")),
+      //       Check_No: item.code === "1.01.10" ? item.checkNo : "",
+      //       Check_Date: item.code === "1.01.10" ? item.checkDate : "",
+      //       Remarks: item.remarks,
+      //       Sub_Acct: "HO",
+      //       ID_No: item.IDNo,
+      //       TC: item.TC_Code,
+      //       VAT_Type: item.vatType,
+      //       OR_Invoice_No: item.invoice,
+      //       VATItemNo: parseInt(item.TempID),
+      //       Source_No_Ref_ID: "",
+      //     },
+      //     req
+      //   );
+      // });
 
-      if (!req.body.hasSelected) {
-        await updateCashDisbursementID(req.body.refNo.split("-")[1], req);
-        await saveUserLogs(req, req.body.refNo, "add", "Cash-Disbursement");
-      }
+      // if (!req.body.hasSelected) {
+      //   await updateCashDisbursementID(req.body.refNo.split("-")[1], req);
+      //   await saveUserLogs(req, req.body.refNo, "add", "Cash-Disbursement");
+      // }
 
       res.send({
         message: req.body.hasSelected
@@ -432,7 +433,7 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
         req
       );
 
-      console.log(PrintTable)
+      console.log(PrintTable);
 
       PrintTable.push({
         Account: "",
@@ -482,8 +483,7 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
           pdfReportGenerator: any,
           doc: PDFKit.PDFDocument
         ) => {
-
-          let adjustHeigth = 20
+          let adjustHeigth = 20;
           doc.fontSize(15);
           doc.text(req.body.reportTitle, 0, 40, {
             align: "center",
@@ -524,9 +524,14 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
           });
 
           doc.font("Helvetica");
-          doc.text(PrintPayeeDetails[0].CvNo, textWidth + 100 + 40, 85 + adjustHeigth, {
-            align: "left",
-          });
+          doc.text(
+            PrintPayeeDetails[0].CvNo,
+            textWidth + 100 + 40,
+            85 + adjustHeigth,
+            {
+              align: "left",
+            }
+          );
 
           doc.font("Helvetica-Bold");
           doc.text("Address. :", 20, 110 + adjustHeigth, {
@@ -564,7 +569,10 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
             .lineTo(PAGE_WIDTH - 10, 145 + adjustHeigth)
             .stroke();
 
-          doc.moveTo(450, 130 + adjustHeigth).lineTo(450, 240 + adjustHeigth).stroke();
+          doc
+            .moveTo(450, 130 + adjustHeigth)
+            .lineTo(450, 240 + adjustHeigth)
+            .stroke();
 
           doc.font("Helvetica-Bold");
           doc.text("PARTICULARS", 5, 133 + adjustHeigth, {
@@ -595,11 +603,16 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
           // amount total
           doc.font("Helvetica-Bold");
 
-          doc.text(`PHP ${PrintPayeeDetails[0].CreditTotal}`, 460, 225  + adjustHeigth, {
-            align: "center",
-            width: 140,
-            height: 10,
-          });
+          doc.text(
+            `PHP ${PrintPayeeDetails[0].CreditTotal}`,
+            460,
+            225 + adjustHeigth,
+            {
+              align: "center",
+              width: 140,
+              height: 10,
+            }
+          );
           // amount total end
           doc.font("Helvetica-Bold");
 

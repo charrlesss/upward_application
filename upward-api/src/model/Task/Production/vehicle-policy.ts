@@ -104,7 +104,7 @@ export async function getTPL_IDS(search: string, req: Request) {
             select * from (
                  Select   
                 Source_No,
-                cast(Credit as decimal(18,2)) as 'Cost' 
+                cast(Credit as decimal(20,2)) as 'Cost' 
                 from Journal 
             where 
                 Explanation ='CTPL Registration' 
@@ -142,7 +142,7 @@ export async function getRateFromTPLUpdate(Source_No: string, req: Request) {
   return await prisma.$queryRawUnsafe(`
   SELECT 
       MIN(Source_No) AS Source_No,
-      MIN(CAST(Credit AS DECIMAL (18 , 2 ))) as Cost ,
+      MIN(CAST(Credit AS DECIMAL (20 , 2 ))) as Cost ,
       Source_No_Ref_ID
   FROM
       journal
@@ -540,7 +540,7 @@ export async function getCostByTPL(Source_No: string, req: Request) {
   return await prisma.$queryRawUnsafe(`
        SELECT 
 				  (Source_No) AS Source_No,
-				  (CAST(Credit AS DECIMAL (18 , 2 ))) as Cost ,
+				  (CAST(Credit AS DECIMAL (20 , 2 ))) as Cost ,
 				  Source_No_Ref_ID
 			  FROM
 				  journal
