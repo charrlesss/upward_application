@@ -22,7 +22,7 @@ export async function getCashCollection(SlipCode: string, IsNew: boolean = true,
     WHERE
         Payment = 'Cash'
             AND (SlipCode IS NULL OR SlipCode = '' ${!IsNew ? ` OR SlipCode = '${SlipCode}' ` : ""}) 
-    ORDER BY a.Date_OR asc 
+    ORDER BY a.Official_Receipt asc 
     `;
 
   return await prisma.$queryRawUnsafe(sql);
@@ -51,7 +51,7 @@ export async function getCheckCollection(SlipCode: string, IsNew: boolean = true
       WHERE
         a.Payment = 'Check'
             AND (a.SlipCode IS NULL OR a.SlipCode = '' ${!IsNew ? ` OR SlipCode = '${SlipCode}' ` : ""})
-      ORDER BY a.Date_OR asc 
+      ORDER BY a.Official_Receipt asc 
     `;
 
   return await prisma.$queryRawUnsafe(sql);
