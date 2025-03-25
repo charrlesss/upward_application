@@ -39,7 +39,7 @@ const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
 ];
-const UCSMIEmailToSend = ["upward.csmi@yahoo.com", "upward.csmi@gmail.com"];
+const UCSMIEmailToSend = ["upward.csmi@yahoo.com", "upward.csmi@gmail.com","upwardinsurance.grace@gmail.com"];
 
 // ========================= REQUEST =================================
 CheckPostponement.get(
