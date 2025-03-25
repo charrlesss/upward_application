@@ -324,7 +324,6 @@ async function insertMarinePolicy(
   dateFromRef = defaultFormat(new Date(dateFromRef));
   dateToRef = defaultFormat(new Date(dateToRef));
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));
- 
 
   await createPolicy(
     {

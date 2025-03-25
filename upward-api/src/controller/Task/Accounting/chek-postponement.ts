@@ -26,12 +26,10 @@ import generateRandomNumber from "../../../lib/generateRandomNumber";
 import saveUserLogs from "../../../lib/save_user_logs";
 import { VerifyToken } from "../../Authentication";
 import generateUniqueUUID from "../../../lib/generateUniqueUUID";
-import { PrismaList } from "../../../model/connection";
 import { Request } from "express";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { v4 as uuidv4 } from "uuid";
-
-const { CustomPrismaClient } = PrismaList();
+import { prisma } from "../../../controller";
 
 const CheckPostponement = express.Router();
 
@@ -39,15 +37,17 @@ const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
 ];
-const UCSMIEmailToSend = ["upward.csmi@yahoo.com", "upward.csmi@gmail.com"];
+const UCSMIEmailToSend = [
+  "upward.csmi@yahoo.com",
+  "upward.csmi@gmail.com",
+  "upwardinsurance.grace@gmail.com",
+];
 
 // ========================= REQUEST =================================
 CheckPostponement.get(
   "/check-postponement/request/load-pnno",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
-
       setTimeout(async () => {
         // Step 2: Create `tmp_numbers` table
         await prisma.$executeRawUnsafe(`
@@ -148,8 +148,6 @@ CheckPostponement.get(
   "/check-postponement/request/auto-id",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
-
       const sql = `
       SELECT 
           CAST((YEAR(CURDATE()) % 100) AS CHAR) AS Year,
@@ -180,8 +178,6 @@ CheckPostponement.post(
   "/check-postponement/request/load-checks",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
-
       await prisma.$executeRawUnsafe(`  
     DROP TEMPORARY TABLE IF EXISTS tmp_dates;
     `);
@@ -258,7 +254,6 @@ CheckPostponement.post(
   "/check-postponement/request/load-checks-details",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const data = await prisma.$queryRawUnsafe(`
         SELECT 
             Cast(Check_Date as Date) CheckDate,
@@ -289,7 +284,6 @@ CheckPostponement.post(
   "/check-postponement/request/load-rpcdno",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const data = await prisma.$queryRawUnsafe(
         ` select '' as  RPCDNo  union all SELECT RPCDNo FROM postponement  Where Status = 'PENDING' and Branch = 'HO'`
       );
@@ -313,7 +307,6 @@ CheckPostponement.post(
   "/check-postponement/request/load-rpcd-details",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const data = await prisma.$queryRawUnsafe(` 
        SELECT 
       PNNO,
@@ -398,7 +391,6 @@ CheckPostponement.post(
   "/check-postponement/request/check-is-pending",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const data = await prisma.$queryRawUnsafe(`
             SELECT * FROM (
             SELECT 
@@ -431,7 +423,6 @@ CheckPostponement.post(
     try {
       const department = req.cookies["up-dpm-login"];
 
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const user = await getUserById((req.user as any).UserId);
       const subtitle = `<h3>Check Deposit Postponement Request</h3>`;
       const text = getSelectedCheck(req.body.data);
@@ -444,15 +435,19 @@ CheckPostponement.post(
         data: {
           RPCDNo: req.body.RPCDNoRef,
           PNNo: req.body.PNNoRef,
-          HoldingFees: req.body.HoldingFeesRef,
-          PenaltyCharge: req.body.PenaltyChargeRef,
+          HoldingFees: parseFloat(
+            req.body.HoldingFeesRef.replace(/,/g, "")
+          ).toFixed(2),
+          PenaltyCharge: parseFloat(
+            req.body.PenaltyChargeRef.replace(/,/g, "")
+          ).toFixed(2),
           PaidVia: req.body.HowToBePaidRef,
           PaidInfo: req.body.RemarksRef,
           Date: defaultFormat(new Date()),
           Status: "PENDING",
           Branch: req.body.BranchRef,
           Prepared_by: req.body.Prepared_By,
-          Surplus: req.body.SurplusRef,
+          Surplus: parseFloat(req.body.SurplusRef.replace(/,/g, "")).toFixed(2),
           Deducted_to: req.body.DeductedToRef,
         },
       });
@@ -544,7 +539,6 @@ CheckPostponement.post(
 CheckPostponement.post("/check-postponement/request/edit", async (req, res) => {
   try {
     const department = req.cookies["up-dpm-login"];
-    const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
     // HEADER
     await prisma.$queryRawUnsafe(
       `delete from postponement where RPCDNo = '${req.body.RPCDNoRef}'`
@@ -669,7 +663,6 @@ CheckPostponement.get(
   "/check-postponement/approve/load-rpcdno",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       res.send({
         message: `Update ${req.body.RPCDNoRef} Successfully`,
         success: true,
@@ -691,33 +684,33 @@ CheckPostponement.post(
   "/check-postponement/approve/load-details",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
-      res.send({
-        message: `Update ${req.body.RPCDNoRef} Successfully`,
-        success: true,
-        data: await prisma.$queryRawUnsafe(`
+      const qry = `
         selecT 
-        PNNO, 
-      (selecT distinct(name) from PDC where PNno = a.PnNo and Check_No = a.CheckNo) as 'Name', 
-      CheckNo, 
-      'HO' as Branch, 
-      (select bank from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
-      (select Check_Amnt from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
-      date_format(a.OldCheckDate,'%Y-%m-%d') as OldDepositDate,
-      date_format(a.NewCheckDate,'%Y-%m-%d') as NewDate,
-      CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
-      a.Reason, 
-      (seleCT PaidVia from Postponement where RPCDNo = a.RPCD) as 'PaidVia', 
-      (seleCT Surplus from Postponement where RPCDNo = a.RPCD) as 'Surplus', 
-      (seleCT Deducted_to from Postponement where RPCDNo = a.RPCD) as 'Deducted_to',
-      (seleCT PaidInfo from Postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
+          PNNO, 
+          CheckNo, 
+          'HO' as Branch,
+          date_format(a.OldCheckDate,'%Y-%m-%d') as OldDepositDate,
+          date_format(a.NewCheckDate,'%Y-%m-%d') as NewDate,
+          CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
+          a.Reason, 
+          (selecT distinct(name) from PDC where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
+          (select bank from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
+          (select Check_Amnt from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
+          (seleCT PaidVia from Postponement where RPCDNo = a.RPCD) as 'PaidVia', 
+          (seleCT Surplus from Postponement where RPCDNo = a.RPCD) as 'Surplus', 
+          (seleCT Deducted_to from Postponement where RPCDNo = a.RPCD) as 'Deducted_to',
+          (seleCT PaidInfo from Postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
       from (
-      seleCT *, 
+          seleCT *, 
           (selecT pnno from Postponement where RPCDNo = A.RPCD) as 'PNNO' 
           from Postponement_Detail A) a 
-      where RPCD = '${req.body.RPCDNo}'  
-        
-      `),
+      where RPCD = '${req.body.RPCDNo}'   
+      `;
+      console.log(qry);
+      res.send({
+        message: `Update ${req.body.RPCDNo} Successfully`,
+        success: true,
+        data: await prisma.$queryRawUnsafe(qry),
       });
     } catch (error: any) {
       console.log(`${error.message}`);
@@ -733,7 +726,6 @@ CheckPostponement.post(
   "/check-postponement/approve/confirmation",
   async (req, res) => {
     try {
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const isCodeFound: Array<any> = await prisma.$queryRawUnsafe(
         `selecT * from postponement_auth_codes where Approved_Code = '${req.body.code}'`
       );
@@ -783,7 +775,6 @@ CheckPostponement.post(
     try {
       const department = req.cookies["up-dpm-login"];
 
-      const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
       const user = await getUserById((req.user as any).UserId);
 
       const subtitle = `<h3>Check Deposit Postponement Request</h3>`;

@@ -304,7 +304,9 @@ export async function getSelectedSearchGeneralJournal(
         OR_Invoice_No as invoice,
         a.VATItemNo AS TempID
     FROM
-      journal_voucher a where a.Source_No ='${Source_No}' order by a.GL_Acct asc
+      journal_voucher a where a.Source_No ='${Source_No}' 
+      order by 
+      a.GL_Acct
       `);
 }
 

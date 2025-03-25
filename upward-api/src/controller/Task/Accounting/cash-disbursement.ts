@@ -86,7 +86,7 @@ CashDisbursement.post(
         req.body.hasSelected &&
         !(await saveUserLogsCode(
           req,
-          "edit",
+          "edit", 
           req.body.refNo,
           "Cash-Disbursement"
         ))
