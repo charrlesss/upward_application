@@ -33,7 +33,13 @@ const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
 ];
-const UCSMIEmailToSend = ["upward.csmi@yahoo.com", "upward.csmi@gmail.com","upwardinsurance.grace@gmail.com"];
+
+const UCSMIEmailToSend = [
+  "upward.csmi@yahoo.com",
+  "upward.csmi@gmail.com",
+  "upwardinsurance.grace@gmail.com",
+];
+
 
 PulloutRequest.post(
   `/pullout/reqeust/save-pullout-request`,
@@ -235,7 +241,6 @@ PulloutApporved.post("/pullout/approved/confirm-code", async (req, res) => {
     const Name = req.body.Name;
     const code = req.body.code;
     const selected = req.body.selected;
-
 
     const user = await getUserById((req.user as any).UserId);
     const Requested_By = user?.Username as string;
