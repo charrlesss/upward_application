@@ -39,6 +39,7 @@ const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
 
 ];
+
 const UCSMIEmailToSend = [
   "upward.csmi@yahoo.com",
   "upward.csmi@gmail.com",

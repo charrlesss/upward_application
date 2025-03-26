@@ -34,11 +34,13 @@ const UMISEmailToSend = [
   "lva_ancar@yahoo.com",
   "upwardinsurance.grace@gmail.com",
 ];
+
 const UCSMIEmailToSend = [
   "upward.csmi@yahoo.com",
   "upward.csmi@gmail.com",
   "upwardinsurance.grace@gmail.com",
 ];
+
 
 PulloutRequest.post(
   `/pullout/reqeust/save-pullout-request`,
