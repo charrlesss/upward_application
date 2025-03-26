@@ -32,6 +32,7 @@ const PulloutApporved = express.Router();
 const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
+  "upwardinsurance.grace@gmail.com",
 ];
 const UCSMIEmailToSend = [
   "upward.csmi@yahoo.com",
