@@ -3,6 +3,9 @@ import cors from "cors";
 import router from "./src/controller";
 import path from "path";
 import cookieParser from "cookie-parser";
+import env from "dotenv";
+
+env.config();
 
 const PORT = process.env.PORT;
 
