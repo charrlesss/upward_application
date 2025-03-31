@@ -6,11 +6,11 @@ import Imbersement from "./Imbersement";
 import Report from "./Report";
 
 const router = express.Router();
-export const prisma = new PrismaClient(); 
+export const prisma = new PrismaClient();
 
-
-
-
+router.get("/test", (req, res) => {
+  res.send({ message: "TEST" });
+});
 router.use(Authentication);
 router.use(ValidateToken);
 router.use(Claims);
