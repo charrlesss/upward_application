@@ -10,11 +10,9 @@ env.config();
 const PORT = process.env.PORT;
 
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://claims.upwardinsurance.net"],
+  origin: ["http://localhost:3000","https://claims.upwardinsurance.net", "/", "*"],
   credentials: true,
   optionSuccessStatus: 200,
-  methods: "GET,POST,PUT,DELETE,OPTIONS",
-  allowedHeaders: "Content-Type,Authorization",
 };
 
 async function main() {
