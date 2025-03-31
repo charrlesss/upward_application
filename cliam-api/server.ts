@@ -10,7 +10,7 @@ env.config();
 const PORT = process.env.PORT;
 
 const corsOptions = {
-  origin: ["http://localhost:3000", "/", "*"],
+  origin: ["http://localhost:3000", "https://claims.upwardinsurance.net"],
   credentials: true,
   optionSuccessStatus: 200,
 };
