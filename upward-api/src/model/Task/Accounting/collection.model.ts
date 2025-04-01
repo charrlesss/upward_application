@@ -80,14 +80,15 @@ export async function postTransactionBanksDetails(code: string, req: Request) {
 }
 
 export async function getTransactionDescription(req: Request) {
+  
   const query = `
         SELECT 
-          Transaction_Code.*, 
-          Chart_Account.Acct_Title 
-        from Transaction_Code 
-        LEFT JOIN Chart_Account ON Transaction_Code.Acct_Code = Chart_Account.Acct_Code 
+          transaction_code.*, 
+          chart_account.Acct_Title 
+        from transaction_code 
+        LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code 
         WHERE 
-        Chart_Account.Acct_Code IS NOT NULL 
+        chart_account.Acct_Code IS NOT NULL 
         ORDER BY Description`;
   return await prisma.$queryRawUnsafe(query);
 }
@@ -185,6 +186,7 @@ export async function getCollections(
   );
 }
 export async function getSearchCollection(ORNo: string, req: Request) {
+  
   return await prisma.$queryRawUnsafe(
     `
   SELECT 
@@ -227,7 +229,7 @@ export async function getSearchCollection(ORNo: string, req: Request) {
         LEFT JOIN
       bank b ON b.Bank_Code = TRIM(BOTH ' ' FROM SUBSTRING_INDEX(a.Bank, '/', 1))
      left join  (
-     select Chart_Account.* ,Transaction_Code.Description ,Transaction_Code.Code from Transaction_Code LEFT JOIN Chart_Account ON Transaction_Code.Acct_Code = Chart_Account.Acct_Code 
+     select chart_account.* ,transaction_code.Description ,transaction_code.Code from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code 
      ) c on a.Purpose = c.Description 
   WHERE
     a.Official_Receipt = ?

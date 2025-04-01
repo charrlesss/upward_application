@@ -442,7 +442,7 @@ export async function getPdcUpload(ref_no: string, req: Request) {
 export async function deletePdcByRefNo(Ref_No: string, req: Request) {
   // return await prisma.pdc.deleteMany({ where: { Ref_No } });
   return await prisma.$queryRawUnsafe(
-    `DELETE FROM PDC  where Ref_No = ?`,
+    `DELETE FROM pdc  where Ref_No = ?`,
     Ref_No
   );
 }

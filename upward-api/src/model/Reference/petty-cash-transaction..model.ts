@@ -5,14 +5,14 @@ export async function getPettyCashTransaction(search: string) {
   return await prisma.$queryRawUnsafe(`
          SELECT 
           Purpose,
-          Chart_Account.Acct_Code AS Code,
-          Chart_Account.Acct_Title AS Account_Name,
-          IF(Petty_Log.InActive = 1, 'Yes', '') AS Inactive,
-          Petty_Log.Petty_Log
+          chart_account.Acct_Code AS Code,
+          chart_account.Acct_Title AS Account_Name,
+          IF(petty_log.InActive = 1, 'Yes', '') AS Inactive,
+          petty_log.Petty_Log
       FROM
-          Petty_Log
+          petty_log
               INNER JOIN
-          Chart_Account ON Petty_Log.Acct_Code = Chart_Account.Acct_Code
+          chart_account ON petty_log.Acct_Code = chart_account.Acct_Code
       WHERE
           (Purpose LIKE '%${search}%')
 
@@ -39,7 +39,7 @@ export async function searchChartAccountPettyCash(search: string) {
     SELECT 
     Acct_Code AS Code, Acct_Title AS Title, Short AS Short_Name
 FROM
-    Chart_Account
+    chart_account
 WHERE
     Acct_Type = 'Detail' AND Inactive = 0
         AND (Acct_Code LIKE '%${search}%' OR Short LIKE '%${search}%'

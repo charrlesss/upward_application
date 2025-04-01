@@ -92,28 +92,28 @@ export async function getCheckList(search: string, req: Request) {
     `
         SELECT 
     Temp_SlipCode AS Deposit_Slip,
-    date_format(Deposit.Temp_SlipDate,'%m/%d/%Y' ) AS Depo_Date,
-    Deposit.Check_No AS Check_No,
-    date_format(Deposit.Check_Date ,'%m/%d/%Y') as Check_Date,
-    FORMAT(Deposit.Credit, 2) AS Amount,
-    Deposit.Bank,
+    date_format(deposit.Temp_SlipDate,'%m/%d/%Y' ) AS Depo_Date,
+    deposit.Check_No AS Check_No,
+    date_format(deposit.Check_Date ,'%m/%d/%Y') as Check_Date,
+    FORMAT(deposit.Credit, 2) AS Amount,
+    deposit.Bank,
     Official_Receipt,
      date_format(Date_OR,'%m/%d/%Y' )AS Date_OR,
     BankAccount
 FROM
-    (Deposit
-    LEFT JOIN Deposit_Slip ON Deposit.Temp_SlipCode = Deposit_Slip.SlipCode)
+    (deposit
+    LEFT JOIN deposit_slip ON deposit.Temp_SlipCode = deposit_slip.SlipCode)
         LEFT JOIN
     (SELECT 
         Official_Receipt, Date_OR
     FROM
-        Collection
-    GROUP BY Official_Receipt , Date_OR) OR_Number ON Deposit.Ref_No = OR_Number.Official_Receipt
-GROUP BY Deposit.Temp_SlipCode , Deposit.Temp_SlipDate , Deposit.Ref_No , OR_Number.Date_OR , Deposit_Slip.BankAccount , Deposit.Credit , Deposit.Check_Date , Deposit.Check_No , Deposit.Bank , Official_Receipt , BankAccount
+        collection
+    GROUP BY Official_Receipt , Date_OR) OR_Number ON deposit.Ref_No = OR_Number.Official_Receipt
+GROUP BY deposit.Temp_SlipCode , deposit.Temp_SlipDate , deposit.Ref_No , OR_Number.Date_OR , deposit_slip.BankAccount , deposit.Credit , deposit.Check_Date , deposit.Check_No , deposit.Bank , Official_Receipt , BankAccount
 HAVING (((OR_Number.Date_OR) IS NOT NULL)
-    AND ((Deposit.Check_No) <> ''))
+    AND ((deposit.Check_No) <> ''))
     AND (Check_No LIKE ? OR Bank LIKE ?)
-ORDER BY Deposit.Check_Date Desc
+ORDER BY deposit.Check_Date Desc
 LIMIT 100
   `,
     `%${search}%`,

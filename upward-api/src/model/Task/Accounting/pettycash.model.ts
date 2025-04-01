@@ -121,6 +121,6 @@ export async function loadSelectedPettyCash(PC_No: string, req: Request) {
 
 export async function loadTranscation(req: Request) {
   return await prisma.$queryRawUnsafe(`
-  SELECT * FROM Petty_Log WHERE InActive = 'False' ORDER BY Purpose
+  SELECT * FROM petty_log WHERE Inactive = 'False' ORDER BY Purpose
   `);
 }

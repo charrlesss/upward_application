@@ -124,7 +124,7 @@ export async function updateApprovalCode(
 
 export async function loadRequestNumber(req: Request) {
   return await prisma.$queryRawUnsafe(
-    `sElect '' as RCPNo union all  Select RCPNo from PullOut_Request where Status = 'PENDING' and Branch = 'HO' `
+    `sElect '' as RCPNo union all  Select RCPNo from pullout_request where Status = 'PENDING' and Branch = 'HO' `
   );
 }
 export async function loadDetails(req: Request, RCPNo: string) {
@@ -141,8 +141,8 @@ export async function loadDetails(req: Request, RCPNo: string) {
         c.Bank,
         b.CheckNo,
         c.Check_Amnt 
-      From PullOut_Request a 
-      Inner join PullOut_Request_Details b on a.RCPNo = b.RCPNo 
+      From pullout_request a 
+      Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
       Inner join PDC c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
       Where a.RCPNo =  ?
     `,
@@ -152,27 +152,27 @@ export async function loadDetails(req: Request, RCPNo: string) {
 
 export async function checkApprovedCode(req: Request, code: string) {
   return await prisma.$queryRawUnsafe(
-    `selecT * from Pullout_auth_codes where Approved_Code = ? and used_by is null`,
+    `selecT * from pullout_auth_codes where Approved_Code = ? and used_by is null`,
     code
   );
 }
 
 export async function checkApprovedCodeIsUsed(req: Request, RCPN: string) {
   return await prisma.$queryRawUnsafe(
-    `selecT * from Pullout_auth_codes where RCPN = ? and used_by is not null`,
+    `selecT * from pullout_auth_codes where RCPN = ? and used_by is not null`,
     RCPN
   );
 }
 
 export async function updateCode(req: Request, username: string, code: string) {
   return await prisma.$queryRawUnsafe(
-    `update pullout_Auth_codes set used_by = ?, used_datetime = now() where Approved_Code = ? `,
+    `update pullout_auth_codes set used_by = ?, used_datetime = now() where Approved_Code = ? `,
     username,
     code
   );
 }
 export async function approved(req: Request, username: string, RCPN: string) {
-  const str = `Update PullOut_Request set Status = 'APPROVED', Approved_By = ?, Approved_Date = now() WHERE RCPNo = ? `;
+  const str = `Update pullout_request set Status = 'APPROVED', Approved_By = ?, Approved_Date = now() WHERE RCPNo = ? `;
 
   return await prisma.$queryRawUnsafe(str, username, RCPN);
 }

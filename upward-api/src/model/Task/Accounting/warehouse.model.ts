@@ -218,8 +218,8 @@ export async function getApprovedRCPNo(req: Request) {
       (SELECT 
           A.RCPNo, A.PNNo, b.CheckNo, a.Status
       FROM
-          PullOut_Request A
-      INNER JOIN PullOut_Request_Details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
+          pullOut_request A
+      INNER JOIN pullOut_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
           AND A.Check_No = B.CheckNo
   WHERE
       PDC_Status = 'Stored'
@@ -246,8 +246,8 @@ export async function loadList(req: Request, RCPNo: string) {
         (SELECT 
             A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
         FROM
-            PullOut_Request A
-        INNER JOIN PullOut_Request_Details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
+            pullOut_request A
+        INNER JOIN pullOut_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
             AND A.Check_No = B.CheckNo
     WHERE
         PDC_Status = 'Stored'
@@ -270,8 +270,8 @@ export async function loadList(req: Request, RCPNo: string) {
         (SELECT 
             A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
         FROM
-            PullOut_Request A
-        INNER JOIN PullOut_Request_Details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
+            pullOut_request A
+        INNER JOIN pullOut_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
             AND A.Check_No = B.CheckNo
     WHERE
         PDC_Status = 'Stored'

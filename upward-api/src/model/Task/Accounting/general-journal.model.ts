@@ -367,7 +367,7 @@ export async function doMonthlyProduction(
     PolicyNo as ClientName,
     LPAD(ROW_NUMBER() OVER (), 3, '0') AS TempID
   FROM
-      Policy P
+      policy P
   WHERE
     Account = '${account}'
         AND MONTH(DateIssued) = ${month}

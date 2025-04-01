@@ -51,7 +51,7 @@ export async function getMortgagee() {
     SELECT 
         a.Mortgagee
     FROM
-          Mortgagee a
+          mortgagee a
     `;
   return await prisma.$queryRawUnsafe(query1);
 }

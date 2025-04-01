@@ -56,19 +56,19 @@ export async function getPolicyAccount(whr: string, req: Request) {
 }
 export async function getPolicyMortgagee(whr: string, req: Request) {
   const qry = `
-  SELECT '' as Mortgagee union all SELECT Mortgagee FROM Mortgagee ${whr} ORDER BY Mortgagee;
+  SELECT '' as Mortgagee union all SELECT Mortgagee FROM mortgagee ${whr} ORDER BY Mortgagee;
   `;
   return (await prisma.$queryRawUnsafe(qry)) as any;
 }
 export async function getPolicyDenomination(whr: string, req: Request) {
   const qry = `
-SELECT '' as Type union all  select distinct Type from Rates ${whr};
+SELECT '' as Type union all  select distinct Type from rates ${whr};
   `;
   return (await prisma.$queryRawUnsafe(qry)) as any;
 }
 
 export async function getPolicySubAccount(req: Request) {
-  const qry = `SELECT Acronym FROM Sub_Account ORDER BY Acronym`;
+  const qry = `SELECT Acronym FROM sub_account ORDER BY Acronym`;
   return (await prisma.$queryRawUnsafe(qry)) as any;
 }
 export async function generateTempID(req: Request) {
@@ -80,7 +80,7 @@ export async function generateTempID(req: Request) {
             '-', 
             LPAD(COALESCE(MAX(CAST(SUBSTRING_INDEX(PolicyNo, '-', -1) AS UNSIGNED)) + 1, 1), 3, '0')
       ) AS PolicyNo
-  FROM Policy
+  FROM policy
   WHERE PolicyNo LIKE CONCAT('TP-', RIGHT(YEAR(NOW()), 2), LPAD(MONTH(NOW()), 2, '0'), '-%');
 `;
   return (await prisma.$queryRawUnsafe(qry)) as any;
@@ -105,7 +105,7 @@ export async function getTPL_IDS(search: string, req: Request) {
                  Select   
                 Source_No,
                 cast(Credit as decimal(20,2)) as 'Cost' 
-                from Journal 
+                from journal 
             where 
                 Explanation ='CTPL Registration' 
                 and Source_No 
@@ -218,7 +218,7 @@ export async function getRate(
   req: Request
 ) {
   const query = `
-  select Rate from Rates 
+  select Rate from rates 
   where 
   trim(Account) = '${account.trim()}' 
   and trim(Line) = '${line}' 
@@ -235,7 +235,7 @@ export async function getRateVPolicy(
   req: Request
 ) {
   const query = `
-  select Rate from Rates 
+  select Rate from rates 
   where 
   trim(Account) = '${account.trim()}' 
   and trim(Line) = '${line}' 

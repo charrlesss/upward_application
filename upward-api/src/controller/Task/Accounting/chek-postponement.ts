@@ -112,7 +112,7 @@ CheckPostponement.get(
           ID_No,
           SUM(IFNULL(Debit, 0) - IFNULL(Credit, 0)) AS Balance
       FROM
-          Journal
+          journal
       WHERE GL_Acct = '1.03.01'
       GROUP BY ID_No
   ) d
@@ -338,25 +338,25 @@ CheckPostponement.post(
       (SELECT 
               PaidVia
           FROM
-              Postponement
+              postponement
           WHERE
               RPCDNo = a.RPCD) AS 'PaidVia',
       (SELECT 
               Surplus
           FROM
-              Postponement
+              postponement
           WHERE
               RPCDNo = a.RPCD) AS 'Surplus',
       (SELECT 
               Deducted_to
           FROM
-              Postponement
+              postponement
           WHERE
               RPCDNo = a.RPCD) AS 'Deducted_to',
       (SELECT 
               PaidInfo
           FROM
-              Postponement
+              postponement
           WHERE
               RPCDNo = a.RPCD) AS 'PaidInfo'
   FROM
@@ -365,11 +365,11 @@ CheckPostponement.post(
               (SELECT 
                       pnno
                   FROM
-                      Postponement
+                      postponement
                   WHERE
                       RPCDNo = A.RPCD) AS 'PNNO'
       FROM
-          Postponement_Detail A) a
+          postponement_detail A) a
   WHERE
       RPCD = '${req.body.RPCDNo}'  
       `);
@@ -397,10 +397,10 @@ CheckPostponement.post(
             SELECT * FROM (
             SELECT 
              *,
-              (SELECT PNNO FROM Postponement WHERE RPCDNo = a.RPCDNo) AS PNNO,
-              (SELECT status FROM Postponement WHERE RPCDNo = a.RPCDNo) AS Status
+              (SELECT PNNO FROM postponement WHERE RPCDNo = a.RPCDNo) AS PNNO,
+              (SELECT status FROM postponement WHERE RPCDNo = a.RPCDNo) AS Status
               
-            FROM Postponement_Detail a
+            FROM postponement_detail a
           ) tbl 
           WHERE checkNo = '${req.body.checkNo}' AND Status = 'PENDING';
       `);
@@ -669,7 +669,7 @@ CheckPostponement.get(
         message: `Update ${req.body.RPCDNoRef} Successfully`,
         success: true,
         data: await prisma.$queryRawUnsafe(
-          `select '' as RPCDNo union all Select RPCDNo from Postponement  Where Status = 'PENDING'`
+          `select '' as RPCDNo union all Select RPCDNo from postponement  Where Status = 'PENDING'`
         ),
       });
     } catch (error: any) {
@@ -705,7 +705,7 @@ CheckPostponement.post(
       from (
           seleCT *, 
           (selecT pnno from Postponement where RPCDNo = A.RPCD) as 'PNNO' 
-          from Postponement_Detail A) a 
+          from postponement_detail A) a 
       where RPCD = '${req.body.RPCDNo}'   
       `;
       console.log(qry);
@@ -848,17 +848,17 @@ CheckPostponement.post(
       }
 
       await prisma.$queryRawUnsafe(
-        `update Postponement_Auth_codes set used_by ='${user?.Username}', used_datetime =now() where Approved_Code ='${req.body.code}'`
+        `update postponement_auth_codes set used_by ='${user?.Username}', used_datetime =now() where Approved_Code ='${req.body.code}'`
       );
       if (req.body.mode === "Approve") {
         const data = JSON.parse(req.body.data);
         for (const itm of data) {
           await prisma.$queryRawUnsafe(
-            `Update PDC set Check_Date = '${itm[5]}' where PNo = '${req.body.PNNoRef}' and Check_No = '${itm[1]}'`
+            `Update pdc set Check_Date = '${itm[5]}' where PNo = '${req.body.PNNoRef}' and Check_No = '${itm[1]}'`
           );
         }
         await prisma.$queryRawUnsafe(
-          `Update Postponement set Status = 'APPROVED' WHERE RPCDNo = '${req.body.RPCD}' `
+          `Update postponement set Status = 'APPROVED' WHERE RPCDNo = '${req.body.RPCD}' `
         );
 
         res.send({
@@ -868,7 +868,7 @@ CheckPostponement.post(
         });
       } else {
         await prisma.$queryRawUnsafe(
-          `Update Postponement set Status = 'DISAPPROVED' WHERE RPCDNo = '${req.body.RPCD}' `
+          `Update postponement set Status = 'DISAPPROVED' WHERE RPCDNo = '${req.body.RPCD}' `
         );
         res.send({
           message: `Request has been disapproved.`,

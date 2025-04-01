@@ -80,10 +80,10 @@ VehiclePolicy.post("/account", async (req, res) => {
     const policy = req.body.policy;
     let whr = "";
     if (policy === "COM") {
-      whr = " WHERE COM = 1";
+      whr = " WHERE COM = true";
     }
     if (policy === "TPL") {
-      whr = " WHERE TPL = 1";
+      whr = " WHERE TPL = true";
     }
     res.send({
       message: "search data successfully",

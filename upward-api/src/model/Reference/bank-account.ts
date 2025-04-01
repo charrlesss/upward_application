@@ -7,21 +7,21 @@ export async function searchBankAccountsModel(search: string) {
     Account_No AS Account_Number,
     Account_Name AS Account_Name,
     Account_Type AS Account_Type,
-    BankAccounts.Desc AS Bank_Name,
-    BankAccounts.Option,
-    BankAccounts.Account_ID,
-    IF(BankAccounts.InActive = 1, 'Yes', '') AS Inactive,
+    bankaccounts.Desc AS Bank_Name,
+    bankaccounts.Option,
+    bankaccounts.Account_ID,
+    IF(bankaccounts.InActive = 1, 'Yes', '') AS Inactive,
     Auto,
-    BankAccounts.IDNo AS ID_No,
+    bankaccounts.IDNo AS ID_No,
     Identity,
     Bank,
     Chart_Account.Acct_Title
 FROM
-    BankAccounts
+    bankaccounts
         LEFT JOIN
-    Bank ON BankAccounts.Desc = Bank.Bank_Code
+    Bank ON bankaccounts.Desc = Bank.Bank_Code
         LEFT JOIN
-    Chart_Account ON BankAccounts.Account_ID = Chart_Account.Acct_Code
+    Chart_Account ON bankaccounts.Account_ID = Chart_Account.Acct_Code
 WHERE
     Account_No LIKE '%${search}%'
         OR Account_Name LIKE '%${search}%'
@@ -33,7 +33,7 @@ export async function searchBankModel(search: string) {
   const qry = `
       SELECT  Bank_Code AS Code, 
       Bank AS Bank_Name 
-      FROM Bank  
+      FROM bank  
       WHERE Inactive = 0 
       AND (Bank_Code LIKE '%${search}%' OR  Bank LIKE '%${search}%') ORDER BY Bank
       limit 100
@@ -47,7 +47,7 @@ export async function searchChartAccountModel(search: string) {
     Acct_Title AS Title, 
     Short
       FROM
-      Chart_Account
+      chart_account
       WHERE
       Inactive = 0
             AND (Acct_Code LIKE '%%' OR Short LIKE '%%'

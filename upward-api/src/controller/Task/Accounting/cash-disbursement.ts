@@ -86,7 +86,7 @@ CashDisbursement.post(
         req.body.hasSelected &&
         !(await saveUserLogsCode(
           req,
-          "edit", 
+          "edit",
           req.body.refNo,
           "Cash-Disbursement"
         ))
@@ -398,13 +398,13 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
       FORMAT(CAST(REPLACE(DebitTotal, ',', '') AS DECIMAL(10, 2)), 2) as DebitTotal,
       FORMAT(CAST(REPLACE(CreditTotal, ',', '') AS DECIMAL(10, 2)), 2) as CreditTotal
       FROM 
-      Journal AS J 
+      journal AS J 
       INNER JOIN (
         SELECT 
         Source_No AS CvNo,
         format(SUM(Debit),2) AS DebitTotal,
         format(SUM(Debit),2) AS CreditTotal 
-        FROM Journal WHERE
+        FROM journal WHERE
         LEFT(Explanation,7) <> '-- Void' AND 
         Source_Type = 'CV' AND 
         Source_No = '${req.body.Source_No}' GROUP BY Source_No 
@@ -424,7 +424,7 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
         cID_No AS Identity,
         FORMAT(CAST(REPLACE(Debit, ',', '') AS DECIMAL(10, 2)), 2) as Debit, 
         FORMAT(CAST(REPLACE(Credit, ',', '') AS DECIMAL(10, 2)), 2) as Credit
-      FROM Journal 
+      FROM journal 
       WHERE LEFT(Explanation,7) <> '-- Void' AND
       Source_Type = 'CV' AND 
       Source_No = '${req.body.Source_No}' 
