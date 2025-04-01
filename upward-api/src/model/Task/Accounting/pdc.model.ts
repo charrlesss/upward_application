@@ -211,26 +211,28 @@ export async function checkClientID(id: string, req: Request) {
 
 export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
   const qry = `
- SELECT 
-    *
-FROM
-    (${withPolicy}) a
-WHERE
-    a.Name IS NOT NULL AND a.IDNo LIKE '%${search}%'
-        OR a.chassis LIKE '%${search}%'
-        OR a.Name LIKE '%${search}%'
-ORDER BY CASE
-    WHEN name REGEXP '^[A-Za-z]' THEN 1
-    WHEN name LIKE 'APARES%' THEN 0
-    ELSE 2
-END , name ASC
-limit 50      
-
+  SELECT 
+      *
+  FROM
+      (${withPolicy}) a
+  WHERE
+      a.Name IS NOT NULL AND a.IDNo LIKE ?
+          OR a.chassis LIKE ?
+          OR a.Name LIKE ?
+  ORDER BY CASE
+      WHEN name REGEXP '^[A-Za-z]' THEN 1
+      WHEN name LIKE 'APARES%' THEN 0
+      ELSE 2
+  END , name ASC
+  limit 50      
   `;
 
-  console.log(qry);
-
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(
+    qry,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
 export async function getCashPayTo(search: string) {
@@ -387,21 +389,26 @@ SELECT
 FROM
     (${_withPolicy}) a
 WHERE
-    a.Name IS NOT NULL AND a.IDNo LIKE '%${search}%'
-        OR a.chassis LIKE '%${search}%'
-        OR a.Name LIKE '%${search}%'
+    a.Name IS NOT NULL AND a.IDNo LIKE ?
+        OR a.chassis LIKE ?
+        OR a.Name LIKE ?
 ORDER BY  a.Name
 limit 50      
 
   `;
 
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(
+    qry,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 export async function getPdcBanks(search: string, req: Request) {
   const query = `
-    SELECT a.Bank_Code, a.Bank FROM   bank a where  a.Bank_Code like '%${search}%' OR a.Bank like '%${search}%' limit 50; 
+    SELECT a.Bank_Code, a.Bank FROM   bank a where  a.Bank_Code like ? OR a.Bank like ? limit 50; 
     `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, `%${search}%`, `%${search}%`);
 }
 export async function findPdc(Ref_No: string, req: Request) {
   return await prisma.pdc.findMany({ where: { Ref_No } });
@@ -420,26 +427,31 @@ export async function pdcUploadsUpdate(data: any, req: Request) {
   });
 }
 export async function getPdcUpload(ref_no: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
     a.upload
   FROM
       pdc_uploads a 
   WHERE
-  a.Ref_No = '${ref_no}'
-  `);
+  a.Ref_No = ?
+  `,
+    ref_no
+  );
 }
 export async function deletePdcByRefNo(Ref_No: string, req: Request) {
   // return await prisma.pdc.deleteMany({ where: { Ref_No } });
   return await prisma.$queryRawUnsafe(
-    `DELETE FROM PDC  where Ref_No ='${Ref_No}' `
+    `DELETE FROM PDC  where Ref_No = ?`,
+    Ref_No
   );
 }
 export async function createPDC(data: any, req: Request) {
   return await prisma.pdc.create({ data });
 }
 export async function searchPDC(search: any, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
         a.Ref_No,
         DATE_FORMAT(a.Date, '%m/%d/%Y') AS Date,
@@ -448,11 +460,14 @@ export async function searchPDC(search: any, req: Request) {
           pdc a
     WHERE
         LEFT(a.Name, 7) <> '--Void'
-            AND (a.Ref_No LIKE '%${search}%' OR a.Name LIKE '%${search}%')
+            AND (a.Ref_No LIKE ? OR a.Name LIKE ?)
     GROUP BY a.Ref_No , a.Date , a.Name
     ORDER BY a.Ref_No DESC
     LIMIT 50
-  `);
+  `,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 export async function getSearchPDCheck(ref_no: any, req: Request) {
   const qry = `
@@ -493,11 +508,11 @@ export async function getSearchPDCheck(ref_no: any, req: Request) {
         left join sub_account c on b.sub_account = c.Sub_Acct
         LEFT JOIN bank d ON a.Bank = d.Bank_Code
         WHERE
-        a.Ref_No = '${ref_no}'
+        a.Ref_No = ?
         order by  a.Check_Date
   `;
   console.log(qry);
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(qry, ref_no);
 }
 export async function pdcIDGenerator(req: Request) {
   return await prisma.$queryRawUnsafe(`
@@ -519,9 +534,14 @@ export async function pdcIDGenerator(req: Request) {
 `);
 }
 export async function updatePDCIDSequence(data: any, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
       update  id_sequence a
-      set a.last_count = '${data.last_count}', a.year= '${data.year}', a.month= '${data.month}'
+      set a.last_count = ?, a.year= ?, a.month= ?
       where a.type ='pdc'
-    `);
+    `,
+    data.last_count,
+    data.year,
+    data.month
+  );
 }

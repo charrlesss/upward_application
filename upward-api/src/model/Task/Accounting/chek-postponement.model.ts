@@ -100,14 +100,19 @@ export async function getCheckPostponementPNNo(search: string, req: Request) {
             
             a.PDC_Status = 'Stored' and 
             (
-              a.PNo LIKE '%${search}%' OR
-              a.IDNo LIKE '%${search}%' OR
-              a.Name LIKE '%${search}%' 
+              a.PNo LIKE ? OR
+              a.IDNo LIKE ? OR
+              a.Name LIKE ? 
             )
     GROUP BY a.PNo
     LIMIT 50;
     `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(
+    query,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
 export async function getRCPNList(req: Request) {
@@ -235,10 +240,10 @@ FROM
     LEFT JOIN entry_client b ON a.IDNo = b.entry_client_id) a
     LEFT JOIN sub_account b ON a.sub_account = b.Sub_Acct
     LEFT JOIN vpolicy c ON a.IDNo = c.PolicyNo) a) c ON a.PNNo = c.IDNo
-  where a.RPCDNo = '${RPCDNo}'
+  where a.RPCDNo = ?
   `;
 
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(qry, RPCDNo);
 }
 
 export async function getSelectedCheckPostponementPNNo(
@@ -260,19 +265,21 @@ export async function getSelectedCheckPostponementPNNo(
                 left join  postponement_detail bb on aa.RPCDNo = bb.RPCD and bb.cancel = 0 and  aa.Status <> 'CANCEL'
                 ) b on PD.Check_No = b.CheckNo 
       WHERE
-        PNo = '${PNNo}'
+        PNo = ?
         AND PDC_Status = 'Stored'
         ORDER BY Check_No
     ;`;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PNNo);
 }
 
 export async function deleteOnUpdate(req: Request, RPCDNo: string) {
   await prisma.$queryRawUnsafe(
-    `Delete from Postponement where RPCDNo = '${RPCDNo}'`
+    `Delete from Postponement where RPCDNo = ?`,
+    RPCDNo
   );
   await prisma.$queryRawUnsafe(
-    `Delete from Postponement_Detail where RPCD ='${RPCDNo}' `
+    `Delete from Postponement_Detail where RPCD = ? `,
+    RPCDNo
   );
 }
 
@@ -301,12 +308,17 @@ export async function searchEditPostponentRequest(
   WHERE
     Status = 'PENDING' AND
     (
-      RPCDNo LIKE '%${search}%' OR 
-      PNNo LIKE '%${search}%' OR 
-      Deducted_to LIKE '%${search}%'
+      RPCDNo LIKE ? OR 
+      PNNo LIKE ? OR 
+      Deducted_to LIKE ?
     )
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(
+    query,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 export async function searchSelectedEditPostponentRequest(
   RPCD: string,
@@ -330,29 +342,29 @@ export async function searchSelectedEditPostponentRequest(
         LEFT JOIN 
           postponement c on a.RPCD = c.RPCDNo
     WHERE
-      RPCD = '${RPCD}' AND
+      RPCD = ? AND
       a.cancel = 0 AND
       c.Status = 'PENDING'
     ;`;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, RPCD);
 }
 export async function updateOnCancelPostponentRequest(
   RPCD: string,
   req: Request
 ) {
   const query = `
-    update    postponement a set a.Status = 'CANCEL'  where a.RPCDNo = '${RPCD}'
+    update    postponement a set a.Status = 'CANCEL'  where a.RPCDNo = ?
     ;`;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, RPCD);
 }
 export async function updateOnCancelPostponentRequestDetails(
   RPCD: string,
   req: Request
 ) {
   const query = `
-    update    postponement_detail a set a.cancel = 1  where a.RPCD = '${RPCD}'
+    update    postponement_detail a set a.cancel = 1  where a.RPCD = ?
     ;`;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, RPCD);
 }
 export async function createPostponement(data: any, req: Request) {
   return await prisma.postponement.create({ data });
@@ -376,9 +388,9 @@ export async function updatePostponementStatus(
       a.Approved_By = '${Approved_By}',
       a.Approved_Date = now()
   WHERE
-      a.RPCDNo = '${RPCDNo}';
+      a.RPCDNo = ?;
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, RPCDNo);
 }
 export async function findApprovalPostponementCode(
   code: string,
@@ -386,9 +398,9 @@ export async function findApprovalPostponementCode(
   req: Request
 ) {
   const query = `
-    SELECT * FROM   postponement_auth_codes a where a.Approved_Code  = '${code}' AND a.RPCD='${RPCD}';
+    SELECT * FROM   postponement_auth_codes a where a.Approved_Code  = ? AND a.RPCD = ?;
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, code, RPCD);
 }
 export async function updateApprovalPostponementCode(
   Used_By: string,
@@ -398,10 +410,10 @@ export async function updateApprovalPostponementCode(
   const query = `
   UPDATE  postponement_auth_codes a 
   SET 
-      a.Used_By = '${Used_By}',
+      a.Used_By = ?,
       a.Used_DateTime = now()
   WHERE
-      a.RPCD = '${RPCDNo}';
+      a.RPCD = ?;
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, Used_By, RPCDNo);
 }

@@ -20,7 +20,7 @@ import PDFReportGenerator from "../../../lib/pdf-generator";
 import { formatNumber, getSum } from "../Production/production-report";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { prisma } from "../../index";
-import PDFDocument, { text } from "pdfkit";
+import PDFDocument from "pdfkit";
 import fs from "fs";
 import { drawExcel } from "../../../lib/excel-generator";
 
@@ -3380,7 +3380,7 @@ async function PostDatedChecksRegistryExcel(req: Request, res: Response) {
       });
     },
     onDraw: (props: any, rowItm: any, rowIdx: number) => {
-      props.setAlignment(rowIdx + 6, ["G"], {
+      props.setAlignment(rowIdx, ["G"], {
         horizontal: "right",
         vertical: "middle",
       });

@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import { PrismaList } from "../../connection";
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
@@ -14,24 +13,30 @@ export async function GenerateGeneralJournalID(req: Request) {
 }
 
 export async function getChartOfAccount(search: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
         a.Acct_Code, a.Acct_Title, a.Short
     FROM
           chart_account a
     WHERE
-        (a.Acct_Code LIKE '%${search}%'
-            OR a.Acct_Title LIKE '%${search}%'
-            OR a.Short LIKE '%${search}%')
+        (a.Acct_Code LIKE ?
+            OR a.Acct_Title LIKE ?
+            OR a.Short LIKE ?)
             AND a.Inactive = 0
             AND a.Acct_Type = 'Detail'
             ORDER BY a.Acct_Code ASC
     LIMIT 50;
-    `);
+    `,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
 export async function getPolicyIdClientIdRefId(search: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
     a.*,
     b.ShortName  as Sub_ShortName,
@@ -129,25 +134,32 @@ FROM
         LEFT JOIN
       sub_account b ON a.sub_account = b.Sub_Acct
     WHERE
-    a.IDNo LIKE '%${search}%'
-        OR a.Shortname LIKE '%${search}%'
+    a.IDNo LIKE ?
+        OR a.Shortname LIKE ?
     ORDER BY a.Shortname
     LIMIT 50;
-      `);
+      `,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
 export async function getTransactionAccount(search: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
         a.Code, a.Description
     FROM
           transaction_code a
     WHERE
-        (a.Code LIKE '%${search}%'
-            OR a.Description LIKE '%${search}%')
+        (a.Code LIKE ?
+            OR a.Description LIKE ?)
     ORDER BY a.Description
     LIMIT 50;
-    `);
+    `,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
 export async function addJournalVoucher(data: any, req: Request) {
@@ -158,83 +170,100 @@ export async function addJournalFromJournalVoucher(data: any, req: Request) {
 }
 
 export async function updateGeneralJournalID(last_count: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
       UPDATE  id_sequence a 
         SET 
-            a.last_count = '${last_count}',
+            a.last_count = ?,
             a.year = DATE_FORMAT(NOW(), '%y'),
             month = DATE_FORMAT(NOW(), '%m')
         WHERE
             a.type = 'general-journal'
-      `);
+      `,
+    last_count
+  );
 }
 export async function deleteGeneralJournal(Source_No: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     DELETE
     FROM
           journal_voucher a
     WHERE
-      a.Source_No = '${Source_No}'
+      a.Source_No = ?
           AND a.Source_Type = 'GL'
-      `);
+      `,
+    Source_No
+  );
 }
 
 export async function deleteJournalFromGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
       DELETE
       FROM
             journal a
       WHERE
-        a.Source_No = '${Source_No}'
+        a.Source_No = ?
             AND a.Source_Type = 'GL'
-        `);
+        `,
+    Source_No
+  );
 }
 export async function findeGeneralJournal(Source_No: string, req: Request) {
   return await prisma.$queryRawUnsafe(
-    `SELECT * FROM  journal_voucher where Source_No = '${Source_No}'`
+    `SELECT * FROM  journal_voucher where Source_No = ?`,
+    Source_No
   );
 }
 export async function voidGeneralJournal(Source_No: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
         DELETE
         FROM
               journal_voucher a
         WHERE
-          a.Source_No = '${Source_No}'
+          a.Source_No = ?
               AND a.Source_Type = 'GL'
-          `);
+          `,
+    Source_No
+  );
 }
 export async function insertVoidGeneralJournal(
   refNo: string,
   dateEntry: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   INSERT INTO
     journal_voucher 
   (Branch_Code,Date_Entry,Source_Type,Source_No,Explanation)
-  VALUES ('HO',"${format(
-    new Date(dateEntry),
-    "yyyy-MM-dd HH:mm:ss.SSS"
-  )}",'GL','${refNo}','-- Void(${format(new Date(), "MM/dd/yyyy")}) --')
-  `);
+  VALUES ('HO',?,'GL',?,'-- Void(${format(new Date(), "MM/dd/yyyy")}) --')
+  `,
+    format(new Date(dateEntry), "yyyy-MM-dd HH:mm:ss.SSS"),
+    refNo
+  );
 }
 
 export async function voidJournalFromGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     DELETE
     FROM
           journal a
     WHERE
-      a.Source_No = '${Source_No}'
+      a.Source_No = ?
           AND a.Source_Type = 'GL'
-      `);
+      `,
+    Source_No
+  );
 }
 
 export async function insertVoidJournalFromGeneralJournal(
@@ -242,15 +271,16 @@ export async function insertVoidJournalFromGeneralJournal(
   dateEntry: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   INSERT INTO
     journal 
   (Branch_Code,Date_Entry,Source_Type,Source_No,Explanation,Source_No_Ref_ID)
-  VALUES ('HO',"${dateEntry}",'GL','${refNo}','-- Void(${format(
-    new Date(),
-    "MM/dd/yyyy"
-  )}) --','')
-  `);
+  VALUES ('HO',?,'GL',?,'-- Void(${format(new Date(), "MM/dd/yyyy")}) --','')
+  `,
+    dateEntry,
+    refNo
+  );
 }
 
 export async function searchGeneralJournal(search: string, req: Request) {
@@ -262,29 +292,28 @@ export async function searchGeneralJournal(search: string, req: Request) {
    from (
     SELECT
          Date_Entry,
-         Source_No, Explanation
+         Source_No, 
+         Explanation
     FROM
-          journal_voucher
-    
+        journal_voucher
       GROUP BY Date_Entry , Source_No , Explanation
-order by Date_Entry desc ,Source_No desc
    ) a 
     WHERE
         LEFT(a.Explanation, 7) <> '-- Void'
-            AND (a.Source_No LIKE '%${search}%'
-            OR a.Explanation LIKE '%${search}%')
+            AND (a.Source_No LIKE ?
+            OR a.Explanation LIKE ?)
+    ORDER BY a.Source_No desc
     LIMIT 50
-
       `;
-  console.log(sql);
-  return await prisma.$queryRawUnsafe(sql);
+  return await prisma.$queryRawUnsafe(sql, `%${search}%`, `%${search}%`);
 }
 
 export async function getSelectedSearchGeneralJournal(
   Source_No: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
         a.Branch_Code as BranchCode,
         a.Date_Entry as dateEntry,
@@ -304,10 +333,12 @@ export async function getSelectedSearchGeneralJournal(
         OR_Invoice_No as invoice,
         a.VATItemNo AS TempID
     FROM
-      journal_voucher a where a.Source_No ='${Source_No}' 
+      journal_voucher a where a.Source_No = ?
       order by 
       a.GL_Acct
-      `);
+      `,
+    Source_No
+  );
 }
 
 export async function doRPTTransactionLastRow(req: Request) {
@@ -350,7 +381,8 @@ export async function doRPTTransaction(
   Mortgagee: string,
   req: Request
 ) {
-  return prisma.$queryRawUnsafe(`
+  return prisma.$queryRawUnsafe(
+    `
   SELECT 
       d.ShortName as subAcctName,
       d.Acronym as BranchCode,
@@ -432,10 +464,14 @@ FROM
           (
             TotalDue - ifnull(b.TotalPaid, 0)) <> 0
             AND a.PolicyType = 'TPL'
-            AND c.Mortgagee = '${Mortgagee}'
-            AND (CAST(a.DateIssued AS DATE) >= STR_TO_DATE('${from}', '%m-%d-%Y') 
-            AND CAST(a.DateIssued AS DATE) <= STR_TO_DATE('${to}', '%m-%d-%Y')
+            AND c.Mortgagee = ?
+            AND (CAST(a.DateIssued AS DATE) >= STR_TO_DATE(?, '%m-%d-%Y') 
+            AND CAST(a.DateIssued AS DATE) <= STR_TO_DATE(?, '%m-%d-%Y')
           )
       ORDER BY a.DateIssued
-    `);
+    `,
+    Mortgagee,
+    from,
+    to
+  );
 }

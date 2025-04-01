@@ -298,7 +298,8 @@ export async function updateCashDisbursementID(
 
 export async function findCashDisbursement(Source_No: string, req: Request) {
   return await prisma.$queryRawUnsafe(
-    `SELECT * FROM  cash_disbursement where Source_No = '${Source_No}' and Source_Type = 'CV'`
+    `SELECT * FROM  cash_disbursement where Source_No = ? and Source_Type = 'CV'`,
+    Source_No
   );
 }
 export async function findSearchSelectedCashDisbursement(
@@ -334,7 +335,7 @@ export async function findSearchSelectedCashDisbursement(
     FROM 
       cash_disbursement 
       where 
-      Source_No = '${Source_No}' and Source_Type = 'CV' and GL_Acct <> '1.01.10'
+      Source_No = ? and Source_Type = 'CV' and GL_Acct <> '1.01.10'
       union all 
       SELECT 
         Branch_Code,
@@ -363,8 +364,10 @@ export async function findSearchSelectedCashDisbursement(
     FROM 
       cash_disbursement 
       where 
-      Source_No = '${Source_No}' and Source_Type = 'CV' and GL_Acct = '1.01.10'
-      `
+      Source_No = ? and Source_Type = 'CV' and GL_Acct = '1.01.10'
+      `,
+    Source_No,
+    Source_No
   );
 }
 export async function searchCashDisbursement(search: string, req: Request) {
@@ -383,11 +386,13 @@ export async function searchCashDisbursement(search: string, req: Request) {
         ORDER BY Date_Entry DESC) a
     WHERE
         LEFT(a.Explanation, 7) <> '-- Void'
-            AND (a.Source_No LIKE '%${search}%'
-            OR a.Explanation LIKE '%${search}%')
+            AND (a.Source_No LIKE ?
+            OR a.Explanation LIKE ?)
             ORDER BY a.Date_Entry  desc, Source_No desc 
     LIMIT 50;
-    `
+    `,
+    `%${search}%`,
+    `%${search}%`
   );
 }
 
@@ -412,13 +417,14 @@ export async function insertVoidCashDisbursement(
   dateEntry: string,
   req: Request
 ) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   INSERT INTO
     cash_disbursement 
   (Branch_Code,Date_Entry,Source_Type,Source_No,Explanation)
-  VALUES ('HO','${format(
-    new Date(dateEntry),
-    "yyyy-MM-dd HH:mm:ss.SSS"
-  )}','CV','${refNo}','-- Void(${format(new Date(), "MM/dd/yyyy")}) --')
-  `);
+  VALUES ('HO',?,'CV',?,'-- Void(${format(new Date(), "MM/dd/yyyy")}) --')
+  `,
+    format(new Date(dateEntry), "yyyy-MM-dd HH:mm:ss.SSS"),
+    refNo
+  );
 }

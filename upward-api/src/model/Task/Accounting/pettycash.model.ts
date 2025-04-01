@@ -2,10 +2,7 @@ import { Request } from "express";
 import { PrismaList } from "../../connection";
 import { prisma } from "../../../controller/index";
 
-
-
 export async function generatePettyCashID(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
       SELECT 
        concat(DATE_FORMAT(NOW(), '%y%m'),'-',if(concat(a.year,a.month) <> DATE_FORMAT(NOW(), '%y%m'),'001',
@@ -17,7 +14,6 @@ export async function generatePettyCashID(req: Request) {
 }
 
 export async function getPettyLog(req: Request) {
-
   const query = `SELECT 
   a.Purpose, b.Acct_Code, b.Acct_Title, b.Short
 FROM
@@ -27,52 +23,50 @@ FROM
   return await prisma.$queryRawUnsafe(query);
 }
 
-export async function deletePettyCash(PC_No: string,req: Request) {
-
+export async function deletePettyCash(PC_No: string, req: Request) {
   const query = `
         DELETE FROM
-        petty_cash a where a.PC_No = '${PC_No}'`;
-  return await prisma.$queryRawUnsafe(query);
+        petty_cash a where a.PC_No = ?`;
+  return await prisma.$queryRawUnsafe(query, PC_No);
 }
 
-export async function deleteJournalFromPettyCash(PC_No: string,req: Request) {
-
-  const query = `DELETE FROM  journal a where a.Source_no = '${PC_No}' AND a.Source_Type = 'PC'`;
-  return await prisma.$queryRawUnsafe(query);
+export async function deleteJournalFromPettyCash(PC_No: string, req: Request) {
+  const query = `DELETE FROM  journal a where a.Source_no = ? AND a.Source_Type = 'PC'`;
+  return await prisma.$queryRawUnsafe(query, PC_No);
 }
 
-export async function addJournalFromPettyCash(data: any,req: Request) {
-
+export async function addJournalFromPettyCash(data: any, req: Request) {
   return await prisma.journal.create({ data });
 }
 
-export async function addPettyCash(data: any,req: Request) {
-
+export async function addPettyCash(data: any, req: Request) {
   return await prisma.petty_cash.create({ data });
 }
 
-export async function findPettyCash(PC_No: string,req: Request) {
-
+export async function findPettyCash(PC_No: string, req: Request) {
   return await prisma.$queryRawUnsafe(
-    `Select * from  petty_cash where PC_No = '${PC_No}'`
+    `Select * from  petty_cash where PC_No = ?`,
+    PC_No
   );
 }
 
-export async function updatePettyCashID(last_count: string,req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+export async function updatePettyCashID(last_count: string, req: Request) {
+  return await prisma.$queryRawUnsafe(
+    `
     UPDATE  id_sequence a 
       SET 
-          a.last_count = '${last_count}',
+          a.last_count = ?,
           a.year = DATE_FORMAT(NOW(), '%y'),
           month = DATE_FORMAT(NOW(), '%m')
       WHERE
           a.type = 'petty-cash'
-    `);
+    `,
+    last_count
+  );
 }
-export async function searchPettyCash(search: string,req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+export async function searchPettyCash(search: string, req: Request) {
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
         date_format(a.PC_Date, '%m/%d/%Y') AS PC_Date,
         a.PC_No,
@@ -82,18 +76,22 @@ export async function searchPettyCash(search: string,req: Request) {
           petty_cash a
     WHERE
         (LEFT(a.Payee, 7) <> '-- Void')
-            AND (a.PC_No LIKE '%${search}%' 
-            OR a.Payee LIKE '%${search}%'
-            OR a.Explanation LIKE '%${search}%')
+            AND (a.PC_No LIKE ? 
+            OR a.Payee LIKE ?
+            OR a.Explanation LIKE ?)
     GROUP BY a.PC_Date , PC_No , a.Payee , a.Explanation
     ORDER BY a.PC_Date DESC
     LIMIT 50
-    `);
+    `,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 
-export async function loadSelectedPettyCash(PC_No: string,req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+export async function loadSelectedPettyCash(PC_No: string, req: Request) {
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
       concat(a.ShortName,' > ',a.IDNo,' > ',a.Sub_Acct) as \`usage\`,
       concat(a.DRShort,' > ',a.DRAcct_Code) as accountID,
@@ -115,12 +113,13 @@ export async function loadSelectedPettyCash(PC_No: string,req: Request) {
       a.DRVATType as vatType,
       a.DRInvoiceNo as invoice,
       LPAD(ROW_NUMBER() OVER (), 3, '0') as TempID
-    FROM  petty_cash a  where a.PC_No='${PC_No}'
-      `);
+    FROM  petty_cash a  where a.PC_No = ?
+      `,
+    PC_No
+  );
 }
 
 export async function loadTranscation(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   SELECT * FROM Petty_Log WHERE InActive = 'False' ORDER BY Purpose
   `);

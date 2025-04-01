@@ -2,8 +2,35 @@ import { Request } from "express";
 import { qry_id_policy_sub } from "../../db/views";
 import { prisma } from "../../../controller/index";
 
+export async function getCashCollection(
+  SlipCode: string,
+  IsNew: boolean = true,
+  req: Request
+) {
+  if (!IsNew) {
+    const sql = `
+    SELECT 
+        a.Official_Receipt AS OR_No,
+        DATE_FORMAT(a.Date_OR, '%m/%d/%Y') AS OR_Date,
+        a.Debit AS Amount,
+        a.Short AS Client_Name,
+        a.DRCode,
+        a.ID_No,
+        a.Temp_OR,
+        a.SlipCode,
+        b.Short
+    FROM
+              collection a
+            LEFT JOIN
+              chart_account b ON a.DRCode = b.Acct_Code
+    WHERE
+        Payment = 'Cash'
+            AND (SlipCode IS NULL OR SlipCode = '' OR SlipCode = ? ) 
+    ORDER BY a.Official_Receipt asc 
+    `;
+    return await prisma.$queryRawUnsafe(sql, SlipCode);
+  }
 
-export async function getCashCollection(SlipCode: string, IsNew: boolean = true, req: Request) {
   const sql = `
     SELECT 
         a.Official_Receipt AS OR_No,
@@ -21,13 +48,45 @@ export async function getCashCollection(SlipCode: string, IsNew: boolean = true,
               chart_account b ON a.DRCode = b.Acct_Code
     WHERE
         Payment = 'Cash'
-            AND (SlipCode IS NULL OR SlipCode = '' ${!IsNew ? ` OR SlipCode = '${SlipCode}' ` : ""}) 
+            AND (SlipCode IS NULL OR SlipCode = '' ) 
     ORDER BY a.Official_Receipt asc 
     `;
 
   return await prisma.$queryRawUnsafe(sql);
 }
-export async function getCheckCollection(SlipCode: string, IsNew: boolean = true, req: Request) {
+export async function getCheckCollection(
+  SlipCode: string,
+  IsNew: boolean = true,
+  req: Request
+) {
+  if (!IsNew) {
+    const sql = `
+    SELECT 
+      a.Official_Receipt AS OR_No,
+      DATE_FORMAT(a.Date_OR, '%m/%d/%Y') AS OR_Date,
+      a.Check_No AS Check_No,
+      DATE_FORMAT(a.Check_Date, '%m/%d/%Y') AS Check_Date ,
+      a.Debit AS Amount,
+      a.Bank AS Bank_Branch,
+      a.Short AS Client_Name,
+      a.DRCode,
+      a.DRRemarks,
+      a.ID_No,
+      a.Temp_OR,
+      SlipCode,
+      b.Short
+    FROM
+            collection a
+          LEFT JOIN
+            chart_account b ON a.DRCode = b.Acct_Code
+    WHERE
+      a.Payment = 'Check'
+          AND (a.SlipCode IS NULL OR a.SlipCode = '' OR SlipCode = ?)
+    ORDER BY a.Official_Receipt asc 
+  `;
+
+    return await prisma.$queryRawUnsafe(sql, SlipCode);
+  }
 
   const sql = `
       SELECT 
@@ -50,15 +109,14 @@ export async function getCheckCollection(SlipCode: string, IsNew: boolean = true
               chart_account b ON a.DRCode = b.Acct_Code
       WHERE
         a.Payment = 'Check'
-            AND (a.SlipCode IS NULL OR a.SlipCode = '' ${!IsNew ? ` OR SlipCode = '${SlipCode}' ` : ""})
+            AND (a.SlipCode IS NULL OR a.SlipCode = '' )
       ORDER BY a.Official_Receipt asc 
     `;
 
   return await prisma.$queryRawUnsafe(sql);
 }
 export async function getBanksFromDeposit(search: string, req: Request) {
-
-  const { IDEntryWithPolicy } = qry_id_policy_sub()
+  const { IDEntryWithPolicy } = qry_id_policy_sub();
 
   const sql = `
       SELECT 
@@ -79,17 +137,21 @@ export async function getBanksFromDeposit(search: string, req: Request) {
           LEFT JOIN (${IDEntryWithPolicy}) id_entry  on a.IDNo = id_entry.IDNo
         WHERE
             a.Inactive = 0
-            AND (a.Account_Type LIKE '%${search}%'
-            OR a.Account_No LIKE '%${search}%'
-            OR a.Account_Name LIKE '%${search}%')
+            AND (a.Account_Type LIKE ?
+            OR a.Account_No LIKE ?
+            OR a.Account_Name LIKE ?)
       ORDER BY a.Account_Name
       LIMIT 50;
       `;
-  console.log(sql)
-  return await prisma.$queryRawUnsafe(sql);
+  console.log(sql);
+  return await prisma.$queryRawUnsafe(
+    sql,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 export async function depositIDSlipCodeGenerator(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
     SELECT 
       concat(DATE_FORMAT(NOW(), '%y%m'),'-',if(concat(a.year,a.month) <> DATE_FORMAT(NOW(), '%y%m'),'001',concat(LEFT(a.last_count ,length(a.last_count) -length(a.last_count + 1)),a.last_count + 1))) as collectionID   
@@ -99,7 +161,6 @@ export async function depositIDSlipCodeGenerator(req: Request) {
       type = 'deposit'`);
 }
 export async function findDepositBySlipCode(Slip_Code: string, req: Request) {
-
   return await prisma.deposit.findMany({
     where: {
       Slip_Code,
@@ -107,21 +168,17 @@ export async function findDepositBySlipCode(Slip_Code: string, req: Request) {
   });
 }
 export async function addDepositSlip(data: any, req: Request) {
-
   return await prisma.deposit_slip.create({ data });
 }
 export async function addCashCheckInDeposit(data: any, req: Request) {
-
   return await prisma.deposit.create({
     data: data,
   });
 }
 export async function addCashBreakDown(data: any, req: Request) {
-
   return await prisma.cash_breakdown.create({ data });
 }
 export async function addJournal(data: any, req: Request) {
-
   return await prisma.journal.create({ data });
 }
 
@@ -130,7 +187,6 @@ export async function updateCollectioSlipCode(
   Temp_OR: string,
   req: Request
 ) {
-
   return await prisma.collection.updateMany({
     data: {
       SlipCode,
@@ -147,7 +203,6 @@ export async function updatePDCSlipCode(
   Check_No: string,
   req: Request
 ) {
-
   return await prisma.pdc.updateMany({
     data: {
       SlipCode,
@@ -162,19 +217,21 @@ export async function updatePDCSlipCode(
   });
 }
 export async function updateDepositIDSequence(data: any, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
       update  id_sequence a
       set 
-        a.last_count = '${data.last_count}',
+        a.last_count = ?,
         a.year = DATE_FORMAT(NOW(), '%y'),
         a.month = DATE_FORMAT(NOW(), '%m')
       where a.type ='deposit'
-    `);
+    `,
+    data.last_count
+  );
 }
 export async function searchDeposit(searchDeposit: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
       DATE_FORMAT(a.Date, '%m/%d/%Y') as Date, 
       a.SlipCode,
@@ -188,16 +245,20 @@ export async function searchDeposit(searchDeposit: string, req: Request) {
         on a.SlipCode =  b.Slip_Code
     WHERE
     LEFT(AccountName, 7) <> '-- Void'
-        AND (a.SlipCode LIKE '%${searchDeposit}%'
-        OR a.BankAccount LIKE '%${searchDeposit}%'
-        OR a.AccountName LIKE '%${searchDeposit}%')
+        AND (a.SlipCode LIKE ?
+        OR a.BankAccount LIKE ?
+        OR a.AccountName LIKE ?)
     ORDER BY a.Date DESC
     limit 50
-`);
+`,
+    `%${searchDeposit}%`,
+    `%${searchDeposit}%`,
+    `%${searchDeposit}%`
+  );
 }
 export async function getCashDeposit(SlipCode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
     a.Payment as  Deposit,
     a.Check_No,
@@ -225,7 +286,7 @@ export async function getCashDeposit(SlipCode: string, req: Request) {
   WHERE
     a.Payment = 'Cash'
     AND a.ORNo IS not NULL AND a.ORNo <> ''
-        AND a.SlipCode = '${SlipCode}'
+        AND a.SlipCode = ?
 
   union all 
   SELECT 
@@ -257,11 +318,13 @@ export async function getCashDeposit(SlipCode: string, req: Request) {
         AND aa.SlipCode = ''
         AND aa.ORNo IS not NULL AND aa.ORNo <> ''
   ORDER BY OR_Date DESC , Check_Date
-  `);
+  `,
+    SlipCode
+  );
 }
 export async function getCheckDeposit(SlipCode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
       a.Payment as  Deposit,
       a.Bank ,
@@ -285,7 +348,7 @@ export async function getCheckDeposit(SlipCode: string, req: Request) {
       b.Short 
     FROM      collection a
     LEFT JOIN       chart_account b ON a.DRCode = b.Acct_Code
-    WHERE a.Payment = 'Check' AND  a.SlipCode = '${SlipCode}'
+    WHERE a.Payment = 'Check' AND  a.SlipCode = ?
     AND a.ORNo IS not NULL AND a.ORNo <> ''
     union all
     SELECT 
@@ -314,11 +377,13 @@ export async function getCheckDeposit(SlipCode: string, req: Request) {
     WHERE aa.Payment = 'Check' AND  aa.SlipCode = ''
     AND aa.ORNo IS not NULL AND aa.ORNo <> ''
     ORDER BY OR_Date DESC, Check_Date
-  `);
+  `,
+    SlipCode
+  );
 }
 export async function getCashBreakDown(SlipCode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     select 
     Pap_1000,
     Pap_500,
@@ -335,11 +400,15 @@ export async function getCashBreakDown(SlipCode: string, req: Request) {
     Cnt_10,
     Cnt_05,
     Cnt_01
-    FROM      cash_breakdown  where Slip_Code = '${SlipCode}'
-  `);
+    FROM      cash_breakdown  where Slip_Code = ?
+  `,
+    SlipCode
+  );
 }
-export async function getBanksFromDepositByAccountNo(AccountNo: string, req: Request) {
-
+export async function getBanksFromDepositByAccountNo(
+  AccountNo: string,
+  req: Request
+) {
   const sql = `
       SELECT 
       a.Account_Type,
@@ -403,39 +472,48 @@ export async function getBanksFromDepositByAccountNo(AccountNo: string, req: Req
             LEFT JOIN
               sub_account d ON c.sub_account = d.Sub_Acct
         WHERE
-            a.Inactive = 0 AND a.Account_No = '${AccountNo}'
+            a.Inactive = 0 AND a.Account_No = ?
       ORDER BY a.Account_Name
       LIMIT 50;
       `;
-  return await prisma.$queryRawUnsafe(sql);
+  return await prisma.$queryRawUnsafe(sql, AccountNo);
 }
 export async function deleteSlipCode(Slipcode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
-  DELETE FROM       deposit_slip WHERE Slipcode = '${Slipcode}'
-  `);
+  return await prisma.$queryRawUnsafe(
+    `DELETE FROM deposit_slip WHERE Slipcode = ? `,
+    Slipcode
+  );
 }
 export async function deleteDeposit(Slipcode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
-    DELETE FROM       deposit WHERE Temp_SlipCode = '${Slipcode}'
-  `);
+  return await prisma.$queryRawUnsafe(
+    `DELETE FROM deposit WHERE Temp_SlipCode = ?`,
+    Slipcode
+  );
 }
 export async function deleteCashBreakDown(Slipcode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
-    DELETE FROM       cash_breakdown WHERE Slip_code = '${Slipcode}'
-  `);
+  return await prisma.$queryRawUnsafe(
+    `
+    DELETE FROM cash_breakdown WHERE Slip_code = ?
+  `,
+    Slipcode
+  );
 }
 export async function deleteJournalFromDeposit(Slipcode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
-    DELETE FROM       journal WHERE Source_Type='DC' and Source_No = '${Slipcode}'
-  `);
+  return await prisma.$queryRawUnsafe(
+    `
+    DELETE FROM journal WHERE Source_Type = 'DC' and Source_No = ?
+  `,
+    Slipcode
+  );
 }
-export async function removeDepositFromCollection(Slipcode: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
-    UPDATE      collection set SlipCode='' WHERE SlipCode='${Slipcode}'
-  `);
+export async function removeDepositFromCollection(
+  Slipcode: string,
+  req: Request
+) {
+  return await prisma.$queryRawUnsafe(
+    `
+    UPDATE      collection set SlipCode = '' WHERE SlipCode = ?
+  `,
+    Slipcode
+  );
 }
