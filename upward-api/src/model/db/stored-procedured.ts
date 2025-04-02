@@ -9,7 +9,6 @@ import {
 
 import { clients_view, qry_id_policy_sub, qryJournal } from "./views";
 
-
 export function parseDate(vbDate: any) {
   const datePart = vbDate.slice(0, 10); // Extracts first 10 characters
   const [month, day, year] = datePart.split("/");
@@ -65,7 +64,7 @@ export function FinancialStatement(
         AND Date_Entry <= '${DateFrom}'
         GROUP BY GL_Acct`;
   }
-  
+
   if (SubAcctParam === "ALL") {
     currText = `
           SELECT
@@ -464,14 +463,14 @@ export function ProductionReport(
         MotorNo,
         Mortgagee,
         vpolicy.Remarks as VRemarks
-    FROM Policy 
-    LEFT JOIN BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo 
-    LEFT JOIN vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo 
-    LEFT JOIN MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo 
-    LEFT JOIN PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo 
-    LEFT JOIN CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo 
-    LEFT JOIN MSPRPolicy ON Policy.PolicyNo = MSPRPolicy.PolicyNo 
-    LEFT JOIN FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo 
+    FROM policy as Policy 
+    LEFT JOIN bpolicy as BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo 
+    LEFT JOIN vpolicy as vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo 
+    LEFT JOIN mpolicy as MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo 
+    LEFT JOIN papolicy as PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo 
+    LEFT JOIN cglpolicy as CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo 
+    LEFT JOIN msprpolicy as MSPRPolicy ON Policy.PolicyNo = MSPRPolicy.PolicyNo 
+    LEFT JOIN fpolicy as FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo 
     LEFT JOIN (
     ${selectClient}
     ) client ON Policy.IDNo = client.IDNo
@@ -644,8 +643,8 @@ export function RenewalNoticeReport(
         Policy.TotalPremium,
         VPolicy.Mortgagee,
         VPolicy.Account
-    FROM Policy 
-    LEFT JOIN VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
+    FROM policy as Policy 
+    LEFT JOIN vpolicy as  VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
     where 
     Policy.PolicyType = '${policy}' AND
@@ -669,8 +668,8 @@ export function RenewalNoticeReport(
       Policy.TotalPremium,
       VPolicy.Mortgagee,
       VPolicy.Account
-    FROM Policy
-    LEFT JOIN VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
+    FROM policy as Policy
+    LEFT JOIN vpolicy as VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo 
     where
     Policy.PolicyType = '${policy}' AND
@@ -690,8 +689,8 @@ export function RenewalNoticeReport(
       Policy.TotalPremium,
       FPolicy.Mortgage,
       FPolicy.Account
-    FROM Policy
-    LEFT JOIN FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo
+    FROM policy as Policy
+    LEFT JOIN fpolicy as FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
     where
     Policy.PolicyType = '${policy}' AND
@@ -709,8 +708,8 @@ export function RenewalNoticeReport(
           MPolicy.InsuredValue,
           Policy.TotalPremium,
           MPolicy.Account
-      FROM Policy
-      LEFT JOIN MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo
+      FROM policy as Policy
+      LEFT JOIN mpolicy as MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo
       LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
       where
       Policy.PolicyType = '${policy}' AND
@@ -728,8 +727,8 @@ export function RenewalNoticeReport(
           Location,
           Policy.TotalPremium,
           PAPolicy.Account
-      FROM Policy
-      LEFT JOIN PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo
+      FROM policy as Policy
+      LEFT JOIN  papolicy as PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo
       LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
       where
       Policy.PolicyType = '${policy}' AND
@@ -774,9 +773,9 @@ export function TemplateRenewalNotice(PolicyType: string, PolicyNo: string) {
         SecIIPercent,
         VPolicy.Remarks
     FROM
-	(SELECT * FROM Policy WHERE Policy.PolicyType = 'COM') AS Policy
+	(SELECT * FROM policy as Policy WHERE Policy.PolicyType = 'COM') AS Policy
 		LEFT JOIN 
-	(SELECT * FROM VPolicy WHERE VPolicy.PolicyType <> 'TPL') AS VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
+	(SELECT * FROM vpolicy as VPolicy WHERE VPolicy.PolicyType <> 'TPL') AS VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
         LEFT JOIN 
 	(${selectClient}) as  client on Policy.IDNo = client.IDNo
     `;
@@ -915,8 +914,8 @@ export function _GeneralLedgerReport(
   )}'), INTERVAL 1 DAY), '%M %d, %Y')) AS Book, 
         SUM(IFNULL(Debit, 0)) AS Debit, 
         SUM(IFNULL(Credit, 0)) AS Credit
-  FROM Journal 
-  LEFT JOIN Books ON Journal.Source_Type = Books.Code
+  FROM journal  as Journal
+  LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
   WHERE ${PrevWhr}
   GROUP BY GL_Acct, Source_Type, Number, Book_Code, Books_Desc
   ORDER BY GL_Acct, Number
@@ -933,8 +932,8 @@ export function _GeneralLedgerReport(
        )}', IF('${report}' = 'Monthly', '%M %Y', '%M %d, %Y'))) AS Book, 
        SUM(IFNULL(Debit, 0)) AS Debit, 
        SUM(IFNULL(Credit, 0)) AS Credit
-FROM Journal 
-LEFT JOIN Books ON Journal.Source_Type = Books.Code
+FROM journal  as Journal
+LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
 WHERE ${CurrWhr}
 GROUP BY GL_Acct, Source_Type, Number, Book_Code, Books_Desc
 ORDER BY GL_Acct, Number
@@ -974,7 +973,7 @@ SELECT
     SubTotal
 FROM
     (${FinalQry}) Final 
-    LEFT JOIN Chart_Account ON Final.GL_Acct = Chart_Account.Acct_Code
+    LEFT JOIN chart_account as Chart_Account ON Final.GL_Acct = Chart_Account.Acct_Code
     LEFT JOIN (${SubTotal}) SubTotal ON Final.GL_Acct = SubTotal.GL_Acct
 ORDER BY
     GL_Acct, Number;
@@ -1058,8 +1057,8 @@ export function _GeneralLedgerReportSumm(
   )}'), INTERVAL 1 DAY), '%M %d, %Y')) AS Book, 
         SUM(IFNULL(Debit, 0)) AS Debit, 
         SUM(IFNULL(Credit, 0)) AS Credit
-  FROM Journal 
-  LEFT JOIN Books ON Journal.Source_Type = Books.Code
+  FROM journal  as Journal 
+  LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
   WHERE ${PrevWhr}
   GROUP BY GL_Acct, Sub_Acct,Source_Type, Number, Book_Code, Books_Desc
   ORDER BY GL_Acct, Number
@@ -1078,8 +1077,8 @@ export function _GeneralLedgerReportSumm(
        )}', IF('${report}' = 'Monthly', '%M %Y', '%M %d, %Y'))) AS Book, 
        SUM(IFNULL(Debit, 0)) AS Debit, 
        SUM(IFNULL(Credit, 0)) AS Credit
-FROM Journal 
-LEFT JOIN Books ON Journal.Source_Type = Books.Code
+FROM journal  as Journal
+LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
 WHERE ${CurrWhr}
 GROUP BY GL_Acct,Sub_Acct, Source_Type, Number, Book_Code, Books_Desc
 ORDER BY GL_Acct, Number
@@ -1123,7 +1122,7 @@ SELECT
     SubTotal
 FROM
     (${FinalQry}) Final 
-    LEFT JOIN Chart_Account ON Final.GL_Acct = Chart_Account.Acct_Code
+    LEFT JOIN chart_account as Chart_Account ON Final.GL_Acct = Chart_Account.Acct_Code
     LEFT JOIN (${SubTotal}) SubTotal ON Final.GL_Acct = SubTotal.GL_Acct
     LEFT JOIN sub_account on Final.Sub_Acct = sub_account.Acronym
 ORDER BY
@@ -1193,16 +1192,16 @@ export function GeneralLedgerSumm(
   const PrevQry = ` 
                   SELECT GL_Acct, Sub_Acct, Source_Type, Number, Book_Code, CONCAT(Books_Desc, ' - ', '${formattedPrevDate}') AS Book, 
                   SUM(IFNULL(Debit, 0)) AS Debit, SUM(IFNULL(Credit, 0)) AS Credit
-                  FROM Journal 
-                  LEFT JOIN Books ON Journal.Source_Type = Books.Code
+                  FROM journal as Journal 
+                  LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
                   WHERE ${PrevWhr}
                   GROUP BY GL_Acct, Sub_Acct, Source_Type, Number, Book_Code, Books_Desc`;
 
   const CurrQry = `
                   SELECT GL_Acct, Sub_Acct, Source_Type, Number, Book_Code, CONCAT(Books_Desc, ' - ', '${formattedCurrDate}') AS Book, 
                   SUM(IFNULL(Debit, 0)) AS Debit, SUM(IFNULL(Credit, 0)) AS Credit
-                  FROM Journal 
-                  LEFT JOIN Books ON Journal.Source_Type = Books.Code
+                  FROM journal as Journal 
+                  LEFT JOIN books as Books ON Journal.Source_Type = Books.Code
                   WHERE ${CurrWhr}
                   GROUP BY GL_Acct, Sub_Acct, Source_Type, Number, Book_Code, Books_Desc`;
 
@@ -1238,7 +1237,7 @@ export function GeneralLedgerSumm(
                         SubTotal
                       FROM
                         (${FinalQry}) temp_Final 
-                      LEFT JOIN Chart_Account ON temp_Final.GL_Acct = Chart_Account.Acct_Code 
+                      LEFT JOIN chart_account as  Chart_Account ON temp_Final.GL_Acct = Chart_Account.Acct_Code 
                       LEFT JOIN (${SubTotalQry}) temp_SubTotal ON (temp_Final.GL_Acct = temp_SubTotal.GL_Acct AND temp_Final.Sub_Acct = temp_SubTotal.Sub_Acct) 
                       LEFT JOIN sub_account SubAccount ON temp_Final.Sub_Acct = SubAccount.Sub_Acct 
                       ORDER BY temp_Final.GL_Acct, temp_Final.Sub_Acct, Number`;
@@ -1251,7 +1250,7 @@ export function AbstractCollections(
   _date: Date, // example date
   order: string // or 'Des
 ) {
-  const date = new Date(_date)
+  const date = new Date(_date);
   let sWhere1 = "";
   let sWhere2 = "";
 
@@ -1292,7 +1291,7 @@ export function AbstractCollections(
            Check_No AS cCheck_No, Collection.DRCode, Collection.Debit, Collection.DRTitle, Collection.CRCode, 
            Collection.Credit, Collection.CRTitle, Collection.Purpose, Collection.CRRemarks, Collection.Official_Receipt, 
            Collection.Temp_OR, Collection.Date_OR, 'Monthly' AS Rpt, Collection.Status 
-    FROM Collection 
+    FROM collection as Collection 
     ${sWhere1}
     ORDER BY Collection.Temp_OR ${order === "Ascending" ? "ASC" : "DESC"}
   `;
@@ -1302,8 +1301,8 @@ export function AbstractCollections(
   const queryJournal = `
     SELECT Journal.GL_Acct, Chart_Account.Acct_Title AS Title, 
             format(SUM(IFNULL(Debit, 0)) ,2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-    FROM Journal 
-    LEFT JOIN Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
+    FROM journal  as Journal
+    LEFT JOIN chart_account as Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
     ${sWhere2}
     GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title 
     HAVING Journal.GL_Acct <> ''
@@ -1331,7 +1330,6 @@ export function DepositedCollections(
   //   new Date(date.getFullYear(), date.getMonth(), 1),
   //   "yyyy-MM-dd"
   // );
-
 
   const formattedDate = format(date, "yyyy-MM-dd");
   const firstDayOfMonth = format(
@@ -1386,16 +1384,14 @@ export function DepositedCollections(
     LEFT JOIN chart_account on Acct_Code = Deposit. Account_ID
     LEFT JOIN bankaccounts c ON Deposit.BankAccount = c.Account_No
     ${sWhere1}
-    ORDER BY Deposit.Temp_SlipDate  ${
-      order === "Ascending" ? "ASC" : "DESC"
-    }
+    ORDER BY Deposit.Temp_SlipDate  ${order === "Ascending" ? "ASC" : "DESC"}
   `;
 
   const queryJournal = `
     SELECT Journal.GL_Acct, Chart_Account.Acct_Title AS Title, 
            format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-    FROM Journal 
-    LEFT JOIN Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
+    FROM  journal as Journal 
+    LEFT JOIN chart_account as Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
     ${sWhere2}
     GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title 
     HAVING Journal.GL_Acct <> ''
@@ -1412,7 +1408,6 @@ export function ReturnedChecksCollection(
   date: Date,
   order: string
 ) {
-
   let sWhere1 = "";
   let sWhere2 = "";
 
@@ -1538,7 +1533,7 @@ export function PostDatedCheckRegistered(
           PDC.PDC_Remarks,
           PDC.PDC_Remarks,
           PDC.mark
-      FROM PDC 
+      FROM pdc as  PDC 
       WHERE (PDC.Check_Date >= '${formattedDateFrom}' AND PDC.Check_Date <= '${formattedDateTo}')
         AND ((PDC.PDC_Remarks <> 'Fully Paid' AND PDC.PDC_Remarks <> 'Foreclosed') 
           OR PDC.PDC_Remarks = 'Replaced' 
@@ -1573,7 +1568,7 @@ export function PostDatedCheckRegistered(
           PDC.PDC_Remarks,
           PDC.PDC_Remarks,
           PDC.mark
-      FROM PDC 
+      FROM pdc as PDC 
       WHERE (PDC.Date >= '${formattedDateFrom}' AND PDC.Date <= '${formattedDateTo}')
         AND ((PDC.PDC_Remarks <> 'Fully Paid' AND PDC.PDC_Remarks <> 'Foreclosed') 
           OR PDC.PDC_Remarks = 'Replaced' 
@@ -1613,8 +1608,8 @@ export function PettyCashFundDisbursement(
 
     dtSummaryQuery = `
       SELECT Journal.GL_Acct, Chart_Account.Acct_Title AS Title, SUM(IFNULL(Journal.Debit, 0)) AS mDebit, SUM(IFNULL(Journal.Credit, 0)) AS mCredit
-      FROM Journal
-      LEFT JOIN Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code
+      FROM journal as Journal
+      LEFT JOIN chart_account as Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code
       WHERE Journal.Source_Type = 'PC' AND Journal.Source_No >= '${from}' AND Journal.Source_No <= '${to}'
       GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title
       HAVING Journal.GL_Acct <> ''
@@ -1644,8 +1639,8 @@ export function PettyCashFundDisbursement(
         WHERE petty_cash.PC_No >= '${from}' AND petty_cash.PC_No <= '${to}' AND petty_cash.SubAcct = '${subAcct}'
         GROUP BY PC_No
       ) AS PC
-      INNER JOIN Journal ON Journal.Source_No = PC.PC_No
-      LEFT JOIN Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code
+      INNER JOIN journal as  Journal ON Journal.Source_No = PC.PC_No
+      LEFT JOIN chart_account as Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code
       WHERE Journal.Source_Type = 'PC' AND Journal.Source_No >= '${from}' AND Journal.Source_No <= '${to}'
       GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title
       HAVING Journal.GL_Acct <> ''`;
@@ -1659,7 +1654,7 @@ export function CashDisbursementBook_CDB(
   dateFormat: string,
   sortOrder: string
 ) {
-  const {IDEntryWithPolicy} = qry_id_policy_sub()
+  const { IDEntryWithPolicy } = qry_id_policy_sub();
 
   let sourceType = "CV";
   let strSQL = "";
@@ -1680,8 +1675,8 @@ export function CashDisbursementBook_CDB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND str_to_date(Journal.Date_Entry ,'%Y-%m-%d')  = '${formattedDate}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1696,8 +1691,8 @@ export function CashDisbursementBook_CDB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, SUM(IFNULL(Debit, 0)) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND str_to_date(Journal.Date_Entry,'%Y-%m-%d') = '${formattedDate}' AND TRIM(Journal.Sub_Acct) = '${subAccount}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1714,8 +1709,8 @@ export function CashDisbursementBook_CDB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND Journal.Date_Entry BETWEEN '${formattedMonthStart}' AND '${formattedMonthEnd}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1729,8 +1724,8 @@ export function CashDisbursementBook_CDB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND Journal.Date_Entry BETWEEN '${formattedMonthStart}' AND '${formattedMonthEnd}' AND TRIM(Journal.Sub_Acct) = '${subAccount}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1774,7 +1769,7 @@ select
     a.Check_No
  from (${strSQL}) a
 left join (${IDEntryWithPolicy}) id_entry on a.ID_No = id_entry.IDNo
-`
+`;
 
   return { strSQL, strSubSQL };
 }
@@ -1784,12 +1779,12 @@ export function CashDisbursementBook_GJB(
   dateFilterType: string,
   sortOrder: string
 ) {
-  const {IDEntryWithPolicy} = qry_id_policy_sub()
+  const { IDEntryWithPolicy } = qry_id_policy_sub();
   let strSQL = "";
   let strSubSQL = "";
   const sourceType = "GL";
   const qryJournals = qryJournal();
-  const reportDate = new Date(_reportDate)
+  const reportDate = new Date(_reportDate);
 
   const formattedDate = format(reportDate, "yyyy-MM-dd");
   const formattedMonthStart = format(startOfMonth(reportDate), "yyyy-MM-dd");
@@ -1805,8 +1800,8 @@ export function CashDisbursementBook_GJB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND date_format(Journal.Date_Entry,'%Y-%m-%d') = '${formattedDate}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1821,8 +1816,8 @@ export function CashDisbursementBook_GJB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, SUM(IFNULL(Debit, 0)) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND date_format(Journal.Date_Entry,'%Y-%m-%d') = '${formattedDate}' AND TRIM(Journal.Sub_Acct) = '${subAccount}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1839,8 +1834,8 @@ export function CashDisbursementBook_GJB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND Journal.Date_Entry BETWEEN '${formattedMonthStart}' AND '${formattedMonthEnd}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1854,8 +1849,8 @@ export function CashDisbursementBook_GJB(
       `;
       strSubSQL = `
         SELECT Journal.GL_Acct, ChartAccount.Acct_Title AS Title, format(SUM(IFNULL(Debit, 0)),2) AS mDebit, format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-        FROM Journal 
-        LEFT JOIN Chart_Account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
+        FROM journal  as Journal 
+        LEFT JOIN chart_account ChartAccount ON Journal.GL_Acct = ChartAccount.Acct_Code 
         WHERE Journal.Source_Type = '${sourceType}' AND Journal.Date_Entry BETWEEN '${formattedMonthStart}' AND '${formattedMonthEnd}' AND TRIM(Journal.Sub_Acct) = '${subAccount}'
         GROUP BY Journal.GL_Acct, ChartAccount.Acct_Title 
         HAVING Journal.GL_Acct <> ''
@@ -1864,8 +1859,7 @@ export function CashDisbursementBook_GJB(
     }
   }
 
-
-strSQL = `
+  strSQL = `
 select 
     a.Branch_Code,
     a.Date_Query,
@@ -1900,7 +1894,7 @@ select
     a.Check_No
  from (${strSQL}) a
 left join (${IDEntryWithPolicy}) id_entry on a.ID_No = id_entry.IDNo
-`
+`;
   return { strSQL, strSubSQL };
 }
 export function ProductionBook(
@@ -1952,8 +1946,8 @@ export function ProductionBook(
           format(b.Debit,2) as Debit, 
           format(b.Credit,2) as Credit, 
           b.TC
-      FROM Policy a
-      LEFT JOIN Journal b ON b.ID_No = a.PolicyNo
+      FROM policy a
+      LEFT JOIN journal b ON b.ID_No = a.PolicyNo
        left join ( SELECT 
               *
           FROM
@@ -2144,8 +2138,8 @@ export function ProductionBook(
       b.cGL_Acct, 
       format(SUM(b.Debit),2) AS Debit, 
       format(SUM(b.Credit),2) AS Credit 
-      FROM Policy a
-      INNER JOIN Journal b ON b.ID_No = a.PolicyNo
+      FROM policy a
+      INNER JOIN journal b ON b.ID_No = a.PolicyNo
       WHERE Source_Type IN ('PL') AND b.cID_No <> 'S P O I L T' 
       ${sWhere} 
       GROUP BY b.cGL_Acct`;
@@ -2190,21 +2184,21 @@ export function VATBook(
   const strSQL = `
       SELECT a.Date_Entry, (a.Source_Type + ' ' + a.Source_No) AS SourceNo, a.GL_Acct, a.cGL_Acct, a.Sub_Acct, 
              IFNULL(a.cID_No, '') AS ID, a.Debit, a.Credit, IFNULL(a.TC, '') AS TC
-      FROM Journal a 
+      FROM journal a 
       WHERE a.Source_Type NOT IN ('BFD', 'BF', 'BFS') 
       ${sWhere} AND (a.Source_Type + ' ' + a.Source_No) IN (
           SELECT (Source_Type + ' ' + Source_No) 
-          FROM Journal  
+          FROM journal  
           WHERE GL_Acct IN ('1.06.02', '4.05.09')
       ) ${sSort}`;
 
   const strSubSQL = `
       SELECT a.cGL_Acct, SUM(a.Debit) AS Debit, SUM(a.Credit) AS Credit
-      FROM Journal a 
+      FROM journal a 
       WHERE a.Source_Type NOT IN ('BFD', 'BF', 'BFS') 
       ${sWhere} AND (a.Source_Type + ' ' + a.Source_No) IN (
           SELECT (Source_Type + ' ' + Source_No) 
-          FROM Journal  
+          FROM journal  
           WHERE GL_Acct IN ('1.06.02', '4.05.09')
       )
       GROUP BY a.cGL_Acct`;
@@ -2302,20 +2296,20 @@ export function AgingAccountsReport(date: Date, type: string) {
                 Policy.AgentCom,
                 IFNULL(VPolicy.Mortgagee, FPolicy.Mortgage) AS Remarks
             FROM
-                Policy 
+               policy as  Policy 
                 RIGHT OUTER JOIN (
                     SELECT ID_No, (IFNULL(SUM(Debit), 0) - IFNULL(SUM(Credit), 0)) AS Balance
-                    FROM Journal
+                    FROM journal as Journal
                     WHERE GL_Acct = '1.03.01' AND ((Source_Type) <> 'BFD' AND (Source_Type) <> 'BF' AND (Source_Type) <> 'BFS') AND Date_Entry <= '${formattedDate}'
                     GROUP BY ID_No
                 ) Payment ON Policy.PolicyNo = Payment.ID_No
-                LEFT OUTER JOIN FPolicy  ON Policy.PolicyNo = FPolicy.PolicyNo
-                LEFT OUTER JOIN VPolicy  ON Policy.PolicyNo = VPolicy.PolicyNo
-                LEFT OUTER JOIN MPolicy  ON Policy.PolicyNo = MPolicy.PolicyNo
-                LEFT OUTER JOIN BPolicy  ON Policy.PolicyNo = BPolicy.PolicyNo
-                LEFT OUTER JOIN MSPRPolicy  ON Policy.PolicyNo = MSPRPolicy.PolicyNo
-                LEFT OUTER JOIN PAPolicy  ON Policy.PolicyNo = PAPolicy.PolicyNo
-                LEFT OUTER JOIN CGLPolicy  ON Policy.PolicyNo = CGLPolicy.PolicyNo
+                LEFT OUTER JOIN fpolicy as  FPolicy  ON Policy.PolicyNo = FPolicy.PolicyNo
+                LEFT OUTER JOIN vpolicy as VPolicy  ON Policy.PolicyNo = VPolicy.PolicyNo
+                LEFT OUTER JOIN mpolicy as MPolicy  ON Policy.PolicyNo = MPolicy.PolicyNo
+                LEFT OUTER JOIN bpolicy as BPolicy  ON Policy.PolicyNo = BPolicy.PolicyNo
+                LEFT OUTER JOIN msprpolicy as MSPRPolicy  ON Policy.PolicyNo = MSPRPolicy.PolicyNo
+                LEFT OUTER JOIN papolicy as PAPolicy  ON Policy.PolicyNo = PAPolicy.PolicyNo
+                LEFT OUTER JOIN cglpolicy as CGLPolicy  ON Policy.PolicyNo = CGLPolicy.PolicyNo
                 LEFT OUTER JOIN (${ID_Entry}) ID_Entry  ON Policy.IDNo = ID_Entry.IDNo
             WHERE
                 (Policy.PolicyNo IS NOT NULL) AND
@@ -2364,13 +2358,13 @@ export function AgingAccountsReport(date: Date, type: string) {
                     WHERE GL_Acct = '1.03.03' AND ((Source_Type) <> 'BFD' AND (Source_Type) <> 'BF' AND (Source_Type) <> 'BFS') AND Date_Entry <= '${formattedDate}'
                     GROUP BY ID_No
                 ) Payment ON Policy.PolicyNo = Payment.ID_No
-                LEFT OUTER JOIN FPolicy  ON Policy.PolicyNo = FPolicy.PolicyNo
-                LEFT OUTER JOIN VPolicy  ON Policy.PolicyNo = VPolicy.PolicyNo
-                LEFT OUTER JOIN MPolicy  ON Policy.PolicyNo = MPolicy.PolicyNo
-                LEFT OUTER JOIN BPolicy  ON Policy.PolicyNo = BPolicy.PolicyNo
-                LEFT OUTER JOIN MSPRPolicy  ON Policy.PolicyNo = MSPRPolicy.PolicyNo
-                LEFT OUTER JOIN PAPolicy  ON Policy.PolicyNo = PAPolicy.PolicyNo
-                LEFT OUTER JOIN CGLPolicy  ON Policy.PolicyNo = CGLPolicy.PolicyNo
+                LEFT OUTER JOIN fpolicy as FPolicy  ON Policy.PolicyNo = FPolicy.PolicyNo
+                LEFT OUTER JOIN vpolicy as VPolicy  ON Policy.PolicyNo = VPolicy.PolicyNo
+                LEFT OUTER JOIN mpolicy as MPolicy  ON Policy.PolicyNo = MPolicy.PolicyNo
+                LEFT OUTER JOIN bpolicy as BPolicy  ON Policy.PolicyNo = BPolicy.PolicyNo
+                LEFT OUTER JOIN msprpolicy as MSPRPolicy  ON Policy.PolicyNo = MSPRPolicy.PolicyNo
+                LEFT OUTER JOIN papolicy as PAPolicy  ON Policy.PolicyNo = PAPolicy.PolicyNo
+                LEFT OUTER JOIN cglpolicy as CGLPolicy  ON Policy.PolicyNo = CGLPolicy.PolicyNo
                 LEFT OUTER JOIN (${ID_Entry}) ID_Entry  ON Policy.IDNo = ID_Entry.IDNo
             WHERE
                 (Policy.PolicyNo IS NOT NULL) AND
