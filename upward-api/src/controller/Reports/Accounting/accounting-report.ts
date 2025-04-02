@@ -2091,7 +2091,7 @@ async function BalanceSheet(req: Request, res: Response) {
         CurrBalance,
         TotalBalance
     FROM (${tmp1}) tmp1
-    LEFT JOIN Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
+    LEFT JOIN chart_account as Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
   `;
     let final = `
     SELECT
@@ -2107,7 +2107,7 @@ async function BalanceSheet(req: Request, res: Response) {
         CurrBalance,
         TotalBalance
     FROM (${finalTemp}) FinalTemp
-    LEFT JOIN Chart_Account ON FinalTemp.H1 = Chart_Account.Acct_Code
+    LEFT JOIN chart_account as Chart_Account ON FinalTemp.H1 = Chart_Account.Acct_Code
   `;
     const tmp2 = `
     SELECT
