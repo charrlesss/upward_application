@@ -1471,7 +1471,7 @@ export function ReturnedChecksCollection(
           format(SUM(IFNULL(Debit, 0)),2) AS mDebit, 
           format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
     FROM journal  as  Journal 
-    LEFT JOIN chart_account ON Journal.GL_Acct = Chart_Account.Acct_Code 
+    LEFT JOIN chart_account as Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
     ${sWhere2}
     GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title 
     HAVING Journal.GL_Acct <> ''
