@@ -1458,7 +1458,7 @@ export function ReturnedChecksCollection(
             Journal.Debit as Debit, 
             Journal.Credit as Credit, 
             'Monthly' AS Rpt 
-    FROM Journal 
+    FROM journal  as Journal
     LEFT JOIN bankaccounts on Journal.ID_No = bankaccounts.IDNo
     ${sWhere1}
     ORDER BY Journal.Source_No ${order === "Ascending" ? "ASC" : "DESC"}
@@ -1470,8 +1470,8 @@ export function ReturnedChecksCollection(
           Chart_Account.Acct_Title AS Title, 
           format(SUM(IFNULL(Debit, 0)),2) AS mDebit, 
           format(SUM(IFNULL(Credit, 0)),2) AS mCredit 
-    FROM Journal 
-    LEFT JOIN Chart_Account ON Journal.GL_Acct = Chart_Account.Acct_Code 
+    FROM journal  as  Journal 
+    LEFT JOIN chart_account ON Journal.GL_Acct = Chart_Account.Acct_Code 
     ${sWhere2}
     GROUP BY Journal.GL_Acct, Chart_Account.Acct_Title 
     HAVING Journal.GL_Acct <> ''

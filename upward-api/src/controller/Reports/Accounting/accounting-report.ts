@@ -32,7 +32,7 @@ accountingReporting.post("/report/get-chart-account", async (req, res) => {
     SELECT 
             Acct_Code AS Code, Acct_Title AS Title, Short AS Short_Name
         FROM
-            Chart_Account
+            chart_account
         WHERE
             Inactive = 0
                 AND (Acct_Code LIKE '%${req.body.search}%' OR Short LIKE '%${req.body.search}%'
@@ -77,7 +77,7 @@ accountingReporting.post("/report/sub-account", async (req, res) => {
       message: "Successfully get Sub Account",
       success: true,
       data: await prisma.$queryRawUnsafe(
-        `SELECT Acronym FROM Sub_Account order by Acronym asc`
+        `SELECT Acronym FROM sub_account order by Acronym asc`
       ),
     });
   } catch (err: any) {
@@ -94,7 +94,7 @@ accountingReporting.post("/report/sub-account-search", async (req, res) => {
       message: "Successfully get Sub Account",
       success: true,
       data: await prisma.$queryRawUnsafe(
-        `SELECT Acronym, ShortName FROM Sub_Account where Acronym like '%${req.body.search}%'  order by Acronym asc`
+        `SELECT Acronym, ShortName FROM sub_account where Acronym like '%${req.body.search}%'  order by Acronym asc`
       ),
     });
   } catch (err: any) {
