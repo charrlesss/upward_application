@@ -187,13 +187,8 @@ VehiclePolicy.post("/search-policy", async (req, res) => {
           Policy.Account, 
           ID_Entry.cID_No AS Name,
           VPolicy.ChassisNo
-        FROM Policy
-        LEFT JOIN FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo 
-        LEFT JOIN VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
-        LEFT JOIN MPolicy  ON Policy.PolicyNo = MPolicy.PolicyNo LEFT JOIN BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo 
-        LEFT JOIN MSPRPolicy  ON Policy.PolicyNo = MSPRPolicy.PolicyNo 
-        LEFT JOIN PAPolicy  ON Policy.PolicyNo = PAPolicy.PolicyNo 
-        LEFT JOIN CGLPolicy  ON Policy.PolicyNo = CGLPolicy.PolicyNo 
+        FROM policy as Policy
+        LEFT JOIN vpolicy as VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
         LEFT JOIN ( 
           SELECT 
                         a.entry_client_id as IDNo,
@@ -257,7 +252,7 @@ VehiclePolicy.post("/search-policy-selected", async (req, res) => {
             INS.cID_No AS InsName, 
             INS.address AS InsAdd, 
             ifnull(AGNT.cID_No,'') AS AgentName 
-          FROM Policy
+          FROM policy as Policy
           LEFT JOIN (
           SELECT 
                           a.entry_client_id as IDNo,
@@ -352,7 +347,7 @@ VehiclePolicy.post("/search-policy-selected", async (req, res) => {
         `
     );
     const data2 = await prisma.$queryRawUnsafe(
-      `SELECT *, ifNull(Denomination,'') as 'Denomi' FROM VPolicy WHERE Account = '${req.body.account}' And PolicyType = '${req.body.policy}' And PolicyNo = '${req.body.policyNo}'`
+      `SELECT *, ifNull(Denomination,'') as 'Denomi' FROM vpolicy as VPolicy WHERE Account = '${req.body.account}' And PolicyType = '${req.body.policy}' And PolicyNo = '${req.body.policyNo}'`
     );
 
     const data3 = await prisma.$queryRawUnsafe(
