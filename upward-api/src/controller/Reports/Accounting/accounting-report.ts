@@ -1690,7 +1690,7 @@ async function IncomeStatement(req: Request, res: Response) {
     FROM
         (${tmp1}) tmp1
     LEFT JOIN
-        Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
+        chart_account as Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
     ORDER BY
         tmp1.Code;
     `;
@@ -1747,7 +1747,7 @@ async function IncomeStatement(req: Request, res: Response) {
     FROM
        (${tmp1}) tmp1
     LEFT JOIN
-        Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
+        chart_account as Chart_Account ON tmp1.H2 = Chart_Account.Acct_Code
     LEFT JOIN
        (${tmp3}) tmp3 ON tmp1.SubAccount = tmp3.SubAccount
     ORDER BY
