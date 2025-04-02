@@ -60,7 +60,7 @@ MarinePolicy.get("/marine/get-words", async (req, res) => {
       message: "Successfully get data",
       success: true,
       words: await __executeQuery(
-        `SELECT * FROM Words WHERE Wordings = 'MPolicy' `
+        `SELECT * FROM words WHERE Wordings = 'MPolicy' `
       ),
     });
   } catch (error: any) {
