@@ -790,7 +790,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
   if (GL_Code === "") GL_Code = "ALL";
   // Define your logic
   // Delete from xSubsidiary
-  await prisma.$queryRawUnsafe("DELETE FROM xSubsidiary");
+  await prisma.$queryRawUnsafe("DELETE FROM xsubsidiary");
 
   switch (_mSubsi.trim()) {
     case "ALL":
@@ -899,7 +899,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
 
           // Insert query into xSubsidiary
           await prisma.$queryRawUnsafe(`
-              INSERT INTO xSubsidiary 
+              INSERT INTO xsubsidiary 
               (Date_Entry, Sort_Number, Source_Type, Source_No, Explanation, Debit, Credit, Bal, Balance, Address, GL_Acct) 
               VALUES 
               ('${format(subDays(DateFrom, 1), "yyyy-MM-dd")}', 1, 'BF', 
@@ -978,7 +978,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
 
           // Insert query into xSubsidiary
           await prisma.$queryRawUnsafe(`
-              INSERT INTO xSubsidiary 
+              INSERT INTO xsubsidiary 
               (Date_Entry, Sort_Number, Source_Type, Source_No, Explanation, Debit, Credit, Bal, Balance, Address, GL_Acct) 
               VALUES 
               ('${format(subDays(DateFrom, 1), "yyyy-MM-dd")}', 1, 'BF', 
@@ -1095,7 +1095,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
 
           // Insert query into xSubsidiary
           await prisma.$queryRawUnsafe(`
-              INSERT INTO xSubsidiary 
+              INSERT INTO xsubsidiary 
               (Date_Entry, Sort_Number, Source_Type, Source_No, Explanation, Debit, Credit, Bal, Balance, Address, GL_Acct) 
               VALUES 
               ('${format(subDays(DateFrom, 1), "yyyy-MM-dd")}', 1, 'BF', 
@@ -1186,7 +1186,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
         // Query to get the Balance from xSubsidiary
         let balanceQuery = `
               SELECT Balance 
-              FROM xSubsidiary 
+              FROM xsubsidiary 
               WHERE GL_Acct = '${lastAcct}' 
          
             `;
@@ -1254,7 +1254,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
   }
 
   const result = (await prisma.$queryRawUnsafe(
-    "select * FROM xSubsidiary order by Date_Entry "
+    "select * FROM xsubsidiary order by Date_Entry "
   )) as Array<any>;
   let runningBalance = 0;
 
