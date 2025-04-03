@@ -8,6 +8,8 @@ import fs from "fs-extra";
 import { v4 as uuidV4 } from "uuid";
 const uploadDir = path.join(__dirname, "./../../static/claim-files");
 import { compareSync } from "bcrypt";
+import PDFDocument from "pdfkit";
+import { format } from "date-fns";
 
 fs.ensureDirSync(uploadDir);
 Claims.post("/get-claim-id", async (req, res): Promise<any> => {
@@ -125,7 +127,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               c.Make,
               c.BodyType,
               c.PlateNo,
-              a.Account
+              a.Account,
+              a.DateIssued,
+              c.DateTo,
+              c.DateFrom
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -168,7 +173,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+               a.DateIssued,
+                c.DateTo,
+                c.DateFrom
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -211,7 +219,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+               a.DateIssued,
+                c.PeriodFrom as DateFrom ,
+                c.PeriodTo as DateTo
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -254,7 +265,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+              a.DateIssued,
+              c.DateTo,
+              c.DateFrom
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -297,7 +311,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+                a.DateIssued,
+              c.PeriodFrom as DateFrom  ,
+              c.PeriodTo as DateTo
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -340,7 +357,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+               a.DateIssued,
+                c.PeriodFrom as DateFrom ,
+                c.PeriodTo as DateTo
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -383,7 +403,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
                           IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                               CONCAT(', ', b.suffix),
                               ''))) AS Name,
-              c.*
+              c.*,
+               a.DateIssued,
+                c.BidDate as DateTo,
+                c.BidTime as DateFrom
           FROM
               ${database}.policy a
                   LEFT JOIN
@@ -651,7 +674,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                 c.Make,
                 c.BodyType,
                 c.PlateNo,
-                a.Account
+                a.Account,
+                a.DateIssued,
+                c.DateTo,
+                c.DateFrom
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -698,7 +724,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                a.DateIssued,
+                c.DateTo,
+                c.DateFrom
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -745,7 +774,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                a.DateIssued,
+                c.PeriodFrom as DateFrom ,
+                c.PeriodTo as DateTo
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -792,7 +824,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                a.DateIssued,
+                c.DateTo,
+                c.DateFrom
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -839,7 +874,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                 a.DateIssued,
+                c.PeriodFrom as DateFrom  ,
+                c.PeriodTo as DateTo
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -886,7 +924,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                 a.DateIssued,
+                c.PeriodFrom as DateFrom ,
+                c.PeriodTo as DateTo
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -933,7 +974,10 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
                             IF(b.suffix <> '' AND b.suffix IS NOT NULL,
                                 CONCAT(', ', b.suffix),
                                 ''))) AS Name,
-                c.*
+                c.*,
+                a.DateIssued,
+                c.BidDate as DateTo,
+                c.BidTime as DateFrom
             FROM
                 ${database}.policy a
                     LEFT JOIN
@@ -1022,6 +1066,586 @@ const upload = multer({
   storage,
 });
 
+Claims.post("/generate-claim-sheet", async (req, res) => {
+  try {
+    let Department = req.body.departmentRef;
+
+    let Assured = req.body.assuredRef;
+    let UnitInsured = req.body.unitRef;
+    let EngineNo = req.body.enigneRef;
+    let ChassisNo = req.body.chassisRef;
+    let PlateNo = req.body.plateRef;
+    let TypeClaim = req.body.claimTypeRef;
+
+    let DatePrepared = format(new Date(req.body.datePrepared), "MMMM dd, yyyy");
+    let PolicyNo = req.body.policyNoRef;
+    let DateAccident =
+      req.body.dateAccidentRef !== ""
+        ? format(new Date(req.body.dateAccidentRef), "MMMM dd, yyyy")
+        : "";
+
+    let DateIssued = format(new Date(req.body.dateIssuredRef), "MM/dd/yyyy");
+    let DateFrom = format(new Date(req.body.dateFromRef), "MMMM dd, yyyy");
+    let DateTo = format(new Date(req.body.dateToRef), "MMMM dd, yyyy");
+
+    const outputFilePath = path.join(__dirname, "manok.pdf");
+    let PAGE_WIDTH = 612;
+    let PAGE_HEIGHT = 792;
+    const MARGINS = {
+      top: 50,
+      bottom: 50,
+      left: 50,
+      right: 50,
+    };
+
+    let yAxis = MARGINS.top;
+
+    const doc = new PDFDocument({
+      margin: 0,
+      size: [PAGE_WIDTH, PAGE_HEIGHT],
+      bufferPages: true,
+    });
+    const writeStream = fs.createWriteStream(outputFilePath);
+    doc.pipe(writeStream);
+    doc.font("Helvetica-Bold");
+    doc.fontSize(14);
+    doc.text(Department, MARGINS.left, yAxis, {
+      width: PAGE_WIDTH - (MARGINS.left + MARGINS.right),
+      align: "center",
+    });
+    const firstlineYAxis = yAxis + 30;
+    doc
+      .moveTo(MARGINS.left, firstlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, firstlineYAxis) // End position
+      .stroke();
+
+    yAxis += 50;
+    doc.fontSize(20);
+    doc.text("CLAIMS INFORMATION SHEET", MARGINS.left, yAxis, {
+      width: PAGE_WIDTH - (MARGINS.left + MARGINS.right),
+      align: "center",
+    });
+
+    const secondlineYAxis = yAxis + 35;
+    doc
+      .moveTo(MARGINS.left, secondlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, secondlineYAxis) // End position
+      .stroke();
+
+    const adjustThridLine = +40;
+    const thridlineYAxis = yAxis + 160 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, thridlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, thridlineYAxis) // End position
+      .stroke();
+
+    const fourthlineYAxis = yAxis + 175 + adjustThridLine;
+    doc.font("Helvetica-Bold");
+    doc.fontSize(11);
+    doc.text("Insurance Coordinator", MARGINS.left + 2, fourthlineYAxis + 3, {
+      width: PAGE_WIDTH - (MARGINS.left + MARGINS.right),
+      align: "left",
+    });
+
+    doc
+      .moveTo(MARGINS.left, fourthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, fourthlineYAxis) // End position
+      .stroke();
+    // start Insurance Coordinator
+
+    // end Insurance Coordinator
+    const fifthlineYAxis = yAxis + 190 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, fifthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, fifthlineYAxis) // End position
+      .stroke();
+
+    const sixthlineYAxis = yAxis + 290 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, sixthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, sixthlineYAxis) // End position
+      .stroke();
+    doc.font("Helvetica-Bold");
+    doc.fontSize(11);
+    doc.text("Accounting", MARGINS.left + 2, sixthlineYAxis + 3, {
+      width: PAGE_WIDTH - (MARGINS.left + MARGINS.right),
+      align: "left",
+    });
+
+    const seventhlineYAxis = yAxis + 305 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, seventhlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, seventhlineYAxis) // End position
+      .stroke();
+
+    // start Accounting
+
+    // end Accounting
+    const eighthlineYAxis = yAxis + 405 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, eighthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, eighthlineYAxis) // End position
+      .stroke();
+
+    doc.font("Helvetica-Bold");
+    doc.fontSize(11);
+    doc.text("Remarks:", MARGINS.left + 2, eighthlineYAxis + 3, {
+      width: PAGE_WIDTH - (MARGINS.left + MARGINS.right),
+      align: "left",
+    });
+
+    // start Remarks
+
+    // end Remarks
+    const ninthlineYAxis = yAxis + 520 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, ninthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, ninthlineYAxis) // End position
+      .stroke();
+
+    const tenthlineYAxis = yAxis + 535 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, tenthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, tenthlineYAxis) // End position
+      .stroke();
+    // start Signatures
+    doc.font("Helvetica");
+    doc.fontSize(10);
+
+    doc.text("Prepared by", MARGINS.left + 20, tenthlineYAxis + 5, {
+      width: 180,
+      align: "left",
+    });
+
+    doc.text("Checked by", MARGINS.left + 180 + 30, tenthlineYAxis + 5, {
+      width: 150,
+      align: "left",
+    });
+
+    // end Signatures
+    const eleventhlineYAxis = yAxis + 610 + adjustThridLine;
+    doc
+      .moveTo(MARGINS.left, eleventhlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, eleventhlineYAxis) // End position
+      .stroke();
+
+    doc.font("Helvetica-Bold");
+    doc.fontSize(12);
+    doc.text("Joy Dela Cruz", MARGINS.left + 20, eleventhlineYAxis - 32, {
+      width: 150,
+      align: "left",
+    });
+
+    doc.text("Gina Rondina", MARGINS.left + 12 + 200, eleventhlineYAxis - 32, {
+      width: 150,
+      align: "left",
+    });
+    doc.text(
+      "Leo Aquino",
+      MARGINS.left + 12 + 200 * 2,
+      eleventhlineYAxis - 32,
+      {
+        width: 150,
+        align: "left",
+      }
+    );
+
+    doc.font("Helvetica");
+    doc.fontSize(8);
+    doc.text("Claims Assistant", MARGINS.left + 30, eleventhlineYAxis - 15, {
+      width: 180,
+      align: "left",
+    });
+
+    doc.text("Accounting", MARGINS.left + 30 + 200, eleventhlineYAxis - 15, {
+      width: 200,
+      align: "left",
+    });
+    doc.text("President", MARGINS.left + 30 + 200 * 2, eleventhlineYAxis - 15, {
+      width: 200,
+      align: "left",
+    });
+
+    // other Horizontal line
+    doc
+      .moveTo(MARGINS.left + 350, secondlineYAxis + 40) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, secondlineYAxis + 40) // End position
+      .stroke();
+
+    doc
+      .moveTo(MARGINS.left + 350, secondlineYAxis + 80) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, secondlineYAxis + 80) // End position
+      .stroke();
+
+    doc.font("Helvetica-Bold");
+    doc.fontSize(10);
+    doc.text("Date Prepared", MARGINS.left + 352, secondlineYAxis + 5, {
+      width: 150,
+      align: "left",
+    });
+
+    doc.text("Policy No", MARGINS.left + 352, secondlineYAxis + 45, {
+      width: 150,
+      align: "left",
+    });
+
+    doc.text("Date of Accident", MARGINS.left + 352, secondlineYAxis + 85, {
+      width: 150,
+      align: "left",
+    });
+
+    doc.font("Helvetica-Bold");
+    doc.fontSize(11);
+    doc
+      .moveTo(MARGINS.left + 350, sixthlineYAxis - 33) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, sixthlineYAxis - 33) // End position
+      .stroke();
+
+    doc.text("Angelo Dacula", MARGINS.left + 350, sixthlineYAxis - 30, {
+      width: 160,
+      align: "center",
+    });
+
+    // other veritcal line
+    doc
+      .moveTo(MARGINS.left + 350, secondlineYAxis) // Start position
+      .lineTo(MARGINS.left + 350, thridlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(MARGINS.left, secondlineYAxis) // Start position
+      .lineTo(MARGINS.left, thridlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(PAGE_WIDTH - MARGINS.right, secondlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, thridlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(MARGINS.left, fourthlineYAxis) // Start position
+      .lineTo(MARGINS.left, ninthlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(PAGE_WIDTH - MARGINS.right, fourthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, ninthlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(MARGINS.left, tenthlineYAxis) // Start position
+      .lineTo(MARGINS.left, eleventhlineYAxis) // End position
+      .stroke();
+
+    doc
+      .moveTo(PAGE_WIDTH - MARGINS.right, tenthlineYAxis) // Start position
+      .lineTo(PAGE_WIDTH - MARGINS.right, eleventhlineYAxis) // End position
+      .stroke();
+
+    // details
+
+    // assured name
+    doc.text("Assured's Name", MARGINS.left + 3, secondlineYAxis + 3, {
+      width: 90,
+      align: "left",
+    });
+
+    doc.text(":", MARGINS.left + 3 + 90, secondlineYAxis + 3, {
+      width: 5,
+      align: "left",
+    });
+
+    const xAsix = MARGINS.left + 3 + 100;
+
+    doc.text(Assured, xAsix, secondlineYAxis + 5, {
+      width: 250,
+      align: "left",
+      height: 60,
+    });
+
+    let assuredH = 20;
+    if (Assured !== "") {
+      assuredH = doc.heightOfString(Assured, {
+        width: 250,
+        align: "left",
+        height: 30,
+      });
+    }
+
+    let adjustFromUnitInsured = assuredH + 5;
+    // Unit Insured
+    doc.text(
+      "Unit Insured",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "left",
+      }
+    );
+
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+
+    doc.text(UnitInsured, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+
+    let UnitInsuredH = 20;
+    if (UnitInsured !== "") {
+      UnitInsuredH = doc.heightOfString(UnitInsured, {
+        width: 250,
+        align: "left",
+        height: 30,
+      });
+    }
+
+    adjustFromUnitInsured += UnitInsuredH + 3;
+    // Engine No
+    doc.text(
+      "Engine No.",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "left",
+      }
+    );
+
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+
+    doc.text(EngineNo, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+
+    adjustFromUnitInsured += 18;
+    // Chassis No
+    doc.text(
+      "Chassis No.",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "left",
+      }
+    );
+
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+    doc.text(ChassisNo, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+    adjustFromUnitInsured += 18;
+    // Plate No
+    doc.text(
+      "Plate No.",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "left",
+      }
+    );
+
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+    doc.text(PlateNo, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+    adjustFromUnitInsured += 18;
+    // Type of Claim
+    doc.text(
+      "Type of Claim.",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "left",
+      }
+    );
+
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+    doc.text(TypeClaim, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+
+    adjustFromUnitInsured += 140;
+    doc.text(
+      "Date Issued",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "center",
+      }
+    );
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+    doc.text(DateIssued, xAsix, secondlineYAxis + adjustFromUnitInsured, {
+      width: 250,
+      align: "left",
+      height: 30,
+    });
+
+    adjustFromUnitInsured += 20;
+    doc.text(
+      "Inception date",
+      MARGINS.left + 3,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 90,
+        align: "center",
+      }
+    );
+    doc.text(
+      ":",
+      MARGINS.left + 3 + 90,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 5,
+        align: "left",
+      }
+    );
+    doc.text(
+      `${DateFrom} - ${DateTo}`,
+      xAsix,
+      secondlineYAxis + adjustFromUnitInsured,
+      {
+        width: 250,
+        align: "left",
+        height: 30,
+      }
+    );
+
+    let adjustFromPrepared = 20;
+    let xAsixFromPrepared = MARGINS.left + 3 + 350;
+    doc.text(
+      DatePrepared,
+      xAsixFromPrepared,
+      secondlineYAxis + adjustFromPrepared,
+      {
+        width: 250,
+        align: "left",
+        height: 30,
+      }
+    );
+    adjustFromPrepared += 40;
+    doc.text(
+      PolicyNo,
+      xAsixFromPrepared,
+      secondlineYAxis + adjustFromPrepared,
+      {
+        width: 250,
+        align: "left",
+        height: 30,
+      }
+    );
+
+    adjustFromPrepared += 40;
+    doc.text(
+      DateAccident,
+      xAsixFromPrepared,
+      secondlineYAxis + adjustFromPrepared,
+      {
+        width: 250,
+        align: "left",
+        height: 30,
+      }
+    );
+
+    doc.end();
+
+    writeStream.on("finish", () => {
+      console.log(`PDF created successfully at: ${outputFilePath}`);
+
+      const readStream = fs.createReadStream(outputFilePath);
+      readStream.pipe(res);
+
+      readStream.on("end", () => {
+        res.end(); // Ensure response is properly closed
+        fs.unlink(outputFilePath, (err: any) => {
+          if (err) {
+            console.error("Error deleting file:", err);
+          } else {
+            console.log(`File ${outputFilePath} deleted successfully.`);
+          }
+        });
+      });
+      readStream.on("error", (err) => {
+        console.error("Error reading file:", err);
+        res.status(500).send("Error sending PDF");
+      });
+    });
+  } catch (error: any) {
+    if (error.code === "P2028") {
+      res.send({
+        data: [],
+        message: `⚠️ Transaction cut off due to a network issue!`,
+        success: false,
+      });
+    } else {
+      res.send({
+        data: [],
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+      });
+    }
+  }
+});
 Claims.post(
   "/save-claim",
   upload.fields([{ name: "files" }, { name: "basic" }]),

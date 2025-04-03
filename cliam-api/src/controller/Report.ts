@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client";
 import { saveUserLogs, saveUserLogsCode } from "./Claims";
 import PDFDocument from "pdfkit";
 import { format } from "date-fns";
-import PDFReportGenerator from "../lib/pdf-generator";
 import fs from "fs";
 import path from "path";
 import { drawExcel } from "../lib/excel-generator";
