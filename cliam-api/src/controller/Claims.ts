@@ -1651,6 +1651,7 @@ Claims.post(
   upload.fields([{ name: "files" }, { name: "basic" }]),
   async (req, res): Promise<any> => {
     try {
+      console.log(req.body)
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const policyDetails = JSON.parse(req.body.policyDetails);
