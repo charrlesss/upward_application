@@ -1646,7 +1646,7 @@ Claims.post("/generate-claim-sheet", async (req, res) => {
     }
   }
 });
-Claims.post(
+Claims.post( 
   "/save-claim",
   upload.fields([{ name: "files" }, { name: "basic" }]),
   async (req, res): Promise<any> => {
