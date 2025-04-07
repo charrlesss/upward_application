@@ -1769,16 +1769,19 @@ Claims.post(
               claim_reference_no: metadata.reference,
               document_id: metadata.documentId,
               claim_type: metadata.claim_type,
-              date_report: new Date(metadata.date_report_not_formated),
+              date_report:
+                metadata.date_report_not_formated !== ""
+                  ? new Date(metadata.date_report_not_formated)
+                  : undefined,
               date_accident: new Date(metadata.date_accident_not_formated),
               date_received:
                 metadata.date_receive_not_formated !== ""
                   ? new Date(metadata.date_receive_not_formated)
-                  : null,
+                  : undefined,
               date_approved:
                 metadata.date_approved_not_formated !== ""
                   ? new Date(metadata.date_approved_not_formated)
-                  : null,
+                  : undefined,
               status: metadata.status,
               claimStatus: metadata.claimStatus,
               amount_claim: metadata.amount_claim.replace(/,/g, ""),
@@ -2000,16 +2003,19 @@ Claims.post(
               claim_reference_no: metadata.reference,
               document_id: metadata.documentId,
               claim_type: metadata.claim_type,
-              date_report: new Date(metadata.date_report_not_formated),
+              date_report:
+                metadata.date_report_not_formated !== ""
+                  ? new Date(metadata.date_report_not_formated)
+                  : undefined,
               date_accident: new Date(metadata.date_accident_not_formated),
               date_received:
                 metadata.date_receive_not_formated !== ""
                   ? new Date(metadata.date_receive_not_formated)
-                  : null,
+                  : undefined,
               date_approved:
                 metadata.date_approved_not_formated !== ""
                   ? new Date(metadata.date_approved_not_formated)
-                  : null,
+                  : undefined,
               status: metadata.status,
               claimStatus: metadata.claimStatus,
               amount_claim: metadata.amount_claim.replace(/,/g, ""),
