@@ -1109,13 +1109,13 @@ Claims.post(
         await __prisma.claims.create({
           data: {
             claim_id: claimId,
-            policyNo: policyDetails.data[0].PolicyNo,
-            department: policyDetails.data[0].Department,
-            account: policyDetails.data[0].Account,
-            assurename: policyDetails.data[0].Name,
-            idno: policyDetails.data[0].IDNo,
-            policyType: policyDetails.data[0].PolicyType,
-            basicDocuments: JSON.stringify(updatedbasicDocuments),
+            policyNo: policyDetails.data[0].PolicyNo || "",
+            department: policyDetails.data[0].Department || "",
+            account: policyDetails.data[0].Account || "",
+            assurename: policyDetails.data[0].Name || "",
+            idno: policyDetails.data[0].IDNo || "",
+            policyType: policyDetails.data[0].PolicyType || "",
+            basicDocuments: JSON.stringify(updatedbasicDocuments ),
           },
         });
         for (let index = 0; index < filesArray.length; index++) {
@@ -1155,34 +1155,36 @@ Claims.post(
           });
 
           const filesToSave = groupByRow.flat(Infinity);
-          const claimDir = path.join(
-            uploadDir,
-            claimId,
-            metadata.reference,
-            metadata.documentId
-          );
-          if (!fs.existsSync(claimDir)) {
-            fs.mkdirSync(claimDir, { recursive: true });
-          }
-
-          filesToSave.forEach((file: Express.Multer.File) => {
-            const sourceImagePath = path.join(uploadDir, file.filename);
-            const targetImagePath = path.join(claimDir, file.filename);
-            fs.copyFile(sourceImagePath, targetImagePath, (err) => {
-              if (err) {
-                console.error("Error copying file:", err);
-              } else {
-                console.log("Image copied successfully to:", targetImagePath);
-                fs.unlink(sourceImagePath, (unlinkErr) => {
-                  if (unlinkErr) {
-                    console.error("Error deleting source file:", unlinkErr);
-                  } else {
-                    console.log("Source file deleted:", sourceImagePath);
-                  }
-                });
-              }
+          if(metadata.documentId){
+            const claimDir = path.join(
+              uploadDir,
+              claimId,
+              metadata.reference,
+              metadata.documentId
+            );
+            if (!fs.existsSync(claimDir)) {
+              fs.mkdirSync(claimDir, { recursive: true });
+            }
+  
+            filesToSave.forEach((file: Express.Multer.File) => {
+              const sourceImagePath = path.join(uploadDir, file.filename);
+              const targetImagePath = path.join(claimDir, file.filename);
+              fs.copyFile(sourceImagePath, targetImagePath, (err) => {
+                if (err) {
+                  console.error("Error copying file:", err);
+                } else {
+                  console.log("Image copied successfully to:", targetImagePath);
+                  fs.unlink(sourceImagePath, (unlinkErr) => {
+                    if (unlinkErr) {
+                      console.error("Error deleting source file:", unlinkErr);
+                    } else {
+                      console.log("Source file deleted:", sourceImagePath);
+                    }
+                  });
+                }
+              });
             });
-          });
+          }
 
           await __prisma.claims_details.create({
             data: {
