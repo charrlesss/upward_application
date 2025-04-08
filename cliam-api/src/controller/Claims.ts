@@ -1058,7 +1058,10 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const extension = getFileExtension(file.originalname);
+    let extension = getFileExtension(file.originalname);
+    if (file.mimetype === "image/jpeg") {
+      extension = ".jpg"; // Force `.jpg` extension for image/jpeg
+    }
     cb(null, `${uuidV4()}${extension}`);
   },
 });
@@ -1066,12 +1069,12 @@ const upload = multer({
   storage,
 });
 
-Claims.post( 
+Claims.post(
   "/save-claim",
   upload.fields([{ name: "files" }, { name: "basic" }]),
   async (req, res): Promise<any> => {
     try {
-      console.log(req.body)
+      console.log(req.body);
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const policyDetails = JSON.parse(req.body.policyDetails);
@@ -1115,7 +1118,7 @@ Claims.post(
             assurename: policyDetails.data[0].Name || "",
             idno: policyDetails.data[0].IDNo || "",
             policyType: policyDetails.data[0].PolicyType || "",
-            basicDocuments: JSON.stringify(updatedbasicDocuments ),
+            basicDocuments: JSON.stringify(updatedbasicDocuments),
           },
         });
         for (let index = 0; index < filesArray.length; index++) {
@@ -1155,7 +1158,7 @@ Claims.post(
           });
 
           const filesToSave = groupByRow.flat(Infinity);
-          if(metadata.documentId){
+          if (metadata.documentId) {
             const claimDir = path.join(
               uploadDir,
               claimId,
@@ -1165,7 +1168,7 @@ Claims.post(
             if (!fs.existsSync(claimDir)) {
               fs.mkdirSync(claimDir, { recursive: true });
             }
-  
+
             filesToSave.forEach((file: Express.Multer.File) => {
               const sourceImagePath = path.join(uploadDir, file.filename);
               const targetImagePath = path.join(claimDir, file.filename);
