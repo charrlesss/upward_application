@@ -1277,15 +1277,13 @@ Claims.post(
       const claimId = req.body.claimId;
       const mainDir = path.join(uploadDir, claimId);
 
+      if (!(await saveUserLogsCode(req, "update", claimId, "Claim", prisma))) {
+        return res.send({ message: "Invalid User Code", success: false });
+      }
+
       await prisma.$transaction(async (_prisma) => {
         await fs.access(mainDir); // Check if the directory exists
         await fs.rm(mainDir, { recursive: true, force: true });
-
-        if (
-          !(await saveUserLogsCode(req, "update", claimId, "Claim", _prisma))
-        ) {
-          return res.send({ message: "Invalid User Code", success: false });
-        }
 
         await prisma.$queryRawUnsafe(
           `DELETE FROM claims.claims where claim_id = ?`,
@@ -1384,19 +1382,19 @@ Claims.post(
             if (!fs.existsSync(claimDir)) {
               fs.mkdirSync(claimDir, { recursive: true });
             }
-  
+
             for (const file of filesToSave) {
               const sourceImagePath = path.join(uploadDir, file.filename);
               const targetImagePath = path.join(claimDir, file.filename);
-  
+
               try {
                 // Check if source file exists
                 await fs.access(sourceImagePath);
-  
+
                 // Copy file
                 await fs.copyFile(sourceImagePath, targetImagePath);
                 console.log("Image copied successfully to:", targetImagePath);
-  
+
                 // Delete source file
                 await fs.unlink(sourceImagePath);
                 console.log("Source file deleted:", sourceImagePath);
@@ -1423,7 +1421,6 @@ Claims.post(
               });
             });
           }
-     
 
           await _prisma.claims_details.create({
             data: {
