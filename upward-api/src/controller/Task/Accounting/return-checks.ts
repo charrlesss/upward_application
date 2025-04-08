@@ -31,7 +31,7 @@ const ReturnCheck = express.Router();
 
 ReturnCheck.post("/return-check/load-entries", async (req, res) => {
   const qry1 = await __executeQuery(
-    `SELECT Account_ID, Short, BankAccounts.IDNo FROM BankAccounts LEFT JOIN Chart_Account ON BankAccounts.Account_ID = Chart_Account.Acct_Code WHERE Account_No = '${req.body.Account_No}'`,
+    `SELECT Account_ID, Short, BankAccounts.IDNo FROM bankaccounts as BankAccounts LEFT JOIN chart_account as Chart_Account ON BankAccounts.Account_ID = Chart_Account.Acct_Code WHERE Account_No = '${req.body.Account_No}'`,
     req
   );
   const qry2 = await __executeQuery(
@@ -41,7 +41,7 @@ ReturnCheck.post("/return-check/load-entries", async (req, res) => {
       if(b.ShortName is not null and b.ShortName <> '', b.ShortName ,'Head Office') as ShortName, 
       if(b.Acronym is not null and b.Acronym <> '', b.Acronym ,'HO') as SubAcct
   FROM
-      Collection a
+      collection a
           LEFT JOIN
       (SELECT 
           b.ShortName, b.Acronym, a.IDNo
