@@ -293,7 +293,7 @@ Deposit.post("/search-cash-check", async (req, res) => {
         Cnt_10,
         Cnt_05,
         Cnt_01
-        FROM Cash_Breakdown WHERE Slip_Code = '${req.body.SlipCode}'`,
+        FROM cash_breakdown WHERE Slip_Code = '${req.body.SlipCode}'`,
         req
       )) as Array<any>;
       const newBreakDown: any = [];
