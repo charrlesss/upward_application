@@ -143,7 +143,7 @@ export async function loadDetails(req: Request, RCPNo: string) {
         c.Check_Amnt 
       From pullout_request a 
       Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
-      Inner join PDC c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
+      Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
       Where a.RCPNo =  ?
     `,
     RCPNo

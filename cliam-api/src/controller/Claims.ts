@@ -1276,15 +1276,15 @@ Claims.post(
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const mainDir = path.join(uploadDir, claimId);
-
+    
       if (!(await saveUserLogsCode(req, "update", claimId, "Claim", prisma))) {
         return res.send({ message: "Invalid User Code", success: false });
       }
 
-      await prisma.$transaction(async (_prisma) => {
-        await fs.access(mainDir); // Check if the directory exists
-        await fs.rm(mainDir, { recursive: true, force: true });
+      await fs.access(mainDir); // Check if the directory exists
+      await fs.rm(mainDir, { recursive: true, force: true });
 
+      await prisma.$transaction(async (_prisma) => {
         await prisma.$queryRawUnsafe(
           `DELETE FROM claims.claims where claim_id = ?`,
           claimId
@@ -1293,48 +1293,51 @@ Claims.post(
           `DELETE FROM claims.claims_details where claim_id = ?`,
           claimId
         );
+      });
 
-        const policyDetails = JSON.parse(req.body.policyDetails);
-        const __metadata = Array.isArray(req.body.metadata)
-          ? req.body.metadata
-          : [req.body.metadata];
+      const policyDetails = JSON.parse(req.body.policyDetails);
+      const __metadata = Array.isArray(req.body.metadata)
+        ? req.body.metadata
+        : [req.body.metadata];
 
-        const filesArray = JSON.parse(req.body.filesArray);
-        const uploadedFiles = reqFile.files as Express.Multer.File[];
+      const filesArray = JSON.parse(req.body.filesArray);
+      const uploadedFiles = (reqFile.files as Express.Multer.File[]) || [];
 
-        const basicDocuments = JSON.parse(req.body.basicDocuments);
-        const uploadedBasicFiles =
-          (reqFile.basic as Express.Multer.File[]) || [];
+      const basicDocuments = JSON.parse(req.body.basicDocuments);
+      const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
 
-        let updatedbasicDocuments = [];
-        if (uploadedBasicFiles.length > 0) {
-          updatedbasicDocuments = basicDocuments.map((itm: any) => {
-            const newFileArray: any = [];
-            uploadedBasicFiles.forEach((file) => {
-              const [id] = file.originalname.split("-").slice(-1);
-              if (itm.id === parseInt(id)) {
-                newFileArray.push(file.filename);
-              }
-            });
-            itm.files = newFileArray;
-
-            return itm;
+      if (fs.existsSync(mainDir)) {
+        fs.rmSync(mainDir, { recursive: true, force: true });
+      }
+      let updatedbasicDocuments = [];
+      if (uploadedBasicFiles.length > 0) {
+        updatedbasicDocuments = basicDocuments.map((itm: any) => {
+          const newFileArray: any = [];
+          uploadedBasicFiles.forEach((file) => {
+            const [id] = file.originalname.split("-").slice(-1);
+            if (itm.id === parseInt(id)) {
+              newFileArray.push(file.filename);
+            }
           });
-        }
+          itm.files = newFileArray;
 
-        await _prisma.claims.create({
+          return itm;
+        });
+      }
+
+      await prisma.$transaction(async (__prisma) => {
+        await __prisma.claims.create({
           data: {
             claim_id: claimId,
-            policyNo: policyDetails.data[0].PolicyNo,
-            department: policyDetails.data[0].Department,
-            account: policyDetails.data[0].Account,
-            assurename: policyDetails.data[0].Name,
-            idno: policyDetails.data[0].IDNo,
-            policyType: policyDetails.data[0].PolicyType,
+            policyNo: policyDetails.data[0].PolicyNo || "",
+            department: policyDetails.data[0].Department || "",
+            account: policyDetails.data[0].Account || "",
+            assurename: policyDetails.data[0].Name || "",
+            idno: policyDetails.data[0].IDNo || "",
+            policyType: policyDetails.data[0].PolicyType || "",
             basicDocuments: JSON.stringify(updatedbasicDocuments),
           },
         });
-
         for (let index = 0; index < filesArray.length; index++) {
           const metadata = JSON.parse(__metadata[index]);
           const group = filesArray[index];
@@ -1383,25 +1386,6 @@ Claims.post(
               fs.mkdirSync(claimDir, { recursive: true });
             }
 
-            for (const file of filesToSave) {
-              const sourceImagePath = path.join(uploadDir, file.filename);
-              const targetImagePath = path.join(claimDir, file.filename);
-
-              try {
-                // Check if source file exists
-                await fs.access(sourceImagePath);
-
-                // Copy file
-                await fs.copyFile(sourceImagePath, targetImagePath);
-                console.log("Image copied successfully to:", targetImagePath);
-
-                // Delete source file
-                await fs.unlink(sourceImagePath);
-                console.log("Source file deleted:", sourceImagePath);
-              } catch (err) {
-                console.error("Error handling file:", file.filename, err);
-              }
-            }
             filesToSave.forEach((file: Express.Multer.File) => {
               const sourceImagePath = path.join(uploadDir, file.filename);
               const targetImagePath = path.join(claimDir, file.filename);
@@ -1422,7 +1406,7 @@ Claims.post(
             });
           }
 
-          await _prisma.claims_details.create({
+          await __prisma.claims_details.create({
             data: {
               claim_id: claimId,
               claim_reference_no: metadata.reference,
@@ -1477,7 +1461,8 @@ Claims.post(
             });
           }
         }
-        await saveUserLogs(_prisma, req, claimId, "update", "Claim");
+
+        await saveUserLogs(__prisma, req, claimId, "save", "Claim");
       });
 
       res.send({
