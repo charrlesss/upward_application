@@ -1059,14 +1059,14 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     let extension = getFileExtension(file.originalname);
-    if (file.mimetype === "image/jpeg") {
-      extension = ".jpg"; // Force `.jpg` extension for image/jpeg
-    }
     cb(null, `${uuidV4()}${extension}`);
   },
 });
 const upload = multer({
   storage,
+  limits:{
+    fileSize:100 * 1024 * 102
+  }
 });
 
 Claims.post(
