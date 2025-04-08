@@ -1053,6 +1053,33 @@ Claims.post("/delete-claim", async (req, res): Promise<any> => {
   }
 });
 
+Claims.post("/check-code", async (req, res): Promise<any> => {
+  try {
+    const user = await getUserById(((req as any).user as any).UserId);
+    if (
+      !compareSync(
+        req.body.userCodeConfirmation,
+        user?.userConfirmationCode as string
+      )
+    ) {
+      return res.send({
+        message: `Invalid User Code`,
+        success: false,
+      });
+    }
+    res.send({
+      message: `Successfully Code `,
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+    });
+  }
+});
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -1276,12 +1303,7 @@ Claims.post(
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const mainDir = path.join(uploadDir, claimId);
-    
-      if (!(await saveUserLogsCode(req, "update", claimId, "Claim", prisma))) {
-        return res.send({ message: "Invalid User Code", success: false });
-      }
 
-   
       await prisma.$transaction(async (_prisma) => {
         await prisma.$queryRawUnsafe(
           `DELETE FROM claims.claims where claim_id = ?`,
@@ -1309,8 +1331,6 @@ Claims.post(
       }
 
       fs.mkdirSync(mainDir, { recursive: true });
-
-
 
       let updatedbasicDocuments = [];
       if (uploadedBasicFiles.length > 0) {
