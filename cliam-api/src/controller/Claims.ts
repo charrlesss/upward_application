@@ -1281,9 +1281,7 @@ Claims.post(
         return res.send({ message: "Invalid User Code", success: false });
       }
 
-      await fs.access(mainDir); // Check if the directory exists
-      await fs.rm(mainDir, { recursive: true, force: true });
-
+   
       await prisma.$transaction(async (_prisma) => {
         await prisma.$queryRawUnsafe(
           `DELETE FROM claims.claims where claim_id = ?`,
@@ -1309,6 +1307,11 @@ Claims.post(
       if (fs.existsSync(mainDir)) {
         fs.rmSync(mainDir, { recursive: true, force: true });
       }
+
+      fs.mkdirSync(mainDir, { recursive: true });
+
+
+
       let updatedbasicDocuments = [];
       if (uploadedBasicFiles.length > 0) {
         updatedbasicDocuments = basicDocuments.map((itm: any) => {
