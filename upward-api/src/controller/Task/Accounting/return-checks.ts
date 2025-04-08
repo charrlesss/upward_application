@@ -228,7 +228,7 @@ ReturnCheck.get("/return-checks/generate-id", async (req, res) => {
         '-', 
         LPAD(CAST(RIGHT(RC_No, 3) AS UNSIGNED) + 1, 3, '0')
       ) AS NewRefCode
-      FROM Return_Checks
+      FROM return_checks
       WHERE LEFT(RIGHT(RC_No, 8), 4) = DATE_FORMAT(CURDATE(), '%y%m')
       GROUP BY RC_No
       ORDER BY CAST(RIGHT(RC_No, 3) AS UNSIGNED) DESC
@@ -265,7 +265,7 @@ ReturnCheck.post("/return-checks/return-checks-search", async (req, res) => {
         date_format(RC_Date,'%M %d %Y') AS RefDate,
         RC_No AS RefNo,
         Explanation
-      FROM Return_Checks
+      FROM return_checks
       WHERE (Left(Explanation,7)<>'-- Void') AND 
       (RC_No LIKE '%${req.body.search}%' OR Explanation LIKE '%${req.body.search}%')
       GROUP BY RC_Date, RC_No, Explanation 
@@ -290,8 +290,8 @@ ReturnCheck.post(
   "/return-checks/return-checks-search-selected",
   async (req, res) => {
     try {
-      const qry1 = `SELECT * FROM Return_Checks WHERE RC_No = '${req.body.RefNo}' ORDER BY nSort`;
-      const qry2 = `SELECT * FROM Journal WHERE Source_Type = 'RC' and Source_No = '${req.body.RefNo}'`;
+      const qry1 = `SELECT * FROM return_checks WHERE RC_No = '${req.body.RefNo}' ORDER BY nSort`;
+      const qry2 = `SELECT * FROM journal WHERE Source_Type = 'RC' and Source_No = '${req.body.RefNo}'`;
       const data1 = await __executeQuery(qry1, req);
       const data2 = await __executeQuery(qry2, req);
 
@@ -320,7 +320,7 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
     const BranchCode = "HO";
     const BranchName = "Head Office";
     await __executeQuery(
-      `DELETE FROM Return_Checks WHERE RC_No ='${req.body.refNo}'`,
+      `DELETE FROM return_checks WHERE RC_No ='${req.body.refNo}'`,
       req
     );
 
@@ -374,21 +374,21 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
       );
 
       await __executeQueryWithParams(
-        `UPDATE PDC SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
+        `UPDATE pdc SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
         [selCheckItm[4]],
         req
       );
 
       // Update Journal
       await __executeQueryWithParams(
-        `UPDATE Journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
+        `UPDATE journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
         [selCheckItm[4], selCheckItm[0]],
         req
       );
     });
 
     await __executeQueryWithParams(
-      `DELETE FROM Journal WHERE Source_No = ? AND Source_Type = 'RC'`,
+      `DELETE FROM journal WHERE Source_No = ? AND Source_Type = 'RC'`,
       [req.body.refNo],
       req
     );
@@ -497,7 +497,7 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
     const BranchCode = "HO";
     const BranchName = "Head Office";
     await __executeQuery(
-      `DELETE FROM Return_Checks WHERE RC_No ='${req.body.refNo}'`,
+      `DELETE FROM return_checks WHERE RC_No ='${req.body.refNo}'`,
       req
     );
 
@@ -551,21 +551,21 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
       );
 
       await __executeQueryWithParams(
-        `UPDATE PDC SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
+        `UPDATE pdc SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
         [selCheckItm[4]],
         req
       );
 
       // Update Journal
       await __executeQueryWithParams(
-        `UPDATE Journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
+        `UPDATE journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
         [selCheckItm[4], selCheckItm[0]],
         req
       );
     });
 
     await __executeQueryWithParams(
-      `DELETE FROM Journal WHERE Source_No = ? AND Source_Type = 'RC'`,
+      `DELETE FROM journal WHERE Source_No = ? AND Source_Type = 'RC'`,
       [req.body.refNo],
       req
     );
