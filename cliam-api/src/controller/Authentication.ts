@@ -101,7 +101,7 @@ Authentication.post(
         process.env.REFRESH_TOKEN as string
       );
       updateRefreshToken(findUser.UserId, refreshToken);
-
+      res.cookie("up-at-login", accessToken, { httpOnly: true });
       res.cookie("up-rt-login", refreshToken, { httpOnly: true });
 
       await prisma.system_logs.create({
@@ -141,14 +141,16 @@ Authentication.post(
 Authentication.get(
   "/token",
   async (req: _Request, res: _Response): Promise<any> => {
+    const accessToken = req.cookies["up-at-login"];
     const refreshToken = req.cookies["up-rt-login"];
 
-    if (refreshToken === "" || refreshToken == null) {
+    if (accessToken === "" || accessToken == null) {
       return res.send(null);
     }
     try {
       res.send({
-        refreshToken,
+        accessToken,
+        refreshToken
       });
     } catch (err: any) {
       console.log(err.message);

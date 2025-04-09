@@ -218,7 +218,7 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1240; // A4 Portrait width
+    const PAGE_WIDTH = 1440; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -661,7 +661,7 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1240; // A4 Portrait width
+    const PAGE_WIDTH = 1440; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -884,8 +884,8 @@ Report.post("/report/ongoing-excel", async (req, res) => {
     const title = req.body.title;
     drawExcel(res, {
       columns: [
-        { key: "Name", width: 70 },
-        { key: "unit_insured", width: 70 },
+        { key: "Name", width: 50 },
+        { key: "unit_insured", width: 50 },
         { key: "policyNo", width: 25 },
         { key: "MotorNo", width: 25 },
         { key: "PlateNo", width: 25 },
@@ -895,6 +895,7 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         { key: "claim_type", width: 22 },
         { key: "amount_claim", width: 22 },
         { key: "date_approved", width: 22 },
+        { key: "name_ttpd", width: 50 },
         { key: "status", width: 22 },
       ],
       data: data,
@@ -930,6 +931,7 @@ Report.post("/report/ongoing-excel", async (req, res) => {
           "Type of Claim",
           "Amount of Claim",
           "Date Settled",
+          "Name of TTPD",
           "Status of Claim",
         ]);
         headerRow.font = { bold: true };
@@ -1084,7 +1086,7 @@ Report.post("/report/denied-pdf", async (req, res) => {
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1240; // A4 Portrait width
+    const PAGE_WIDTH = 1440; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -1513,7 +1515,7 @@ Report.post("/report/cancel-pdf", async (req, res) => {
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1240; // A4 Portrait width
+    const PAGE_WIDTH = 1440; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
