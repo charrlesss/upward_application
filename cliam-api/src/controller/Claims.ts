@@ -1145,6 +1145,7 @@ Claims.post(
             basicDocuments: JSON.stringify(updatedbasicDocuments),
           },
         });
+
         for (let index = 0; index < filesArray.length; index++) {
           const metadata = JSON.parse(__metadata[index]);
           const group = filesArray[index];
@@ -1169,6 +1170,7 @@ Claims.post(
                 groupFilename.push(file.filename);
               }
             });
+
             detailsJsonByRow.push({
               id: items.id,
               label: items.label,
@@ -1177,7 +1179,9 @@ Claims.post(
               required: items.required,
               primaryDocuments: items.primaryDocuments,
               others: items.others,
+              remarks: items.remarks,
             });
+
             groupByRow.push(groupFiles);
           });
 
@@ -1393,6 +1397,7 @@ Claims.post(
               required: items.required,
               primaryDocuments: items.primaryDocuments,
               others: items.others,
+              remarks: items.remarks,
             });
             groupByRow.push(groupFiles);
           });
