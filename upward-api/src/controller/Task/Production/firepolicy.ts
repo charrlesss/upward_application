@@ -41,7 +41,7 @@ FirePolicy.get("/fire/get-occupancy",async (req,res)=>{
     res.send({
       message: "Successfully get data",
       success: true,
-      occupancy: await __executeQuery(`select '' as SubLineName union all select SubLineName from subline as Subline where line = 'Fire';`)
+      occupancy: await __executeQuery(`select '' as SubLineName union all select SubLineName from subline  where line = 'Fire';`)
     });
   } catch (error: any) {
     console.log(error.message);

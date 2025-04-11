@@ -36,7 +36,7 @@ BondPolicy.get("/bond/get-bond-subline", async (req, res) => {
     res.send({
       message: "Create Bonds Policy Successfully",
       data: await prisma?.$queryRawUnsafe(
-        `select '' as  SubLineName union all select SubLineName from Subline where line = 'Bonds'`
+        `select '' as  SubLineName union all select SubLineName from subline where line = 'Bonds'`
       ),
       success: true,
     });
