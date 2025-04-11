@@ -203,10 +203,7 @@ BondPolicy.post("/search-bonds-policy", async (req, res) => {
     res.send({
       message: "Successfully search data",
       success: true,
-      data: await searchBondsPolicy(
-        req.body.search ,
-        req
-      ),
+      data: await searchBondsPolicy(req.body.search, req),
     });
   } catch (error: any) {
     console.log(error.message);
@@ -223,9 +220,7 @@ BondPolicy.post("/get-search-selected-bonds-policy", async (req, res) => {
     res.send({
       message: "Successfully search data",
       success: true,
-      data: await searchSelectedBondsPolicy(
-        req.body.policyNo
-      ),
+      data: await searchSelectedBondsPolicy(req.body.policyNo),
     });
   } catch (error: any) {
     console.log(error.message);
@@ -370,7 +365,7 @@ async function insertBondsPolicy(
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));
   di2Ref = defaultFormat(new Date(di2Ref));
   di1Ref = defaultFormat(new Date(di1Ref));
-  
+
   const now = new Date();
   const [hours, minutes] = timeRef.split(":").map(Number); // Extract hours & minutes
 
@@ -391,7 +386,7 @@ async function insertBondsPolicy(
       PolicyType: policyTypeRef,
       PolicyNo: policyNoRef,
       DateIssued: dateIssuedRef,
-      TotalPremium: parseFloat(parseFloat(totalPremiumRef).toFixed(2)),
+      TotalPremium: parseFloat(totalPremiumRef.toString().replace(/,/g, "")),
       Vat: parseFloat(vatRef.replace(/,/g, "")).toFixed(2),
       DocStamp: parseFloat(docstampRef.replace(/,/g, "")).toFixed(2),
       FireTax: "0",
