@@ -104,7 +104,7 @@ CheckPostponement.get(
       a.Name,
       'HO' AS BName
   FROM
-      PDC a
+      pdc a
   LEFT JOIN TMP c
       ON c.\`Date\` >= CURDATE() AND c.\`Date\` < a.Check_Date
   LEFT JOIN (
@@ -227,7 +227,7 @@ CheckPostponement.post(
       union all
       SELECT 
         T.Check_No AS CheckNo
-      FROM PDC T
+      FROM pdc T
       LEFT JOIN tmp_dates c 
           ON c.Date >= CURDATE() 
           AND c.Date <= T.Check_Date
@@ -262,7 +262,7 @@ CheckPostponement.post(
       Bank,
       Check_No CheckNo,
       Check_Amnt Amount 
-        FROM PDC  
+        FROM pdc  
           Where 
         Check_No = '${req.body.checkNo}' And PNo = '${req.body.PNNo}'
       limit 1
@@ -315,7 +315,7 @@ CheckPostponement.post(
       (SELECT DISTINCT
               (name)
           FROM
-              PDC
+              pdc
           WHERE
               PNo = a.PNNo AND Check_No = a.CheckNo) AS 'Name',
       CheckNo,
@@ -323,13 +323,13 @@ CheckPostponement.post(
       (SELECT 
               bank
           FROM
-              PDC
+              pdc
           WHERE
               Check_No = a.CheckNo AND PNo = a.PNNO) AS 'Bank',
       (SELECT 
               Check_Amnt
           FROM
-              PDC
+              pdc
           WHERE
               Check_No = a.CheckNo AND PNo = a.PNNO) AS 'check_Amnt',
       a.OldCheckDate,
@@ -695,16 +695,16 @@ CheckPostponement.post(
           date_format(a.NewCheckDate,'%Y-%m-%d') as NewDate,
           CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
           a.Reason, 
-          (selecT distinct(name) from PDC where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
-          (select bank from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
-          (select Check_Amnt from PDC where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
-          (seleCT PaidVia from Postponement where RPCDNo = a.RPCD) as 'PaidVia', 
-          (seleCT Surplus from Postponement where RPCDNo = a.RPCD) as 'Surplus', 
-          (seleCT Deducted_to from Postponement where RPCDNo = a.RPCD) as 'Deducted_to',
-          (seleCT PaidInfo from Postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
+          (selecT distinct(name) from pdc where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
+          (select bank from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
+          (select Check_Amnt from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
+          (seleCT PaidVia from postponement where RPCDNo = a.RPCD) as 'PaidVia', 
+          (seleCT Surplus from postponement where RPCDNo = a.RPCD) as 'Surplus', 
+          (seleCT Deducted_to from postponement where RPCDNo = a.RPCD) as 'Deducted_to',
+          (seleCT PaidInfo from postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
       from (
           seleCT *, 
-          (selecT pnno from Postponement where RPCDNo = A.RPCD) as 'PNNO' 
+          (selecT pnno from postponement where RPCDNo = A.RPCD) as 'PNNO' 
           from postponement_detail A) a 
       where RPCD = '${req.body.RPCDNo}'   
       `;
