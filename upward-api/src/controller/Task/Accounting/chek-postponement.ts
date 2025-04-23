@@ -37,7 +37,6 @@ const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
   "lva_ancar@yahoo.com",
   "upwardinsurance.grace@gmail.com",
-
 ];
 const UCSMIEmailToSend = [
   "upward.csmi@yahoo.com",
@@ -46,10 +45,12 @@ const UCSMIEmailToSend = [
 ];
 
 // ========================= REQUEST =================================
-CheckPostponement.get(
+CheckPostponement.post(
   "/check-postponement/request/load-pnno",
   async (req, res) => {
     try {
+
+      console.log(req.body)
       setTimeout(async () => {
         // Step 2: Create `tmp_numbers` table
         await prisma.$executeRawUnsafe(`
@@ -95,10 +96,6 @@ CheckPostponement.get(
         const data = await prisma.$queryRawUnsafe(`
 
   select * from (
-        select  '' as PNo,
-          '' as Name,
-          '' AS BName
-  union all
   SELECT 
       a.PNo,
       a.Name,
@@ -332,8 +329,8 @@ CheckPostponement.post(
               pdc
           WHERE
               Check_No = a.CheckNo AND PNo = a.PNNO) AS 'check_Amnt',
-      a.OldCheckDate,
-      a.NewCheckDate,
+      date_format(a.OldCheckDate ,'%m/%d/%Y') as OldCheckDate,
+       date_format(a.NewCheckDate ,'%m/%d/%Y') as NewCheckDate,
       a.Reason,
       (SELECT 
               PaidVia
@@ -438,10 +435,10 @@ CheckPostponement.post(
           RPCDNo: req.body.RPCDNoRef,
           PNNo: req.body.PNNoRef,
           HoldingFees: parseFloat(
-            req.body.HoldingFeesRef.replace(/,/g, "")
+            req.body.HoldingFeesRef.replace(/,/g, "") || 0
           ).toFixed(2),
           PenaltyCharge: parseFloat(
-            req.body.PenaltyChargeRef.replace(/,/g, "")
+            req.body.PenaltyChargeRef.replace(/,/g, "") || 0
           ).toFixed(2),
           PaidVia: req.body.HowToBePaidRef,
           PaidInfo: req.body.RemarksRef,
@@ -449,7 +446,7 @@ CheckPostponement.post(
           Status: "PENDING",
           Branch: req.body.BranchRef,
           Prepared_by: req.body.Prepared_By,
-          Surplus: parseFloat(req.body.SurplusRef.replace(/,/g, "")).toFixed(2),
+          Surplus: parseFloat(req.body.SurplusRef.replace(/,/g, "") || 0).toFixed(2),
           Deducted_to: req.body.DeductedToRef,
         },
       });
