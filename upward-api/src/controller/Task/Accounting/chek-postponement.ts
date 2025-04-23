@@ -81,7 +81,7 @@ CheckPostponement.get(
         await prisma.$executeRawUnsafe(`
   UPDATE TMP
   SET IsWorkDay = 0
-  WHERE \`Date\` IN (SELECT \`Date\` FROM HOLIDAYS);
+  WHERE \`Date\` IN (SELECT \`Date\` FROM holidays);
 `);
 
         // Step 6: Update `TMP` table for weekends
