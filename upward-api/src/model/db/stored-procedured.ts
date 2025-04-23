@@ -465,7 +465,7 @@ export function ProductionReport(
         vpolicy.Remarks as VRemarks
     FROM policy as Policy 
     LEFT JOIN bpolicy as BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo 
-    LEFT JOIN vpolicy as vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo 
+    LEFT JOIN vpolicy  ON Policy.PolicyNo = vpolicy.PolicyNo 
     LEFT JOIN mpolicy as MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo 
     LEFT JOIN papolicy as PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo 
     LEFT JOIN cglpolicy as CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo 
@@ -483,7 +483,7 @@ export function ProductionReport(
           whr_query = ` WHERE CAST(Policy.DateIssued AS DATE) <= STR_TO_DATE('${DateTo}','%Y-%m-%d') AND CAST(Policy.DateIssued AS DATE) >= STR_TO_DATE('${DateFrom}','%Y-%m-%d')   AND Policy.PolicyType in (select SublineName from subline where line = 'Bonds')`;
         }
         if (SortBy === "Date From") {
-          whr_query = ` WHERE date(IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= STR_TO_DATE('${DateTo}','%Y-%m-%d') AND date(IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) >= STR_TO_DATE('${DateFrom}','%Y-%m-%d')   AND Policy.PolicyType in (select SublineName from subline where line = 'Bonds')`;
+          whr_query = ` WHERE date(IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= STR_TO_DATE('${DateTo}','%Y-%m-%d') AND date(IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) >= STR_TO_DATE('${DateFrom}','%Y-%m-%d')   AND Policy.PolicyType in (select SublineName from subline where line = 'Bonds')`;
         }
       }
 
@@ -502,13 +502,13 @@ export function ProductionReport(
 
         if (SortBy === "Date From") {
           whr_query = ` WHERE DATE(IFNULL(BPolicy.BidDate,
-    										IFNULL(VPolicy.DateFrom,
+    										IFNULL(vpolicy.DateFrom,
     												IFNULL(MPolicy.DateFrom,
     														IFNULL(PAPolicy.PeriodFrom,
     																IFNULL(CGLPolicy.PeriodFrom,
     																		IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= STR_TO_DATE('${DateTo}', '%Y-%m-%d')
     								AND DATE(IFNULL(BPolicy.BidDate,
-    										IFNULL(VPolicy.DateFrom,
+    										IFNULL(vpolicy.DateFrom,
     												IFNULL(MPolicy.DateFrom,
     														IFNULL(PAPolicy.PeriodFrom,
     																IFNULL(CGLPolicy.PeriodFrom,
@@ -525,7 +525,7 @@ export function ProductionReport(
       whr_query = `${whr_query} ${
         IsFinanced === 0
           ? ""
-          : ` AND ((VPolicy.Mortgagee LIKE '%CASH MANAGEMENT%') OR (VPolicy.Mortgagee LIKE '%CREDIT MASTER%') OR (VPolicy.Mortgagee LIKE '%CAMFIN%'))`
+          : ` AND ((vpolicy.Mortgagee LIKE '%CASH MANAGEMENT%') OR (vpolicy.Mortgagee LIKE '%CREDIT MASTER%') OR (vpolicy.Mortgagee LIKE '%CAMFIN%'))`
       }`;
     }
 
@@ -537,14 +537,14 @@ export function ProductionReport(
         if (SortBy === "Date From") {
           whr_query = ` WHERE date(
 						IFNULL(BPolicy.BidDate, 
-						IFNULL(VPolicy.DateFrom, 
+						IFNULL(vpolicy.DateFrom, 
 						IFNULL(MPolicy.DateFrom, 
 						IFNULL(PAPolicy.PeriodFrom, 
 						IFNULL(CGLPolicy.PeriodFrom, 
 						IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= date('${DateTo}')
                         AND date(
 						IFNULL(BPolicy.BidDate, 
-						IFNULL(VPolicy.DateFrom, 
+						IFNULL(vpolicy.DateFrom, 
 						IFNULL(MPolicy.DateFrom, 
 						IFNULL(PAPolicy.PeriodFrom, 
 						IFNULL(CGLPolicy.PeriodFrom, 
@@ -556,24 +556,24 @@ export function ProductionReport(
           whr_query = `  where date(Policy.DateIssued) <= date('${DateTo}') and  date(Policy.DateIssued) >= date('${DateFrom}')  AND Policy.Account = '${Account_}' AND Policy.PolicyType = '${PolicyType}'`;
         }
         if (SortBy === "Date From") {
-          whr_query = ` WHERE date(IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= date('${DateTo}') AND date(IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) >= date('${DateFrom}') AND Policy.Account = '${Account_}' AND Policy.PolicyType = '${PolicyType}'`;
+          whr_query = ` WHERE date(IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) <= date('${DateTo}') AND date(IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom))))))) >= date('${DateFrom}') AND Policy.Account = '${Account_}' AND Policy.PolicyType = '${PolicyType}'`;
         }
       }
       whr_query = `${whr_query} ${
         IsFinanced === 0
           ? ""
-          : ` AND ((VPolicy.Mortgagee LIKE '%CASH MANAGEMENT%') OR (VPolicy.Mortgagee LIKE '%CREDIT MASTER%') OR (VPolicy.Mortgagee LIKE '%CAMFIN%')`
+          : ` AND ((vpolicy.Mortgagee LIKE '%CASH MANAGEMENT%') OR (vpolicy.Mortgagee LIKE '%CREDIT MASTER%') OR (vpolicy.Mortgagee LIKE '%CAMFIN%')`
       }`;
     }
   }
 
   if (Mortgagee !== "") {
     if (SortBy === "Date From") {
-      whr_query = ` WHERE IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom)))))) <= date('${DateTo}') AND IFNULL(BPolicy.BidDate, IFNULL(VPolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom)))))) >= date('${DateFrom}') AND Policy.Account = '${Account_}' AND VPolicy.Mortgagee = '${Mortgagee}'`;
+      whr_query = ` WHERE IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom)))))) <= date('${DateTo}') AND IFNULL(BPolicy.BidDate, IFNULL(vpolicy.DateFrom, IFNULL(MPolicy.DateFrom, IFNULL(PAPolicy.PeriodFrom, IFNULL(CGLPolicy.PeriodFrom, IFNULL(MSPRPolicy.PeriodFrom, FPolicy.DateFrom)))))) >= date('${DateFrom}') AND Policy.Account = '${Account_}' AND vpolicy.Mortgagee = '${Mortgagee}'`;
     }
 
     if (SortBy !== "Date From") {
-      whr_query = `  where date(Policy.DateIssued) <= date('${DateTo}') and  date(Policy.DateIssued) >= date('${DateFrom}')  AND Policy.Account = '${Account_}' AND VPolicy.Mortgagee = '${Mortgagee}'`;
+      whr_query = `  where date(Policy.DateIssued) <= date('${DateTo}') and  date(Policy.DateIssued) >= date('${DateFrom}')  AND Policy.Account = '${Account_}' AND vpolicy.Mortgagee = '${Mortgagee}'`;
     }
   }
 
@@ -592,7 +592,7 @@ export function ProductionReport(
   if (SortBy === "Date From") {
     whr_query =
       whr_query +
-      " order by  IFNULL(IFNULL(IFNULL(IFNULL(IFNULL(VPolicy.DateFrom,FPolicy.DateFrom),CGLPolicy.PeriodFrom),MPolicy.DateFrom),BPolicy.BidDate),PAPolicy.PeriodFrom) asc";
+      " order by  IFNULL(IFNULL(IFNULL(IFNULL(IFNULL(vpolicy.DateFrom,FPolicy.DateFrom),CGLPolicy.PeriodFrom),MPolicy.DateFrom),BPolicy.BidDate),PAPolicy.PeriodFrom) asc";
   }
   return `${sql_query} ${whr_query}`;
 }
@@ -609,75 +609,75 @@ export function RenewalNoticeReport(
     SELECT 
         a.Shortname as AssuredName,
         Policy.PolicyNo,
-        DATE_FORMAT(VPolicy.DateTo, '%m-%d-%Y')as Expiration,
-        VPolicy.EstimatedValue as InsuredValue,
-        VPolicy.Make,
-        VPolicy.BodyType,
-        VPolicy.PlateNo,
-        VPolicy.ChassisNo,
-        VPolicy.MotorNo,
+        DATE_FORMAT(vpolicy.DateTo, '%m-%d-%Y')as Expiration,
+        vpolicy.EstimatedValue as InsuredValue,
+        vpolicy.Make,
+        vpolicy.BodyType,
+        vpolicy.PlateNo,
+        vpolicy.ChassisNo,
+        vpolicy.MotorNo,
         Policy.TotalPremium,
-        VPolicy.Mortgagee,
-        VPolicy.Account
+        vpolicy.Mortgagee,
+        vpolicy.Account
     FROM Policy 
-    LEFT JOIN VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
+    LEFT JOIN vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo 
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
     where 
     SUBSTRING(Policy.PolicyNo, 1, 3)  <> 'TP-' AND
-    month(VPolicy.DateTo) = month('${date}') AND
-    year(VPolicy.DateTo) = year('${date}') 
-    ${account === "ALL" ? "" : ` AND VPolicy.Account =${account} `}
-    ORDER BY date(VPolicy.DateTo) asc`;
+    month(vpolicy.DateTo) = month('${date}') AND
+    year(vpolicy.DateTo) = year('${date}') 
+    ${account === "ALL" ? "" : ` AND vpolicy.Account =${account} `}
+    ORDER BY date(vpolicy.DateTo) asc`;
   } else if (policy === "COM" && _type === "Regular") {
     select_query = `
     SELECT 
         a.Shortname as AssuredName,
         Policy.PolicyNo,
-        DATE_FORMAT(VPolicy.DateTo, '%m-%d-%Y')as Expiration,
-        VPolicy.EstimatedValue as InsuredValue,
-        VPolicy.Make,
-        VPolicy.BodyType,
-        VPolicy.PlateNo,
-        VPolicy.ChassisNo,
-        VPolicy.MotorNo,
+        DATE_FORMAT(vpolicy.DateTo, '%m-%d-%Y')as Expiration,
+        vpolicy.EstimatedValue as InsuredValue,
+        vpolicy.Make,
+        vpolicy.BodyType,
+        vpolicy.PlateNo,
+        vpolicy.ChassisNo,
+        vpolicy.MotorNo,
         Policy.TotalPremium,
-        VPolicy.Mortgagee,
-        VPolicy.Account
+        vpolicy.Mortgagee,
+        vpolicy.Account
     FROM policy as Policy 
-    LEFT JOIN vpolicy as  VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo 
+    LEFT JOIN vpolicy  ON Policy.PolicyNo = vpolicy.PolicyNo 
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo
     where 
     Policy.PolicyType = '${policy}' AND
     SUBSTRING(Policy.PolicyNo, 1, 3)  <> 'TP-' AND
-    month(VPolicy.DateTo) = month('${date}') AND
-    year(VPolicy.DateTo) = year('${date}') 
-    ${account === "ALL" ? "" : ` AND VPolicy.Account =${account} `}
-    ORDER BY date(VPolicy.DateTo) asc`;
+    month(vpolicy.DateTo) = month('${date}') AND
+    year(vpolicy.DateTo) = year('${date}') 
+    ${account === "ALL" ? "" : ` AND vpolicy.Account =${account} `}
+    ORDER BY date(vpolicy.DateTo) asc`;
   } else if (policy === "COM" && _type !== "Regular") {
     select_query = `
     SELECT
       a.Shortname as AssuredName,
       Policy.PolicyNo,
-      DATE_FORMAT(VPolicy.DateTo, '%m-%d-%Y')as Expiration,
-      VPolicy.EstimatedValue as InsuredValue,
-      VPolicy.Make,
-      VPolicy.BodyType,
-      VPolicy.PlateNo,
-      VPolicy.ChassisNo,
-      VPolicy.MotorNo,
+      DATE_FORMAT(vpolicy.DateTo, '%m-%d-%Y')as Expiration,
+      vpolicy.EstimatedValue as InsuredValue,
+      vpolicy.Make,
+      vpolicy.BodyType,
+      vpolicy.PlateNo,
+      vpolicy.ChassisNo,
+      vpolicy.MotorNo,
       Policy.TotalPremium,
-      VPolicy.Mortgagee,
-      VPolicy.Account
+      vpolicy.Mortgagee,
+      vpolicy.Account
     FROM policy as Policy
-    LEFT JOIN vpolicy as VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
+    LEFT JOIN vpolicy  ON Policy.PolicyNo = vpolicy.PolicyNo
     LEFT JOIN  (${selectClient}) a ON Policy.IDNo = a.IDNo 
     where
     Policy.PolicyType = '${policy}' AND
     SUBSTRING(Policy.PolicyNo, 1, 3)  = 'TP-' AND
-    month(VPolicy.DateTo) = month('${date}') AND
-    year(VPolicy.DateTo) = year('${date}')
-    ${account === "ALL" ? "" : ` AND VPolicy.Account =${account} `}
-    ORDER BY date(VPolicy.DateTo) asc
+    month(vpolicy.DateTo) = month('${date}') AND
+    year(vpolicy.DateTo) = year('${date}')
+    ${account === "ALL" ? "" : ` AND vpolicy.Account =${account} `}
+    ORDER BY date(vpolicy.DateTo) asc
   `;
   } else if (policy === "FIRE") {
     select_query = `
@@ -749,33 +749,33 @@ export function TemplateRenewalNotice(PolicyType: string, PolicyNo: string) {
 		    client.Shortname,
         client.address,
 		    Policy.PolicyNo,
-        VPolicy.PlateNo,
-        VPolicy.ChassisNo,
-        VPolicy.MotorNo,
-        VPolicy.DateTo,
-        concat(VPolicy.Model,' ',VPolicy.Make,' ',VPolicy.BodyType) as unitInsuredu,
-        VPolicy.Mortgagee,
-        FORMAT(VPolicy.EstimatedValue, 4) as tl_prev_insured,
-        FORMAT(VPolicy.EstimatedValue, 4) as acn_prev_insured,
-        FORMAT(VPolicy.BodilyInjury,4) as injury_prev_insured,
-        FORMAT(VPolicy.PropertyDamage,4) as damage_prev_insured,
-        FORMAT(VPolicy.PersonalAccident,4) as accident_prev_insured,
-        FORMAT(VPolicy.ODamage,4) as tl_prev_premium,
-        FORMAT(VPolicy.AOG,4) as acn_prev_premium,
-        VPolicy.Sec4A as injury_prev_premium,
-        VPolicy.Sec4B as damage_prev_premium,
-        VPolicy.Sec4C	as accident_prev_premium,
+        vpolicy.PlateNo,
+        vpolicy.ChassisNo,
+        vpolicy.MotorNo,
+        vpolicy.DateTo,
+        concat(vpolicy.Model,' ',vpolicy.Make,' ',vpolicy.BodyType) as unitInsuredu,
+        vpolicy.Mortgagee,
+        FORMAT(vpolicy.EstimatedValue, 4) as tl_prev_insured,
+        FORMAT(vpolicy.EstimatedValue, 4) as acn_prev_insured,
+        FORMAT(vpolicy.BodilyInjury,4) as injury_prev_insured,
+        FORMAT(vpolicy.PropertyDamage,4) as damage_prev_insured,
+        FORMAT(vpolicy.PersonalAccident,4) as accident_prev_insured,
+        FORMAT(vpolicy.ODamage,4) as tl_prev_premium,
+        FORMAT(vpolicy.AOG,4) as acn_prev_premium,
+        vpolicy.Sec4A as injury_prev_premium,
+        vpolicy.Sec4B as damage_prev_premium,
+        vpolicy.Sec4C	as accident_prev_premium,
         FORMAT(Policy.TotalPremium,4)  as prev_sub_total,
         FORMAT(Policy.DocStamp,4)	as prev_doc_stamp,
         FORMAT(Policy.Vat,4) as prev_evat,
         FORMAT(Policy.LGovTax,4) as prev_lgt,
         FORMAT(Policy.TotalDue,4) as prev_gross,
         SecIIPercent,
-        VPolicy.Remarks
+        vpolicy.Remarks
     FROM
 	(SELECT * FROM policy as Policy WHERE Policy.PolicyType = 'COM') AS Policy
 		LEFT JOIN 
-	(SELECT * FROM vpolicy as VPolicy WHERE VPolicy.PolicyType <> 'TPL') AS VPolicy ON Policy.PolicyNo = VPolicy.PolicyNo
+	(SELECT * FROM vpolicy  WHERE vpolicy.PolicyType <> 'TPL') AS vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo
         LEFT JOIN 
 	(${selectClient}) as  client on Policy.IDNo = client.IDNo
     `;
