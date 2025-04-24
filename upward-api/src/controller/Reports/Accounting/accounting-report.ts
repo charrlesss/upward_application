@@ -1317,7 +1317,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
         { headerName: "CHECK NO", textAlign: "center" },
         { headerName: "DEBIT", textAlign: "right" },
         { headerName: "CREDIT", textAlign: "right" },
-        { headerName: "EXPLANTION", textAlign: "left" },
+        { headerName: "EXPLANATION", textAlign: "left" },
       ],
       keys: [
         "Date_Entry",
@@ -1422,7 +1422,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
         { headerName: "DEBIT", textAlign: "right" },
         { headerName: "CREDIT", textAlign: "right" },
         { headerName: "BALANCE", textAlign: "right" },
-        { headerName: "EXPLANTION", textAlign: "left" },
+        { headerName: "EXPLANATION", textAlign: "left" },
       ],
       keys: [
         "Date_Entry",

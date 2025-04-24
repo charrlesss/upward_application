@@ -39,7 +39,7 @@ router.use(Task);
 router.use(Reports);
 router.use(Template);
 router.use(MasterAdminUser);
-router.get("/logout", logout);
+router.post("/logout", logout);
 router.post("/open-report-by-username", async (req, res) => {
   try {
     const user: any = await getUserByUsername(req.body.username, req);
