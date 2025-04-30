@@ -10,7 +10,12 @@ env.config();
 const PORT = process.env.PORT;
 
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://claims.upwardinsurance.net"],
+  origin: [
+    "http://localhost:3000",
+    "https://claims.upwardinsurance.net",
+    "/",
+    "*",
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 };
@@ -22,8 +27,8 @@ async function main() {
   app.use(cookieParser());
 
   app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions));
-  
+  app.options("*", cors(corsOptions));
+
   app.use(express.static(path.join(__dirname, "static")));
   app.use(express.static(path.join(__dirname, "/static/image/")));
   app.use("/api", router);
