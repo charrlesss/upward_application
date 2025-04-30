@@ -35,7 +35,7 @@ Imbersement.post("/get-imbersement-id", async (req, res): Promise<any> => {
 
     // Get the last claim_id for the current month
     const lastClaim: any = await prisma.$queryRawUnsafe(`
-        SELECT refNo FROM claims.imbursement 
+        SELECT refNo FROM claims.reimbursement 
         WHERE refNo LIKE '${monthPrefix}%' COLLATE utf8mb4_unicode_ci 
         ORDER BY refNo DESC 
         LIMIT 1
@@ -122,7 +122,7 @@ Imbersement.post(
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
         metadata.date_return_upward = new Date(metadata.date_return_upward);
-        await _prisma.imbursement.create({
+        await _prisma.reimbursement.create({
           data: {
             ...metadata,
             basicDocuments: JSON.stringify(basicDocuments),
@@ -182,7 +182,7 @@ Imbersement.post(
   "/update-imbersement",
   upload.fields([{ name: "basic" }]),
   async (req, res): Promise<any> => {
-    console.log('update')
+    console.log("update");
     try {
       const reqFile = req.files as any;
 
@@ -205,7 +205,7 @@ Imbersement.post(
         delete metadata.userCodeConfirmation;
 
         await _prisma.$queryRawUnsafe(
-          `DELETE FROM claims.imbursement WHERE refNo = ?`,
+          `DELETE FROM claims.reimbursement WHERE refNo = ?`,
           metadata.refNo
         );
 
@@ -236,7 +236,7 @@ Imbersement.post(
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
         metadata.date_return_upward = new Date(metadata.date_return_upward);
-        await _prisma.imbursement.create({
+        await _prisma.reimbursement.create({
           data: {
             ...metadata,
             basicDocuments: JSON.stringify(basicDocuments),
@@ -308,7 +308,7 @@ Imbersement.post("/delete-imbersement", async (req, res): Promise<any> => {
       delete req.body.userCodeConfirmation;
 
       await _prisma.$queryRawUnsafe(
-        `DELETE FROM claims.imbursement WHERE refNo = ?`,
+        `DELETE FROM claims.reimbursement WHERE refNo = ?`,
         req.body.refNo
       );
       await saveUserLogs(
@@ -339,23 +339,22 @@ async function searchImberment(search: string) {
     `
     SELECT 
       refNo,
+      policy_no,
       check_from,
-      client_name,
       type_claim,
-      format(amount_claim,2) as amount_claim,
-      date_claim,
-      DATE_FORMAT(date_claim, '%m/%d/%Y') AS date_claim,
-      payment,
+      date_format(date_claim,'%Y-%m-%d') as date_claim,
+      unit_insured,
+      client_name,
+       format(amount_claim,2) as amount_claim,
+      date_format(date_release,'%Y-%m-%d') as date_release,
+      date_format(date_return_upward,'%Y-%m-%d') as date_return_upward,
       format(amount_imbursement,2) as amount_imbursement,
-      DATE_FORMAT(date_release, '%m/%d/%Y') AS date_release,
+      payment,
       payee,
-      DATE_FORMAT(date_return_upward, '%m/%d/%Y') AS date_return_upward,
-      DATE_FORMAT(date_claim, '%Y-%m-%d') as date_claim_sub,
-      DATE_FORMAT(date_claim, '%Y-%m-%d') as  date_release_sub,
-      DATE_FORMAT(date_claim, '%Y-%m-%d') as date_return_upward_sub,
+      remarks,
       basicDocuments
     FROM
-        claims.imbursement
+        claims.reimbursement
     WHERE
         refNo LIKE ?  
         OR client_name LIKE ?  
