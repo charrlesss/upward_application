@@ -4,6 +4,7 @@ import { compareSync } from "bcrypt";
 import jwt from "jsonwebtoken";
 import { _Request, _Response } from "../types/express";
 
+
 const Authentication = express.Router();
 const prisma = new PrismaClient();
 
@@ -73,7 +74,6 @@ Authentication.post("/refresh-token", async (req, res): Promise<any> => {
     }
   );
 });
-
 
 Authentication.post(
   "/login",
@@ -150,7 +150,7 @@ Authentication.get(
     try {
       res.send({
         accessToken,
-        refreshToken
+        refreshToken,
       });
     } catch (err: any) {
       console.log(err.message);

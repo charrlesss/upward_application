@@ -1,9 +1,30 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
-import { saveUserLogs, saveUserLogsCode } from "./Claims";
+import { getFileExtension, saveUserLogs, saveUserLogsCode } from "./Claims";
+import multer from "multer";
+import { v4 as uuidV4 } from "uuid";
+import path from "path";
+import fs from "fs";
+import { Console } from "console";
+
+const uploadDir = path.join(__dirname, "./../../static/reimbursement");
 
 const prisma = new PrismaClient();
 const Imbersement = express.Router();
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    let extension = getFileExtension(file.originalname);
+    cb(null, `${uuidV4()}${extension}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 150 * 1024 * 1024 }, // 150MB file size limit
+});
 
 Imbersement.post("/get-imbersement-id", async (req, res): Promise<any> => {
   try {
@@ -61,93 +82,215 @@ Imbersement.post("/search-imbersement", async (req, res): Promise<any> => {
     });
   }
 });
-Imbersement.post("/add-imbersement", async (req, res): Promise<any> => {
-  try {
-    delete req.body.isUpdate;
-    req.body.amount_claim = parseFloat(
-      req.body.amount_claim.replace(/,/g, "")
-    ).toFixed(2);
-    req.body.amount_imbursement = parseFloat(
-      req.body.amount_imbursement.replace(/,/g, "")
-    ).toFixed(2);
 
-    await prisma.$transaction(async (_prisma) => {
-      req.body.date_claim = new Date(req.body.date_claim);
-      req.body.date_release = new Date(req.body.date_release);
-      req.body.date_return_upward = new Date(req.body.date_return_upward);
-      await prisma.imbursement.create({ data: req.body });
-      await saveUserLogs(_prisma, req, req.body.refNo, "add", "Imbersement");
-    });
+Imbersement.post(
+  "/add-imbersement",
+  upload.fields([{ name: "basic" }]),
+  async (req, res): Promise<any> => {
+    try {
+      const reqFile = req.files as any;
 
-    res.send({
-      message: "Successfully Add Imbersement.",
-      success: true,
-      data: await searchImberment(""),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      data: [],
-    });
-  }
-});
-Imbersement.post("/update-imbersement", async (req, res): Promise<any> => {
-  try {
-    await prisma.$transaction(async (_prisma) => {
-      if (
-        !(await saveUserLogsCode(
-          req,
-          "update",
-          req.body.refNo,
-          "Reimbersement",
-          _prisma
-        ))
-      ) {
-        return res.send({ message: "Invalid User Code", success: false });
+      const metadata = JSON.parse(req.body.metadata);
+      const basicDocuments = JSON.parse(req.body.basicDocuments);
+      const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
+
+      let updatedbasicDocuments = [];
+      if (uploadedBasicFiles.length > 0) {
+        updatedbasicDocuments = basicDocuments.map((itm: any) => {
+          const newFileArray: any = [];
+          uploadedBasicFiles.forEach((file) => {
+            const [id] = file.originalname.split("-").slice(-1);
+            if (itm.id === parseInt(id)) {
+              newFileArray.push(file.filename);
+            }
+          });
+          itm.files = newFileArray;
+
+          return itm;
+        });
       }
-      delete req.body.userCodeConfirmation;
 
-      await _prisma.$queryRawUnsafe(
-        `DELETE FROM claims.imbursement WHERE refNo = ?`,
-        req.body.refNo
-      );
-
-      req.body.amount_claim = parseFloat(
-        req.body.amount_claim.replace(/,/g, "")
+      delete metadata.isUpdate;
+      metadata.amount_claim = parseFloat(
+        metadata.amount_claim.replace(/,/g, "")
       ).toFixed(2);
-      req.body.amount_imbursement = parseFloat(
-        req.body.amount_imbursement.replace(/,/g, "")
+      metadata.amount_imbursement = parseFloat(
+        metadata.amount_imbursement.replace(/,/g, "")
       ).toFixed(2);
 
-      req.body.date_claim = new Date(req.body.date_claim);
-      req.body.date_release = new Date(req.body.date_release);
-      req.body.date_return_upward = new Date(req.body.date_return_upward);
-      await _prisma.imbursement.create({ data: req.body });
-      await saveUserLogs(
-        _prisma,
-        req,
-        req.body.refNo,
-        "update",
-        "Reimbersement"
-      );
-    });
+      await prisma.$transaction(async (_prisma) => {
+        metadata.date_claim = new Date(metadata.date_claim);
+        metadata.date_release = new Date(metadata.date_release);
+        metadata.date_return_upward = new Date(metadata.date_return_upward);
+        await _prisma.imbursement.create({
+          data: {
+            ...metadata,
+            basicDocuments: JSON.stringify(basicDocuments),
+          },
+        });
 
-    res.send({
-      message: "Successfully Update Imbersement.",
-      success: true,
-      data: await searchImberment(""),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      data: [],
-    });
+        const mainDir = path.join(uploadDir, metadata.refNo);
+        if (fs.existsSync(mainDir)) {
+          fs.rmSync(mainDir, { recursive: true, force: true });
+        }
+
+        if (!fs.existsSync(mainDir)) {
+          fs.mkdirSync(mainDir, { recursive: true });
+        }
+
+        if (uploadedBasicFiles) {
+          if (uploadedBasicFiles.length > 0) {
+            uploadedBasicFiles.forEach((file: Express.Multer.File) => {
+              const sourceImagePath = path.join(uploadDir, file.filename);
+              const targetImagePath = path.join(mainDir, file.filename);
+              fs.copyFile(sourceImagePath, targetImagePath, (err) => {
+                if (err) {
+                  console.error("Error copying file:", err);
+                } else {
+                  console.log("Image copied successfully to:", targetImagePath);
+                  fs.unlink(sourceImagePath, (unlinkErr) => {
+                    if (unlinkErr) {
+                      console.error("Error deleting source file:", unlinkErr);
+                    } else {
+                      console.log("Source file deleted:", sourceImagePath);
+                    }
+                  });
+                }
+              });
+            });
+          }
+        }
+        await saveUserLogs(_prisma, req, metadata.refNo, "add", "Imbersement");
+      });
+
+      res.send({
+        message: "Successfully Add Imbersement.",
+        success: true,
+        data: await searchImberment(""),
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
   }
-});
+);
+Imbersement.post(
+  "/update-imbersement",
+  upload.fields([{ name: "basic" }]),
+  async (req, res): Promise<any> => {
+    console.log('update')
+    try {
+      const reqFile = req.files as any;
+
+      const metadata = JSON.parse(req.body.metadata);
+      const basicDocuments = JSON.parse(req.body.basicDocuments);
+      const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
+
+      await prisma.$transaction(async (_prisma) => {
+        if (
+          !(await saveUserLogsCode(
+            req,
+            "update",
+            metadata.refNo,
+            "Reimbersement",
+            _prisma
+          ))
+        ) {
+          return res.send({ message: "Invalid User Code", success: false });
+        }
+        delete metadata.userCodeConfirmation;
+
+        await _prisma.$queryRawUnsafe(
+          `DELETE FROM claims.imbursement WHERE refNo = ?`,
+          metadata.refNo
+        );
+
+        let updatedbasicDocuments = [];
+        if (uploadedBasicFiles.length > 0) {
+          updatedbasicDocuments = basicDocuments.map((itm: any) => {
+            const newFileArray: any = [];
+            uploadedBasicFiles.forEach((file) => {
+              const [id] = file.originalname.split("-").slice(-1);
+              if (itm.id === parseInt(id)) {
+                newFileArray.push(file.filename);
+              }
+            });
+            itm.files = newFileArray;
+
+            return itm;
+          });
+        }
+
+        delete metadata.isUpdate;
+        metadata.amount_claim = parseFloat(
+          metadata.amount_claim.replace(/,/g, "")
+        ).toFixed(2);
+        metadata.amount_imbursement = parseFloat(
+          metadata.amount_imbursement.replace(/,/g, "")
+        ).toFixed(2);
+
+        metadata.date_claim = new Date(metadata.date_claim);
+        metadata.date_release = new Date(metadata.date_release);
+        metadata.date_return_upward = new Date(metadata.date_return_upward);
+        await _prisma.imbursement.create({
+          data: {
+            ...metadata,
+            basicDocuments: JSON.stringify(basicDocuments),
+          },
+        });
+
+        const mainDir = path.join(uploadDir, metadata.refNo);
+        if (fs.existsSync(mainDir)) {
+          fs.rmSync(mainDir, { recursive: true, force: true });
+        }
+
+        if (!fs.existsSync(mainDir)) {
+          fs.mkdirSync(mainDir, { recursive: true });
+        }
+
+        if (uploadedBasicFiles) {
+          if (uploadedBasicFiles.length > 0) {
+            uploadedBasicFiles.forEach((file: Express.Multer.File) => {
+              const sourceImagePath = path.join(uploadDir, file.filename);
+              const targetImagePath = path.join(mainDir, file.filename);
+              fs.copyFile(sourceImagePath, targetImagePath, (err) => {
+                if (err) {
+                  console.error("Error copying file:", err);
+                } else {
+                  console.log("Image copied successfully to:", targetImagePath);
+                  fs.unlink(sourceImagePath, (unlinkErr) => {
+                    if (unlinkErr) {
+                      console.error("Error deleting source file:", unlinkErr);
+                    } else {
+                      console.log("Source file deleted:", sourceImagePath);
+                    }
+                  });
+                }
+              });
+            });
+          }
+        }
+      });
+
+      res.send({
+        message: "Successfully Update Imbersement.",
+        success: true,
+        data: await searchImberment(""),
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
 Imbersement.post("/delete-imbersement", async (req, res): Promise<any> => {
   try {
     await prisma.$transaction(async (_prisma) => {
@@ -209,7 +352,8 @@ async function searchImberment(search: string) {
       DATE_FORMAT(date_return_upward, '%m/%d/%Y') AS date_return_upward,
       DATE_FORMAT(date_claim, '%Y-%m-%d') as date_claim_sub,
       DATE_FORMAT(date_claim, '%Y-%m-%d') as  date_release_sub,
-      DATE_FORMAT(date_claim, '%Y-%m-%d') as date_return_upward_sub
+      DATE_FORMAT(date_claim, '%Y-%m-%d') as date_return_upward_sub,
+      basicDocuments
     FROM
         claims.imbursement
     WHERE

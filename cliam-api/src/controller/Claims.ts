@@ -1113,9 +1113,12 @@ Claims.post(
       const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
 
       const mainDir = path.join(uploadDir, claimId);
+
       if (fs.existsSync(mainDir)) {
         fs.rmSync(mainDir, { recursive: true, force: true });
       }
+
+      
       let updatedbasicDocuments = [];
       if (uploadedBasicFiles.length > 0) {
         updatedbasicDocuments = basicDocuments.map((itm: any) => {
@@ -2096,7 +2099,7 @@ Claims.post("/generate-claim-sheet", async (req, res) => {
     }
   }
 });
-function getFileExtension(filename: string) {
+export function getFileExtension(filename: string) {
   let dotIndex = filename.lastIndexOf(".");
   if (dotIndex === -1) return null; // No extension found
   return filename.substring(dotIndex).split(/[^a-zA-Z0-9.]/)[0];
