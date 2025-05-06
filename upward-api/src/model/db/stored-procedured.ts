@@ -2351,7 +2351,7 @@ export function AgingAccountsReport(date: Date, type: string) {
                 Policy.AgentCom,
                 IFNULL(VPolicy.Mortgagee, FPolicy.Mortgage) AS Remarks
             FROM
-                Policy 
+                policy  as Policy
                 RIGHT OUTER JOIN (
                     SELECT ID_No, (IFNULL(SUM(Debit), 0) - IFNULL(SUM(Credit), 0)) AS Balance
                     FROM journal as Journal
