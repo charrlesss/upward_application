@@ -70,7 +70,7 @@ Authentication.post("/refresh-token", async (req, res) => {
 });
 
 Authentication.post("/login", async (req: Request, res: Response) => {
-  
+  console.log(req.body)
   const findUser = await prisma.users.findUnique({
     where: {
       Username: req.body.username,

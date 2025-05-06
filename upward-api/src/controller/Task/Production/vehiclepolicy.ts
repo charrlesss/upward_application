@@ -36,10 +36,106 @@ import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
 import { VerifyToken } from "../../Authentication";
 import { convertToPassitive } from "../../../lib/convertToPassitive";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { DefaultArgs } from "@prisma/client/runtime/library";
 const prisma = new PrismaClient();
 
 const VehiclePolicy = express.Router();
+
+VehiclePolicy.post("/get-transaction-history", async (req, res) => {
+  try {
+    const history = await prisma.$transaction([
+      prisma.$queryRawUnsafe(
+        `SELECT * FROM pdc where PNo = ? order by Check_Date`,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+        SELECT b.* FROM journal a
+        left join collection b on a.Source_No = b.Official_Receipt
+        where a.ID_No = ? and a.Source_Type = 'OR';
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+        SELECT b.*,c.* FROM journal a
+        left join deposit b on a.Source_No = b.Temp_SlipCode
+        left join deposit_slip c on b.Temp_SlipCode = c.SlipCode
+        where a.ID_No = ? and a.Source_Type = 'DC';
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+        SELECT * FROM journal a 
+        left join return_checks b on a.Source_No = b.RC_No
+        where a.ID_No = ? and a.Source_Type = 'RC';
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+       SELECT * FROM journal_voucher  a
+       where a.Source_Type = 'GL' and a.ID_No = ?;
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+        SELECT * FROM cash_disbursement  a
+        where a.Source_Type = 'CV' and a.ID_No = ?
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+       SELECT 
+          *
+        FROM
+            pullout_request a
+                LEFT JOIN
+            pullout_request_details b ON a.RCPNo = b.RCPNo
+        WHERE
+            a.PNNo = ?;
+        `,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
+        `
+    SELECT 
+        *
+    FROM
+        postponement a
+            LEFT JOIN
+        postponement_detail b ON a.RPCDNo = b.RPCD
+    WHERE
+        a.PNNo = ?;
+        `,
+        req.body.policyNo
+      ),
+
+
+    ]);
+    const jsonString = JSON.stringify(history, (_, value) =>
+      typeof value === 'bigint' ? value.toString() + 'n' : value
+    );
+
+    res.send({
+      message: "Successfully get transaction history",
+      success: true,
+      history:jsonString,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      history: [],
+    });
+  }
+});
 
 VehiclePolicy.post("/search-client-by-id-or-name", async (req, res) => {
   try {
@@ -416,7 +512,7 @@ VehiclePolicy.post("/save", async (req, res) => {
     //     req
     //   )) as Array<any>
     // )[0];
-    
+
     // if (rate == null) {
     //   return res.send({
     //     message: "Please setup commission rate for this account and Line",
