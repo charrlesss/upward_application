@@ -366,7 +366,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
               IF(SUBSTRING(GL_Acct, 1, 1) <= '3' OR SUBSTRING(GL_Acct, 1, 1) = '7', 
               SUM(qryJournal.mDebit) - SUM(qryJournal.mCredit), 
               SUM(qryJournal.mCredit) - SUM(qryJournal.mDebit)) AS Balance
-              From (${_qryJournal}) QryJournal 
+              From (${_qryJournal}) qryJournal 
               WHERE (((qryJournal.Source_Type) <>'BF' And (qryJournal.Source_Type) <>'BFD' And (qryJournal.Source_Type) <>'BFS') AND ((qryJournal.Date_Entry) <='${dateFormatted}')) 
               GROUP BY qryJournal.GL_Acct, qryJournal.Sub_Acct, qryJournal.mSub_Acct 
               HAVING (qryJournal.GL_Acct='${account.trim()}') ${
@@ -391,7 +391,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
               IF(SUBSTRING(GL_Acct, 1, 1) <= '3' OR SUBSTRING(GL_Acct, 1, 1) = '7', 
               SUM(qryJournal.mDebit) - SUM(qryJournal.mCredit), 
               SUM(qryJournal.mCredit) - SUM(qryJournal.mDebit)) AS Balance
-              From (${_qryJournal}) QryJournal 
+              From (${_qryJournal}) qryJournal 
               WHERE (((qryJournal.Source_Type) <>'BF' And (qryJournal.Source_Type) <>'BFD' And (qryJournal.Source_Type) <>'BFS') AND ((qryJournal.Date_Entry) <='${dateFormatted}')) 
               GROUP BY qryJournal.GL_Acct, qryJournal.Sub_Acct, qryJournal.mSub_Acct 
               ORDER BY  ${
