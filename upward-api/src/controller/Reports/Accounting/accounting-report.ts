@@ -438,7 +438,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
             Left(GL.GL_Acct,1) AS 'Group Header', 
             Left(GL.GL_Acct,4) AS Header,GL.GL_Acct,CA.Short AS 'mShort',
             '' AS 'Sub_Acct',
-            ifnull(gl.ID_No,'') AS 'ID_No',
+            ifnull(GL.ID_No,'') AS 'ID_No',
             ifnull(ID.Shortname,'') as 'mID', 
             sum(Debit) as 'Debit',
             sum(Credit) as 'Credit',
@@ -453,7 +453,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
           GL.Source_Type NOT IN ('BF','BFD','BFS') AND
            Date_Entry <= '${dateFormatted}' AND 
            GL.GL_Acct ='${account.trim()}' 
-          GROUP BY GL_Acct,ca.Short,gl.ID_No,IfNULL(ID.Shortname,'')  ) a
+          GROUP BY GL_Acct,ca.Short,GL.ID_No,IfNULL(ID.Shortname,'')  ) a
           where Balance <> 0 
           ORDER BY 'Group Header',Header,GL_Acct,${
             parseInt(sort) === 0 ? "mID" : "ID_No"
