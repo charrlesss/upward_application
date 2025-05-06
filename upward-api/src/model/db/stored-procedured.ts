@@ -2354,7 +2354,7 @@ export function AgingAccountsReport(date: Date, type: string) {
                 Policy 
                 RIGHT OUTER JOIN (
                     SELECT ID_No, (IFNULL(SUM(Debit), 0) - IFNULL(SUM(Credit), 0)) AS Balance
-                    FROM Journal
+                    FROM journal as Journal
                     WHERE GL_Acct = '1.03.03' AND ((Source_Type) <> 'BFD' AND (Source_Type) <> 'BF' AND (Source_Type) <> 'BFS') AND Date_Entry <= '${formattedDate}'
                     GROUP BY ID_No
                 ) Payment ON Policy.PolicyNo = Payment.ID_No

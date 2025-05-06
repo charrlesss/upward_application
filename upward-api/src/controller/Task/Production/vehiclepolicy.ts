@@ -36,8 +36,8 @@ import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
 import { VerifyToken } from "../../Authentication";
 import { convertToPassitive } from "../../../lib/convertToPassitive";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
-import { Prisma, PrismaClient } from "@prisma/client";
-import { DefaultArgs } from "@prisma/client/runtime/library";
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
 const VehiclePolicy = express.Router();
@@ -46,23 +46,73 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
   try {
     const history = await prisma.$transaction([
       prisma.$queryRawUnsafe(
+        `SELECT 
+              a.PolicyNo,
+              date_format(a.DateIssued ,'%m/%d/%Y') as DateIssued,
+              date_format(b.DateFrom ,'%m/%d/%Y') as DateFrom,
+              date_format(b.DateTo ,'%m/%d/%Y') as DateTo,
+              b.Account,
+              b.Model,
+              b.Make,
+              b.BodyType,
+              b.Color,
+              b.BLTFileNo,
+              b.PlateNo,
+              b.ChassisNo,
+              b.MotorNo,
+              b.Mortgagee,
+              format(b.EstimatedValue,2) as EstimatedValue,
+              format(a.TotalDue,2) as TotalDue,
+              c.entry_client_id,
+              c.company,
+              c.firstname,
+              c.lastname,
+              c.middlename,
+              c.suffix,
+              c.address,
+              d.mobile
+          FROM
+              policy a
+                  LEFT JOIN
+              vpolicy b ON a.PolicyNo = b.PolicyNo
+                  LEFT JOIN
+              entry_client c ON a.IDNo = c.entry_client_id
+                  LEFT JOIN
+              contact_details d ON c.client_contact_details_id = d.contact_details_id
+          WHERE
+              a.PolicyNo = ?`,
+        req.body.policyNo
+      ),
+      prisma.$queryRawUnsafe(
         `SELECT * FROM pdc where PNo = ? order by Check_Date`,
         req.body.policyNo
       ),
       prisma.$queryRawUnsafe(
         `
-        SELECT b.* FROM journal a
-        left join collection b on a.Source_No = b.Official_Receipt
-        where a.ID_No = ? and a.Source_Type = 'OR';
+     SELECT 
+            b.*,
+            DATE_FORMAT(b.Date, '%m/%d/%Y') AS Date,
+            DATE_FORMAT(b.Check_Date, '%m/%d/%Y') AS Check_Date
+        FROM
+
+            collection b 
+        WHERE
+            b.ID_No = ?;
         `,
         req.body.policyNo
       ),
       prisma.$queryRawUnsafe(
         `
-        SELECT b.*,c.* FROM journal a
+        SELECT 
+            b.*,c.*,
+            format(b.Debit,2) as Debit,
+            format(b.Credit,2) as Credit,
+           date_format(b.Date_Deposit,'%m/%d/%Y') as Date__Deposit,
+           date_format(b.Check_Date,'%m/%d/%Y') as Check__Date
+        FROM journal a
         left join deposit b on a.Source_No = b.Temp_SlipCode
         left join deposit_slip c on b.Temp_SlipCode = c.SlipCode
-        where a.ID_No = ? and a.Source_Type = 'DC';
+        where a.ID_No = ? and a.Source_Type = 'DC' order by Temp_SlipCode ,Temp_SlipDate ,Deposit_ID;
         `,
         req.body.policyNo
       ),
@@ -76,14 +126,24 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
       ),
       prisma.$queryRawUnsafe(
         `
-       SELECT * FROM journal_voucher  a
+       SELECT 
+           *, 
+           date_format(Date_Entry,'%m/%d/%Y') as Date_Entry,
+           FORMAT(Debit, 2), Debit, 
+           FORMAT(Credit, 2) Credit
+       FROM journal_voucher  a
        where a.Source_Type = 'GL' and a.ID_No = ?;
         `,
         req.body.policyNo
       ),
       prisma.$queryRawUnsafe(
         `
-        SELECT * FROM cash_disbursement  a
+        SELECT 
+            *, 
+           date_format(Date_Entry,'%m/%d/%Y') as Date_Entry,
+           FORMAT(Debit, 2), Debit, 
+           FORMAT(Credit, 2) Credit
+        FROM cash_disbursement  a
         where a.Source_Type = 'CV' and a.ID_No = ?
         `,
         req.body.policyNo
@@ -91,7 +151,8 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
       prisma.$queryRawUnsafe(
         `
        SELECT 
-          *
+          *,
+          date_format(Requested_Date,'%m/%d/%Y') as Requested_Date
         FROM
             pullout_request a
                 LEFT JOIN
@@ -104,7 +165,9 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
       prisma.$queryRawUnsafe(
         `
     SELECT 
-        *
+         *,
+         date_format(OldCheckDate,'%m/%d/%Y') as OldCheckDate,
+         date_format(NewCheckDate,'%m/%d/%Y') as NewCheckDate
     FROM
         postponement a
             LEFT JOIN
@@ -114,17 +177,15 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
         `,
         req.body.policyNo
       ),
-
-
     ]);
     const jsonString = JSON.stringify(history, (_, value) =>
-      typeof value === 'bigint' ? value.toString() + 'n' : value
+      typeof value === "bigint" ? value.toString() + "n" : value
     );
 
     res.send({
       message: "Successfully get transaction history",
       success: true,
-      history:jsonString,
+      history: jsonString,
     });
   } catch (error: any) {
     console.log(error.message);
