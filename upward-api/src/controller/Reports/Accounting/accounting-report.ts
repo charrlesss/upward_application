@@ -453,7 +453,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
           GL.Source_Type NOT IN ('BF','BFD','BFS') AND
            Date_Entry <= '${dateFormatted}' AND 
            GL.GL_Acct ='${account.trim()}' 
-          GROUP BY GL_Acct,ca.Short,GL.ID_No,IfNULL(ID.Shortname,'')  ) a
+          GROUP BY GL_Acct,CA.Short,GL.ID_No,IfNULL(ID.Shortname,'')  ) a
           where Balance <> 0 
           ORDER BY 'Group Header',Header,GL_Acct,${
             parseInt(sort) === 0 ? "mID" : "ID_No"
@@ -505,7 +505,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
         LEFT JOIN sub_account SUB ON SUB.Sub_Acct = GL.Sub_Acct 
         LEFT JOIN (${id_entry}) ID ON ID.IDNo = GL.ID_No 
         WHERE GL.Source_Type NOT IN ('BF','BFD','BFS') AND CAST(Date_Entry AS DATE) <= '${dateFormatted}' 
-        GROUP BY GL_Acct,ca.Short,GL.ID_No,IFNULL(ID.Shortname,'')  
+        GROUP BY GL_Acct,CA.Short,GL.ID_No,IFNULL(ID.Shortname,'')  
         ) a
          where Balance <> 0 
         ORDER BY 'Group Header',Header,GL_Acct,${
