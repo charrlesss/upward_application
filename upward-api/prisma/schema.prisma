@@ -1013,7 +1013,7 @@ model xsubsidiary {
   Credit         Decimal? @db.Decimal(19, 4)
   Bal            Decimal? @db.Decimal(19, 4)
   Balance        Decimal? @db.Decimal(19, 4)
-  xsubsidiary_id String   @id @default(uuid())
+  xsubsidiary_id Int      @id @default(autoincrement())
 }
 
 model contact_details {
