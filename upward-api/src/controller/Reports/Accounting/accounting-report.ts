@@ -446,8 +446,8 @@ async function ScheduleAccounts(req: Request, res: Response) {
             SUM(Debit) - SUM(Credit), 
             SUM(Credit) - SUM(Debit)) AS Balance
           FROM journal GL 
-            INNER JOIN Chart_Account CA  ON CA.Acct_Code = GL.GL_Acct 
-            LEFT JOIN Sub_Account SUB  ON SUB.Sub_Acct = GL.Sub_Acct 
+            INNER JOIN chart_account CA  ON CA.Acct_Code = GL.GL_Acct 
+            LEFT JOIN sub_account SUB  ON SUB.Sub_Acct = GL.Sub_Acct 
             LEFT JOIN (${id_entry}) ID  ON ID.IDNo = GL.ID_No 
           WHERE 
           GL.Source_Type NOT IN ('BF','BFD','BFS') AND
@@ -501,8 +501,8 @@ async function ScheduleAccounts(req: Request, res: Response) {
             SUM(Debit) - SUM(Credit), 
             SUM(Credit) - SUM(Debit)) AS Balance
         FROM journal GL 
-        INNER JOIN Chart_Account CA ON CA.Acct_Code = GL.GL_Acct 
-        LEFT JOIN Sub_Account SUB ON SUB.Sub_Acct = GL.Sub_Acct 
+        INNER JOIN chart_account CA ON CA.Acct_Code = GL.GL_Acct 
+        LEFT JOIN sub_account SUB ON SUB.Sub_Acct = GL.Sub_Acct 
         LEFT JOIN (${id_entry}) ID ON ID.IDNo = GL.ID_No 
         WHERE GL.Source_Type NOT IN ('BF','BFD','BFS') AND CAST(Date_Entry AS DATE) <= '${dateFormatted}' 
         GROUP BY GL_Acct,ca.Short,gl.ID_No,IFNULL(ID.Shortname,'')  
@@ -530,8 +530,8 @@ async function ScheduleAccounts(req: Request, res: Response) {
                 SUM(qryJournal.mDebit) - SUM(qryJournal.mCredit), 
                 SUM(qryJournal.mCredit) - SUM(qryJournal.mDebit)) AS Balance 
         FROM (${_qryJournal}) qryJournal 
-        LEFT JOIN Policy ON qryJournal.ID_No = Policy.PolicyNo 
-        INNER JOIN Policy_Account Account ON Policy.Account = Account.Account 
+        LEFT JOIN policy ON qryJournal.ID_No = policy.PolicyNo 
+        INNER JOIN policy_account Account ON policy.Account = Account.Account 
         WHERE qryJournal.Date_Entry <='${dateFormatted}' 
         GROUP BY Account.AccountCode, qryJournal.Sub_Acct, qryJournal.GL_Acct, qryJournal.ID_No 
         ) a
@@ -555,8 +555,8 @@ async function ScheduleAccounts(req: Request, res: Response) {
                 SUM(qryJournal.mDebit) - SUM(qryJournal.mCredit), 
                 SUM(qryJournal.mCredit) - SUM(qryJournal.mDebit)) AS Balance 
         FROM (${_qryJournal}) qryJournal 
-        LEFT JOIN Policy ON qryJournal.ID_No = Policy.PolicyNo 
-        INNER JOIN Policy_Account Account ON Policy.Account = Account.Account 
+        LEFT JOIN policy ON qryJournal.ID_No = policy.PolicyNo 
+        INNER JOIN policy_account Account ON policy.Account = Account.Account 
         WHERE qryJournal.Date_Entry <='${dateFormatted}' 
         GROUP BY Account.AccountCode, qryJournal.Sub_Acct, qryJournal.GL_Acct, qryJournal.ID_No 
         ) a
