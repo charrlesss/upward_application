@@ -445,7 +445,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
             IF(SUBSTRING(GL_Acct, 1, 1) <= '3' OR SUBSTRING(GL_Acct, 1, 1) = '7', 
             SUM(Debit) - SUM(Credit), 
             SUM(Credit) - SUM(Debit)) AS Balance
-          FROM Journal GL 
+          FROM journal GL 
             INNER JOIN Chart_Account CA  ON CA.Acct_Code = GL.GL_Acct 
             LEFT JOIN Sub_Account SUB  ON SUB.Sub_Acct = GL.Sub_Acct 
             LEFT JOIN (${id_entry}) ID  ON ID.IDNo = GL.ID_No 
@@ -500,7 +500,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
              IF(SUBSTRING(GL_Acct, 1, 1) <= '3' OR SUBSTRING(GL_Acct, 1, 1) = '7', 
             SUM(Debit) - SUM(Credit), 
             SUM(Credit) - SUM(Debit)) AS Balance
-        FROM Journal GL 
+        FROM journal GL 
         INNER JOIN Chart_Account CA ON CA.Acct_Code = GL.GL_Acct 
         LEFT JOIN Sub_Account SUB ON SUB.Sub_Acct = GL.Sub_Acct 
         LEFT JOIN (${id_entry}) ID ON ID.IDNo = GL.ID_No 
