@@ -494,7 +494,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
             Left(GL.GL_Acct,4) AS Header,
             GL.GL_Acct,CA.Short AS 'mShort',
             '' AS 'Sub_Acct',
-            IFNULL(gl.ID_No,'') AS 'ID_No',
+            IFNULL(GL.ID_No,'') AS 'ID_No',
             IFNULL(ID.Shortname,'') as 'mID', 
             sum(Debit) as 'Debit',sum(Credit) as 'Credit', 
              IF(SUBSTRING(GL_Acct, 1, 1) <= '3' OR SUBSTRING(GL_Acct, 1, 1) = '7', 
@@ -505,7 +505,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
         LEFT JOIN sub_account SUB ON SUB.Sub_Acct = GL.Sub_Acct 
         LEFT JOIN (${id_entry}) ID ON ID.IDNo = GL.ID_No 
         WHERE GL.Source_Type NOT IN ('BF','BFD','BFS') AND CAST(Date_Entry AS DATE) <= '${dateFormatted}' 
-        GROUP BY GL_Acct,ca.Short,gl.ID_No,IFNULL(ID.Shortname,'')  
+        GROUP BY GL_Acct,ca.Short,GL.ID_No,IFNULL(ID.Shortname,'')  
         ) a
          where Balance <> 0 
         ORDER BY 'Group Header',Header,GL_Acct,${
