@@ -52,13 +52,13 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
               date_format(b.DateFrom ,'%m/%d/%Y') as DateFrom,
               date_format(b.DateTo ,'%m/%d/%Y') as DateTo,
               b.Account,
-              b.Model,
+              b.ChassisNo,
               b.Make,
+              b.Model,
               b.BodyType,
               b.Color,
               b.BLTFileNo,
               b.PlateNo,
-              b.ChassisNo,
               b.MotorNo,
               b.Mortgagee,
               format(b.EstimatedValue,2) as EstimatedValue,
@@ -70,6 +70,9 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
               c.middlename,
               c.suffix,
               c.address,
+              c.client_mortgagee,
+              c.client_branch,
+              c.sale_officer,
               d.mobile
           FROM
               policy a
@@ -194,6 +197,128 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
       history: [],
+    });
+  }
+});
+
+VehiclePolicy.post("/temp-to-regular", async (req, res) => {
+  try {
+    const newPolicy = req.body.newPolicyNo;
+    const oldPolicy = req.body.oldPolicyNo;
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "update",
+        `temp ${oldPolicy} - Reg ${newPolicy}`,
+        "Vehicle Policy"
+      ))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    console.log(req.body);
+   
+    // await prisma.$transaction(async (_prisma) => {
+    //   // Production
+    //   await _prisma.$executeRawUnsafe(
+    //     `UPDATE policy SET PolicyNo = ?, DateIssued = ? WHERE PolicyNo = ?`,
+    //     newPolicy,
+    //     req.body.newDateIssued,
+    //     oldPolicy
+    //   );
+    //   await _prisma.$executeRawUnsafe(
+    //     `UPDATE vpolicy SET PolicyNo = ?, DateFrom = ?, DateTo = ? WHERE PolicyNo = ?`,
+    //     newPolicy,
+    //     req.body.newDateFrom,
+    //     req.body.newDateTo,
+    //     oldPolicy
+    //   );
+
+    //   // Accounting
+    //   //PDC
+    //   await _prisma.$executeRawUnsafe(
+    //     `UPDATE pdc SET PNo = ? WHERE PNo = ?`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   //COLLECTION
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE collection
+    //       SET IDNo = ?
+    //       WHERE IDNo = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE collection
+    //       SET ID_No = ?
+    //       WHERE ID_No = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   //GENERAL JOURNAL
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE journal_voucher
+    //       SET ID_No = ?
+    //       WHERE ID_No = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   //CASH DISBURSEMENT
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE cash_disbursement
+    //       SET ID_No = ?
+    //       WHERE ID_No = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   //PULLOUT
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE pullout_request
+    //       SET PNNo = ?
+    //       WHERE PNNo = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+    //   //POSTPONEMENT 
+    //   await _prisma.$executeRawUnsafe(
+    //     ` UPDATE postponement
+    //       SET PNNo = ?
+    //       WHERE PNNo = ?;`,
+    //     newPolicy,
+    //     oldPolicy
+    //   );
+
+    //     //JOURNAL 
+    //     await _prisma.$executeRawUnsafe(
+    //       ` UPDATE journal
+    //         SET ID_No = ?
+    //         WHERE ID_No = ?;`,
+    //       newPolicy,
+    //       oldPolicy
+    //     );
+
+    //     await _prisma.$executeRawUnsafe(
+    //       ` UPDATE journal
+    //         SET Source_No = ?
+    //         WHERE Source_No = ?;`,
+    //       newPolicy,
+    //       oldPolicy
+    //     );
+    // });
+
+    res.send({
+      message: `Successfully Update Tempory Policy (${oldPolicy}) to Regular Policy (${newPolicy}).`,
+      success: true,
+      data: [],
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
     });
   }
 });

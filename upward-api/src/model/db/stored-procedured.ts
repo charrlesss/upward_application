@@ -2370,8 +2370,7 @@ export function AgingAccountsReport(date: Date, type: string) {
                 LEFT OUTER JOIN (${ID_Entry}) ID_Entry  ON Policy.IDNo = ID_Entry.IDNo
             WHERE
                 (Policy.PolicyNo IS NOT NULL) AND
-                (CAST(Policy.DateIssued AS DATE) <= CAST('${formattedDate}' AS DATE)) AND
-                (IFNULL(Payment.Balance, Policy.TotalDue) <> 0) AND
+                (CAST(Policy.DateIssued AS DATE) <= CAST e) <> 0) AND
                 ID_Entry.Shortname <> 'S P O I L T' AND (Policy.PolicyNo LIKE '%TP-%')
             ORDER BY
                 Policy.DateIssued,
