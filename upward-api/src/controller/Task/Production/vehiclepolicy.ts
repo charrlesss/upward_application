@@ -218,94 +218,94 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
 
     console.log(req.body);
    
-    // await prisma.$transaction(async (_prisma) => {
-    //   // Production
-    //   await _prisma.$executeRawUnsafe(
-    //     `UPDATE policy SET PolicyNo = ?, DateIssued = ? WHERE PolicyNo = ?`,
-    //     newPolicy,
-    //     req.body.newDateIssued,
-    //     oldPolicy
-    //   );
-    //   await _prisma.$executeRawUnsafe(
-    //     `UPDATE vpolicy SET PolicyNo = ?, DateFrom = ?, DateTo = ? WHERE PolicyNo = ?`,
-    //     newPolicy,
-    //     req.body.newDateFrom,
-    //     req.body.newDateTo,
-    //     oldPolicy
-    //   );
+    await prisma.$transaction(async (_prisma) => {
+      // Production
+      await _prisma.$executeRawUnsafe(
+        `UPDATE policy SET PolicyNo = ?, DateIssued = ? WHERE PolicyNo = ?`,
+        newPolicy,
+        req.body.newDateIssued,
+        oldPolicy
+      );
+      await _prisma.$executeRawUnsafe(
+        `UPDATE vpolicy SET PolicyNo = ?, DateFrom = ?, DateTo = ? WHERE PolicyNo = ?`,
+        newPolicy,
+        req.body.newDateFrom,
+        req.body.newDateTo,
+        oldPolicy
+      );
 
-    //   // Accounting
-    //   //PDC
-    //   await _prisma.$executeRawUnsafe(
-    //     `UPDATE pdc SET PNo = ? WHERE PNo = ?`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   //COLLECTION
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE collection
-    //       SET IDNo = ?
-    //       WHERE IDNo = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE collection
-    //       SET ID_No = ?
-    //       WHERE ID_No = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   //GENERAL JOURNAL
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE journal_voucher
-    //       SET ID_No = ?
-    //       WHERE ID_No = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   //CASH DISBURSEMENT
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE cash_disbursement
-    //       SET ID_No = ?
-    //       WHERE ID_No = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   //PULLOUT
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE pullout_request
-    //       SET PNNo = ?
-    //       WHERE PNNo = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
-    //   //POSTPONEMENT 
-    //   await _prisma.$executeRawUnsafe(
-    //     ` UPDATE postponement
-    //       SET PNNo = ?
-    //       WHERE PNNo = ?;`,
-    //     newPolicy,
-    //     oldPolicy
-    //   );
+      // Accounting
+      //PDC
+      await _prisma.$executeRawUnsafe(
+        `UPDATE pdc SET PNo = ? WHERE PNo = ?`,
+        newPolicy,
+        oldPolicy
+      );
+      //COLLECTION
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE collection
+          SET IDNo = ?
+          WHERE IDNo = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE collection
+          SET ID_No = ?
+          WHERE ID_No = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+      //GENERAL JOURNAL
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal_voucher
+          SET ID_No = ?
+          WHERE ID_No = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+      //CASH DISBURSEMENT
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE cash_disbursement
+          SET ID_No = ?
+          WHERE ID_No = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+      //PULLOUT
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE pullout_request
+          SET PNNo = ?
+          WHERE PNNo = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+      //POSTPONEMENT 
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE postponement
+          SET PNNo = ?
+          WHERE PNNo = ?;`,
+        newPolicy,
+        oldPolicy
+      );
 
-    //     //JOURNAL 
-    //     await _prisma.$executeRawUnsafe(
-    //       ` UPDATE journal
-    //         SET ID_No = ?
-    //         WHERE ID_No = ?;`,
-    //       newPolicy,
-    //       oldPolicy
-    //     );
+        //JOURNAL 
+        await _prisma.$executeRawUnsafe(
+          ` UPDATE journal
+            SET ID_No = ?
+            WHERE ID_No = ?;`,
+          newPolicy,
+          oldPolicy
+        );
 
-    //     await _prisma.$executeRawUnsafe(
-    //       ` UPDATE journal
-    //         SET Source_No = ?
-    //         WHERE Source_No = ?;`,
-    //       newPolicy,
-    //       oldPolicy
-    //     );
-    // });
+        await _prisma.$executeRawUnsafe(
+          ` UPDATE journal
+            SET Source_No = ?
+            WHERE Source_No = ?;`,
+          newPolicy,
+          oldPolicy
+        );
+    });
 
     res.send({
       message: `Successfully Update Tempory Policy (${oldPolicy}) to Regular Policy (${newPolicy}).`,
