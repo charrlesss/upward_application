@@ -292,21 +292,6 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
       //JOURNAL
       await _prisma.$executeRawUnsafe(
         ` UPDATE journal
-            SET ID_No = ?
-            WHERE ID_No = ?;`,
-        newPolicy,
-        oldPolicy
-      );
-
-      await _prisma.$executeRawUnsafe(
-        ` UPDATE journal
-            SET Source_No = ?
-            WHERE Source_No = ?;`,
-        newPolicy,
-        oldPolicy
-      );
-      await _prisma.$executeRawUnsafe(
-        ` UPDATE journal
             SET GL_Acct = ?
             WHERE Source_No = ? and GL_Acct = ? and TC = ?;`,
         "1.03.01",
@@ -323,6 +308,23 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         "4.02.07",
         'A/P'
       );
+      
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
+            SET ID_No = ?
+            WHERE ID_No = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
+            SET Source_No = ?
+            WHERE Source_No = ?;`,
+        newPolicy,
+        oldPolicy
+      );
+     
     });
 
     res.send({
