@@ -217,7 +217,7 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
     }
 
     console.log(req.body);
-   
+
     await prisma.$transaction(async (_prisma) => {
       // Production
       await _prisma.$executeRawUnsafe(
@@ -280,7 +280,7 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         newPolicy,
         oldPolicy
       );
-      //POSTPONEMENT 
+      //POSTPONEMENT
       await _prisma.$executeRawUnsafe(
         ` UPDATE postponement
           SET PNNo = ?
@@ -289,22 +289,40 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         oldPolicy
       );
 
-        //JOURNAL 
-        await _prisma.$executeRawUnsafe(
-          ` UPDATE journal
+      //JOURNAL
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
             SET ID_No = ?
             WHERE ID_No = ?;`,
-          newPolicy,
-          oldPolicy
-        );
+        newPolicy,
+        oldPolicy
+      );
 
-        await _prisma.$executeRawUnsafe(
-          ` UPDATE journal
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
             SET Source_No = ?
             WHERE Source_No = ?;`,
-          newPolicy,
-          oldPolicy
-        );
+        newPolicy,
+        oldPolicy
+      );
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
+            SET GL_Acct = ?
+            WHERE Source_No = ? and GL_Acct = ? and TC = ?;`,
+        "1.03.01",
+        oldPolicy,
+        "1.03.03",
+        'P/R'
+      );
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE journal
+            SET GL_Acct = ?
+            WHERE Source_No = ? and GL_Acct = ? and TC = ?;`,
+        "4.02.01",
+        oldPolicy,
+        "4.02.07",
+        'A/P'
+      );
     });
 
     res.send({
