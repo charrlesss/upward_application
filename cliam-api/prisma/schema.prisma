@@ -76,23 +76,23 @@ model claims_document {
 }
 
 model reimbursement {
-  imbursement_auto_id Int      @id @default(autoincrement())
-  refNo               String   @db.VarChar(550)
-  check_from          String   @db.VarChar(550)
-  client_name         String   @db.Text
-  type_claim          String   @db.VarChar(550)
-  amount_claim        Decimal? @default(0.0000) @db.Decimal(19, 4)
-  date_claim          DateTime @default(now())
-  payment             String   @db.VarChar(550)
-  amount_imbursement  Decimal? @default(0.0000) @db.Decimal(19, 4)
-  date_release        DateTime @default(now())
-  payee               String   @db.Text
-  date_return_upward  DateTime @default(now())
-  CreatedAt           DateTime @default(now())
-  basicDocuments      Json     @default("{}")
-  unit_insured        String   @db.Text
-  remarks             String   @db.Text
-  policy_no           String   @db.VarChar(550)
+  imbursement_auto_id Int       @id @default(autoincrement())
+  refNo               String    @db.VarChar(550)
+  check_from          String    @db.VarChar(550)
+  client_name         String    @db.Text
+  type_claim          String    @db.VarChar(550)
+  amount_claim        Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  date_claim          DateTime  @default(now())
+  payment             String    @db.VarChar(550)
+  amount_imbursement  Decimal?  @default(0.0000) @db.Decimal(19, 4)
+  date_release        DateTime  @default(now())
+  payee               String    @db.Text
+  date_return_upward  DateTime?
+  CreatedAt           DateTime  @default(now())
+  basicDocuments      Json      @default("{}")
+  unit_insured        String    @db.Text
+  remarks             String    @db.Text
+  policy_no           String    @db.VarChar(550)
 }
 
 model system_logs {

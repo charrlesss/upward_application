@@ -1817,4 +1817,388 @@ Report.post("/report/cancel-excel", async (req, res) => {
     }
   }
 });
+
+// Reimbersement
+Report.post("/report/reimbursement-pdf", async (req, res) => {
+  try {
+    const DateFrom = format(new Date(req.body.dateFrom), "yyyy-MM-dd");
+    const DateTo = format(new Date(req.body.dateTo), "yyyy-MM-dd");
+
+    const result: any = await prisma.$queryRawUnsafe(`
+      SELECT * FROM claims.reimbursement where  
+      str_to_date(date_release,'%Y-%m-%d') >= '${DateFrom}'
+      and  str_to_date(date_release,'%Y-%m-%d') <= '${DateTo}'
+      and check_from = '${req.body.department}'
+      `);
+
+    const data = result.map((itm: any) => {
+      itm.date_claim = format(new Date(itm.date_claim), "MM/dd/yyyy");
+      itm.date_release = format(new Date(itm.date_release), "MM/dd/yyyy");
+      itm.date_return_upward =
+        itm.date_return_upward && itm.date_return_upward !== ""
+          ? format(new Date(itm.date_return_upward), "MM/dd/yyyy")
+          : "";
+
+      itm.amount_claim = formatNumber(
+        parseFloat(itm.amount_claim.toString().replace(/,/g, ""))
+      );
+      itm.amount_imbursement = formatNumber(
+        parseFloat(itm.amount_imbursement.toString().replace(/,/g, ""))
+      );
+
+      return itm;
+    });
+
+    const headers = [
+      {
+        label: "CHEQUE FROM",
+        key: "check_from",
+        style: { width: 60, textAlign: "left" },
+      },
+      {
+        label: "CLIENT'S NAME",
+        key: "client_name",
+        style: { width: 150, textAlign: "left" },
+      },
+      {
+        label: "POLICY NO",
+        key: "policy_no",
+        style: { width: 100, textAlign: "left" },
+      },
+      {
+        label: "UNIT INSURED",
+        key: "unit_insured",
+        style: { width: 150, textAlign: "left" },
+      },
+      {
+        label: "TYPE OF CLAIM",
+        key: "type_claim",
+        style: { width: 100, textAlign: "left" },
+      },
+      {
+        label: "AMOUNT OF CLAIM",
+        key: "amount_claim",
+        style: { width: 100, textAlign: "right" },
+      },
+      {
+        label: "CHEQUE",
+        key: "payment",
+        style: { width: 100, textAlign: "left" },
+      },
+      {
+        label: "DISBURSEMENT AMOUNT",
+        key: "amount_imbursement",
+        style: { width: 100, textAlign: "right" },
+      },
+      {
+        label: "DISBURSEMENT DATE AT RELEASE",
+        key: "date_release",
+        style: { width: 150, textAlign: "left" },
+      },
+      {
+        label: "PAYEE",
+        key: "payee",
+        style: { width: 120, textAlign: "left" },
+      },
+      {
+        label: "STATUS",
+        key: "remarks",
+        style: { width: 120, textAlign: "left" },
+      },
+      {
+        label: "REIMBURSEMENT RETURN DATE'S",
+        key: "date_return_upward",
+        style: { width: 150, textAlign: "left" },
+      },
+    ];
+
+    const outputFilePath = path.join(__dirname, "manok.pdf");
+
+    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_HEIGHT = 595; // A4 Portrait height
+    const MARGINS = {
+      top: 100,
+      bottom: 50,
+      left: 20,
+      right: 20,
+    };
+    const rowFontSize = 9;
+    const doc = new PDFDocument({
+      margin: 0,
+      size: [PAGE_WIDTH, PAGE_HEIGHT],
+      bufferPages: true,
+    });
+    const writeStream = fs.createWriteStream(outputFilePath);
+    doc.pipe(writeStream);
+
+    function getRowHeight(itm: any, headers: any) {
+      const rowHeight = Math.max(
+        ...headers.map((hItm: any) => {
+          return doc.heightOfString(itm[hItm.key] || "-", {
+            width: hItm.style.width - 5,
+            align: hItm.style.textAlign,
+          });
+        }),
+        rowFontSize + 1
+      );
+
+      return rowHeight + 5;
+    }
+    function addPageHeader(header: Array<any>, y: number, _x: any = 0) {
+      doc.font("Helvetica-Bold");
+      doc.fontSize(11);
+      const rowHeight = Math.max(
+        ...header.map((itm) =>
+          doc.heightOfString(itm.label, { width: itm.style.width })
+        ),
+        10
+      );
+      let x = MARGINS.left + _x;
+      header.forEach((itm) => {
+        if (itm.key === "ID_No") {
+          doc.text(itm.label, x, y, {
+            width: header[2].style.width - 5 + (header[3].style.width - 5),
+            align: "center",
+          });
+        } else {
+          doc.text(itm.label, x, y, {
+            width: itm.style.width - 5,
+            align:
+              itm.style.textAlign === "right" ? "center" : itm.style.textAlign,
+          });
+        }
+        x += itm.style.width + 5;
+      });
+      return y + rowHeight + 5;
+    }
+    function drawTitle() {
+      doc.font("Helvetica-Bold");
+      doc.fontSize(12);
+      doc.text(req.body.title, 20, 30);
+    }
+
+    drawTitle();
+    let currentPage = 1;
+    let yAxis = MARGINS.top;
+    yAxis = addPageHeader(headers, yAxis);
+
+    data.forEach((itm: any, idx: number) => {
+      let rowHeight = getRowHeight(itm, headers);
+
+      if (yAxis + rowHeight > PAGE_HEIGHT - MARGINS.bottom) {
+        currentPage = currentPage + 1;
+        doc.addPage({
+          size: [PAGE_WIDTH, PAGE_HEIGHT],
+          margin: 0,
+          bufferPages: true,
+        });
+        drawTitle();
+        yAxis = addPageHeader(headers, MARGINS.top);
+      }
+
+      let x = MARGINS.left;
+      headers.forEach((hItm: any) => {
+        const value = itm[hItm.key] || "";
+        doc.font("Helvetica");
+        doc.fontSize(10);
+        doc.text(value, x, yAxis, {
+          width: hItm.style.width - 5,
+          align: value === "-" ? "center" : hItm.style.textAlign,
+        });
+        x += hItm.style.width + 5;
+      });
+
+      yAxis += rowHeight;
+    });
+
+    yAxis += 5;
+
+    const range = doc.bufferedPageRange();
+    let i;
+    let end;
+
+    for (
+      i = range.start, end = range.start + range.count, range.start <= end;
+      i < end;
+      i++
+    ) {
+      doc.switchToPage(i);
+      doc.text(
+        `Page ${i + 1} of ${range.count}`,
+        PAGE_WIDTH - 80,
+        PAGE_HEIGHT - 30
+      );
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 30
+      );
+    }
+
+    doc.end();
+    writeStream.on("finish", () => {
+      console.log(`PDF created successfully at: ${outputFilePath}`);
+
+      const readStream = fs.createReadStream(outputFilePath);
+      readStream.pipe(res);
+
+      readStream.on("end", () => {
+        res.end(); // Ensure response is properly closed
+        fs.unlink(outputFilePath, (err: any) => {
+          if (err) {
+            console.error("Error deleting file:", err);
+          } else {
+            console.log(`File ${outputFilePath} deleted successfully.`);
+          }
+        });
+      });
+      readStream.on("error", (err) => {
+        console.error("Error reading file:", err);
+        res.status(500).send("Error sending PDF");
+      });
+    });
+  } catch (error: any) {
+    console.log(error);
+    if (error.code === "P2028") {
+      res.send({
+        data: [],
+        message: `⚠️ Transaction cut off due to a network issue!`,
+        success: false,
+      });
+    } else {
+      res.send({
+        data: [],
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+      });
+    }
+  }
+});
+Report.post("/report/reimbursement-excel", async (req, res) => {
+  try {
+    const DateFrom = format(new Date(req.body.dateFrom), "yyyy-MM-dd");
+    const DateTo = format(new Date(req.body.dateTo), "yyyy-MM-dd");
+
+    const result: any = await prisma.$queryRawUnsafe(`
+      SELECT * FROM claims.reimbursement where  
+      str_to_date(date_release,'%Y-%m-%d') >= '${DateFrom}'
+      and  str_to_date(date_release,'%Y-%m-%d') <= '${DateTo}'
+      and check_from = '${req.body.department}'
+      `);
+
+    const data = result.map((itm: any) => {
+      itm.date_claim = format(new Date(itm.date_claim), "MM/dd/yyyy");
+      itm.date_release = format(new Date(itm.date_release), "MM/dd/yyyy");
+      itm.date_return_upward =
+        itm.date_return_upward && itm.date_return_upward !== ""
+          ? format(new Date(itm.date_return_upward), "MM/dd/yyyy")
+          : "";
+
+      itm.amount_claim = formatNumber(
+        parseFloat(itm.amount_claim.toString().replace(/,/g, ""))
+      );
+      itm.amount_imbursement = formatNumber(
+        parseFloat(itm.amount_imbursement.toString().replace(/,/g, ""))
+      );
+      return itm;
+    });
+
+    const title = req.body.title;
+    drawExcel(res, {
+      columns: [
+        { key: "check_from", width: 20 },
+        { key: "client_name", width: 50 },
+        { key: "policy_no", width: 20 },
+        { key: "unit_insured", width: 50 },
+        { key: "type_claim", width: 25 },
+        { key: "amount_claim", width: 20 },
+        { key: "payment", width: 20 },
+        { key: "amount_imbursement", width: 20 },
+        { key: "date_release", width: 20 },
+        { key: "payee", width: 50 },
+        { key: "remarks", width: 50 },
+        { key: "date_return_upward", width: 20 },
+      ],
+      data: data,
+      beforeDraw: (props: any, worksheet: any) => {
+        title.split("\n").forEach((t: string, idx: number) => {
+          const tt = worksheet.addRow([t]);
+          props.mergeCells(
+            idx + 1,
+            props.alphabet[0],
+            props.alphabet[props.columns.length - 1]
+          );
+          const alignColumns = props.alphabet.slice(0, props.columns.length);
+          props.setAlignment(1, alignColumns, {
+            horizontal: "left",
+            vertical: "middle",
+          });
+          tt.font = { bolder: true };
+        });
+        props.setFontSize([1, 2, 3], 12);
+
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+        // Now, insert the column header row after the custom rows (row 3)
+        const headerRow = worksheet.addRow([
+          "CHEQUE FROM",
+          "CLIENT'S NAME",
+          "POLICY NO",
+          "UNIT INSURED",
+          "TYPE OF CLAIM",
+          "AMOUNT OF CLAIM",
+          "CHEQUE",
+          "DISBURSEMENT AMOUNT",
+          "DISBURSEMENT DATE AT RELEASE",
+          "PAYEE",
+          "STATUS",
+          "REIMBURSEMENT RETURN DATE'S",
+        ]);
+        headerRow.font = { bold: true };
+        props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
+          bottom: { style: "thin" },
+        });
+      },
+      onDraw: (props: any, rowItm: any, rowIdx: number) => {
+        props.setAlignment(rowIdx + 8, ["F","H"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+    
+      },
+      afterDraw: (props: any, worksheet: any) => {
+        props.setAlignment(7, ["F","H"], {
+          horizontal: "center",
+          vertical: "middle",
+        });
+        props.setAlignment(data.length + 7, ["F","H"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+      },
+    });
+  } catch (error: any) {
+    console.log(error);
+    if (error.code === "P2028") {
+      res.send({
+        data: [],
+        message: `⚠️ Transaction cut off due to a network issue!`,
+        success: false,
+      });
+    } else {
+      res.send({
+        data: [],
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+      });
+    }
+  }
+});
+
+function formatNumber(num: number) {
+  return (num || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 export default Report;

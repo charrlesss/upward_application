@@ -121,7 +121,11 @@ Imbersement.post(
       await prisma.$transaction(async (_prisma) => {
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
-        metadata.date_return_upward = new Date(metadata.date_return_upward);
+        metadata.date_return_upward =
+          metadata.date_return_upward !== ""
+            ? new Date(metadata.date_return_upward)
+            : undefined;
+
         await _prisma.reimbursement.create({
           data: {
             ...metadata,
@@ -235,7 +239,11 @@ Imbersement.post(
 
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
-        metadata.date_return_upward = new Date(metadata.date_return_upward);
+        metadata.date_return_upward =
+          metadata.date_return_upward !== ""
+            ? new Date(metadata.date_return_upward)
+            : undefined;
+
         await _prisma.reimbursement.create({
           data: {
             ...metadata,
