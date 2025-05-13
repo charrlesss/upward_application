@@ -5,7 +5,7 @@ import { prisma } from "../../../controller/index";
 export async function getMarineRate(account: string, line: string, req: Request) {
 
   const query = `
-    select Rate from Rates 
+    select Rate from rates 
     where 
     Account = '${account}' 
     and Line = '${line}' 
