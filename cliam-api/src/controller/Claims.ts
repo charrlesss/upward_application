@@ -51,7 +51,7 @@ Claims.post("/get-claim-id", async (req, res): Promise<any> => {
       success: false,
     });
   }
-});
+}); 
 Claims.post("/get-reference-id", async (req, res): Promise<any> => {
   try {
     const reference = await generateUniqueClaimID();
@@ -1052,7 +1052,6 @@ Claims.post("/delete-claim", async (req, res): Promise<any> => {
     });
   }
 });
-
 Claims.post("/check-code", async (req, res): Promise<any> => {
   try {
     const user = await getUserById(((req as any).user as any).UserId);
@@ -1078,8 +1077,7 @@ Claims.post("/check-code", async (req, res): Promise<any> => {
       success: false,
     });
   }
-});
-
+});      
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -1093,7 +1091,6 @@ const upload = multer({
   storage,
   limits: { fileSize: 150 * 1024 * 1024 }, // 150MB file size limit
 });
-
 Claims.post(
   "/save-claim",
   upload.fields([{ name: "files" }, { name: "basic" }]),
@@ -1307,6 +1304,7 @@ Claims.post(
   upload.fields([{ name: "files" }, { name: "basic" }]),
   async (req, res): Promise<any> => {
     try {
+
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const mainDir = path.join(uploadDir, claimId);
@@ -1332,6 +1330,8 @@ Claims.post(
 
       const basicDocuments = JSON.parse(req.body.basicDocuments);
       const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
+
+      console.log(uploadedBasicFiles)
 
       if (fs.existsSync(mainDir)) {
         fs.rmSync(mainDir, { recursive: true, force: true });

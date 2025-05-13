@@ -194,19 +194,25 @@ Imbersement.post(
       const basicDocuments = JSON.parse(req.body.basicDocuments);
       const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
 
+      if (
+        !(await saveUserLogsCode(
+          req,
+          "update",
+          metadata.refNo,
+          "Reimbersement",
+          prisma
+        ))
+      ) {
+        return res.send({ message: "Invalid User Code", success: false });
+      }
+
       await prisma.$transaction(async (_prisma) => {
-        if (
-          !(await saveUserLogsCode(
-            req,
-            "update",
-            metadata.refNo,
-            "Reimbersement",
-            _prisma
-          ))
-        ) {
-          return res.send({ message: "Invalid User Code", success: false });
-        }
         delete metadata.userCodeConfirmation;
+
+        const mainDir = path.join(uploadDir, metadata.refNo);
+        if (fs.existsSync(mainDir)) {
+          fs.rmSync(mainDir, { recursive: true, force: true });
+        }
 
         await _prisma.$queryRawUnsafe(
           `DELETE FROM claims.reimbursement WHERE refNo = ?`,
@@ -214,6 +220,7 @@ Imbersement.post(
         );
 
         let updatedbasicDocuments = [];
+
         if (uploadedBasicFiles.length > 0) {
           updatedbasicDocuments = basicDocuments.map((itm: any) => {
             const newFileArray: any = [];
@@ -251,7 +258,6 @@ Imbersement.post(
           },
         });
 
-        const mainDir = path.join(uploadDir, metadata.refNo);
         if (fs.existsSync(mainDir)) {
           fs.rmSync(mainDir, { recursive: true, force: true });
         }
@@ -353,6 +359,7 @@ async function searchImberment(search: string) {
       date_format(date_claim,'%Y-%m-%d') as date_claim,
       unit_insured,
       client_name,
+       tpl_name,
        format(amount_claim,2) as amount_claim,
       date_format(date_release,'%Y-%m-%d') as date_release,
       date_format(date_return_upward,'%Y-%m-%d') as date_return_upward,
@@ -366,10 +373,12 @@ async function searchImberment(search: string) {
     WHERE
         refNo LIKE ?  
         OR client_name LIKE ?  
+        OR tpl_name LIKE ?  
         OR payee LIKE ?  
         OR type_claim LIKE ?
     ORDER BY refNo;
   `,
+    `%${search}%`,
     `%${search}%`,
     `%${search}%`,
     `%${search}%`,

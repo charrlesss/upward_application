@@ -87,6 +87,7 @@ model reimbursement {
   amount_imbursement  Decimal?  @default(0.0000) @db.Decimal(19, 4)
   date_release        DateTime  @default(now())
   payee               String    @db.Text
+  tpl_name            String?    @db.Text 
   date_return_upward  DateTime?
   CreatedAt           DateTime  @default(now())
   basicDocuments      Json      @default("{}")
