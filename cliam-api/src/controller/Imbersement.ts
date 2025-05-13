@@ -118,6 +118,10 @@ Imbersement.post(
         metadata.amount_imbursement.replace(/,/g, "")
       ).toFixed(2);
 
+      metadata.amount_approved = parseFloat(
+        metadata.amount_approved.replace(/,/g, "") || 0
+      ).toFixed(2);
+
       await prisma.$transaction(async (_prisma) => {
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
@@ -244,6 +248,10 @@ Imbersement.post(
           metadata.amount_imbursement.replace(/,/g, "")
         ).toFixed(2);
 
+        metadata.amount_approved = parseFloat(
+          metadata.amount_approved.replace(/,/g, "") || 0
+        ).toFixed(2);
+
         metadata.date_claim = new Date(metadata.date_claim);
         metadata.date_release = new Date(metadata.date_release);
         metadata.date_return_upward =
@@ -364,6 +372,7 @@ async function searchImberment(search: string) {
       date_format(date_release,'%Y-%m-%d') as date_release,
       date_format(date_return_upward,'%Y-%m-%d') as date_return_upward,
       format(amount_imbursement,2) as amount_imbursement,
+      format(amount_approved,2) as amount_approved,
       payment,
       payee,
       remarks,

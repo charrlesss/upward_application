@@ -1845,6 +1845,9 @@ Report.post("/report/reimbursement-pdf", async (req, res) => {
       itm.amount_imbursement = formatNumber(
         parseFloat(itm.amount_imbursement.toString().replace(/,/g, ""))
       );
+      itm.amount_approved = formatNumber(
+        parseFloat(itm.amount_approved.toString().replace(/,/g, ""))
+      );
 
       return itm;
     });
@@ -1873,17 +1876,27 @@ Report.post("/report/reimbursement-pdf", async (req, res) => {
       {
         label: "TYPE OF CLAIM",
         key: "type_claim",
-        style: { width: 100, textAlign: "left" },
+        style: { width: 80, textAlign: "left" },
       },
       {
         label: "AMOUNT OF CLAIM",
         key: "amount_claim",
-        style: { width: 100, textAlign: "right" },
+        style: { width: 80, textAlign: "right" },
+      },
+      {
+        label: "DATE OF CLAIM",
+        key: "date_claim",
+        style: { width: 80, textAlign: "right" },
+      },
+      {
+        label: "THIRD PARTY",
+        key: "tpl_name",
+        style: { width: 150, textAlign: "right" },
       },
       {
         label: "CHEQUE",
         key: "payment",
-        style: { width: 100, textAlign: "left" },
+        style: { width: 80, textAlign: "left" },
       },
       {
         label: "DISBURSEMENT AMOUNT",
@@ -1893,28 +1906,33 @@ Report.post("/report/reimbursement-pdf", async (req, res) => {
       {
         label: "DISBURSEMENT DATE AT RELEASE",
         key: "date_release",
-        style: { width: 150, textAlign: "left" },
+        style: { width: 110, textAlign: "left" },
+      },
+      {
+        label: "AMOUNT APPROVED",
+        key: "amount_approved",
+        style: { width: 80, textAlign: "right" },
       },
       {
         label: "PAYEE",
         key: "payee",
-        style: { width: 120, textAlign: "left" },
+        style: { width: 100, textAlign: "left" },
       },
       {
         label: "STATUS",
         key: "remarks",
-        style: { width: 120, textAlign: "left" },
+        style: { width: 100, textAlign: "left" },
       },
       {
         label: "REIMBURSEMENT RETURN DATE'S",
         key: "date_return_upward",
-        style: { width: 150, textAlign: "left" },
+        style: { width: 106, textAlign: "left" },
       },
     ];
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_WIDTH = 1640; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -2100,6 +2118,9 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
       itm.amount_imbursement = formatNumber(
         parseFloat(itm.amount_imbursement.toString().replace(/,/g, ""))
       );
+        itm.amount_approved = formatNumber(
+        parseFloat(itm.amount_approved.toString().replace(/,/g, ""))
+      );
       return itm;
     });
 
@@ -2111,10 +2132,13 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
         { key: "policy_no", width: 20 },
         { key: "unit_insured", width: 50 },
         { key: "type_claim", width: 25 },
-        { key: "amount_claim", width: 20 },
+        { key: "amount_claim", width: 25 },
+        { key: "date_claim", width: 25 },
+        { key: "tpl_name", width: 20 },
         { key: "payment", width: 20 },
         { key: "amount_imbursement", width: 20 },
         { key: "date_release", width: 20 },
+        { key: "amount_approved", width: 20 },
         { key: "payee", width: 50 },
         { key: "remarks", width: 50 },
         { key: "date_return_upward", width: 20 },
@@ -2147,9 +2171,12 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
           "UNIT INSURED",
           "TYPE OF CLAIM",
           "AMOUNT OF CLAIM",
+          "DATE OF CLAIM",
+          "THIRD PARTY",
           "CHEQUE",
           "DISBURSEMENT AMOUNT",
           "DISBURSEMENT DATE AT RELEASE",
+          "AMOUNT APPROVED",
           "PAYEE",
           "STATUS",
           "REIMBURSEMENT RETURN DATE'S",
@@ -2160,18 +2187,17 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
         });
       },
       onDraw: (props: any, rowItm: any, rowIdx: number) => {
-        props.setAlignment(rowIdx + 8, ["F","H"], {
+        props.setAlignment(rowIdx + 8, ["F", "J", "L"], {
           horizontal: "right",
           vertical: "middle",
         });
-    
       },
       afterDraw: (props: any, worksheet: any) => {
-        props.setAlignment(7, ["F","H"], {
+        props.setAlignment(7, ["F", "J", "L"], {
           horizontal: "center",
           vertical: "middle",
         });
-        props.setAlignment(data.length + 7, ["F","H"], {
+        props.setAlignment(data.length + 7, ["F", "J", "L"], {
           horizontal: "right",
           vertical: "middle",
         });
