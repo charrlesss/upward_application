@@ -97,6 +97,258 @@ model reimbursement {
   policy_no           String    @db.VarChar(550)
 }
 
+model vpolicy {
+  PolicyNo            String   @id @db.VarChar(255)
+  Account             String?  @db.VarChar(255)
+  PolicyType          String?  @db.VarChar(255)
+  CoverNo             String?  @db.VarChar(255)
+  ORNo                String?  @db.VarChar(255)
+  DateFrom            String?  @db.VarChar(255)
+  DateTo              String?  @db.VarChar(255)
+  Model               String?  @db.VarChar(255)
+  Make                String?  @db.VarChar(255)
+  BodyType            String?  @db.VarChar(255)
+  Color               String?  @db.VarChar(255)
+  BLTFileNo           String?  @db.VarChar(255)
+  PlateNo             String?  @db.VarChar(255)
+  ChassisNo           String?  @db.VarChar(255)
+  MotorNo             String?  @db.VarChar(255)
+  AuthorizedCap       String?  @db.VarChar(255)
+  UnladenWeight       String?  @db.VarChar(255)
+  TPL                 String?  @db.VarChar(255)
+  TPLLimit            Decimal? @default(0.0000) @db.Decimal(19, 4)
+  PremiumPaid         Decimal? @default(0.0000) @db.Decimal(19, 4)
+  EstimatedValue      Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Aircon              Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Stereo              Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Magwheels           Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Others              String?  @db.VarChar(255)
+  OthersAmount        Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Deductible          Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Towing              Decimal? @default(0.0000) @db.Decimal(19, 4)
+  RepairLimit         Decimal? @default(0.0000) @db.Decimal(19, 4)
+  BodilyInjury        Decimal? @default(0.0000) @db.Decimal(19, 4)
+  PropertyDamage      Decimal? @default(0.0000) @db.Decimal(19, 4)
+  PersonalAccident    Decimal? @default(0.0000) @db.Decimal(19, 4)
+  SecI                Decimal? @default(0.0000) @db.Decimal(19, 4)
+  SecIIPercent        Decimal? @default(0.0000) @db.Decimal(19, 4)
+  ODamage             Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Theft               Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Sec4A               Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Sec4B               Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Sec4C               Decimal? @default(0.0000) @db.Decimal(19, 4)
+  AOG                 Decimal? @default(0.0000) @db.Decimal(19, 4)
+  MortgageeForm       Boolean?
+  Mortgagee           String?  @db.VarChar(255)
+  Denomination        String?  @db.VarChar(255)
+  AOGPercent          Decimal? @default(0.0000) @db.Decimal(19, 4)
+  LocalGovTaxPercent  Decimal? @default(0.0000) @db.Decimal(19, 4)
+  TPLTypeSection_I_II String?
+  Remarks             String?
+}
+
+model journal {
+  Branch_Code      String?  @db.VarChar(255)
+  Date_Entry       String?  @db.VarChar(255)
+  Source_Type      String?  @db.VarChar(255)
+  Source_No        String?  @db.VarChar(255)
+  Explanation      String?  @db.LongText
+  Particulars      String?  @db.LongText
+  Payto            String?  @db.VarChar(500)
+  Address          String?  @db.VarChar(255)
+  Check_Date       String?  @db.VarChar(255)
+  Check_No         String?  @db.VarChar(255)
+  Check_Bank       String?  @db.VarChar(255)
+  Check_Return     String?  @db.VarChar(255)
+  Check_Collect    String?  @db.VarChar(255)
+  Check_Deposit    String?  @db.VarChar(255)
+  Check_Reason     String?  @db.VarChar(255)
+  GL_Acct          String?  @db.VarChar(255)
+  Sub_Acct         String?  @db.VarChar(255)
+  ID_No            String?  @db.VarChar(255)
+  cGL_Acct         String?  @db.VarChar(255)
+  cSub_Acct        String?  @db.VarChar(255)
+  cID_No           String?  @db.VarChar(500)
+  Debit            Decimal? @default(0.0000) @db.Decimal(19, 4)
+  Credit           Decimal? @default(0.0000) @db.Decimal(19, 4)
+  TC               String?  @db.VarChar(255)
+  Remarks          String?  @db.LongText
+  AutoNo           BigInt   @id @default(autoincrement())
+  VAT_Type         String?  @db.VarChar(255)
+  OR_Invoice_No    String?  @db.VarChar(255)
+  VATItemNo        Int?
+  Source_No_Ref_ID String?
+}
+
+model policy {
+  IDNo         String   @db.VarChar(20)
+  Account      String   @db.VarChar(20)
+  SubAcct      String   @default("") @db.VarChar(20)
+  PolicyType   String?  @db.VarChar(20)
+  PolicyNo     String   @id @db.VarChar(255)
+  DateIssued   DateTime @db.DateTime(6)
+  TotalPremium Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Vat          Decimal  @default(0.0000) @db.Decimal(19, 4)
+  DocStamp     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  FireTax      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  LGovTax      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Notarial     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Misc         Decimal  @default(0.0000) @db.Decimal(19, 4)
+  TotalDue     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  ExtraDebit   Decimal  @default(0.0000) @db.Decimal(19, 4)
+  ExtraCredit  Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment1     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment2     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Payment3     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  TotalPaid    Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Discount     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Journal      Boolean
+  Cancelled    Boolean  @default(false)
+  Remarks      String   @default("") @db.VarChar(255)
+  AgentID      String?  @db.VarChar(100)
+  AgentCom     Decimal? @db.Decimal(19, 4)
+  Remitted     Boolean  @default(false)
+}
+
+model fpolicy {
+  PolicyNo        String   @id @db.VarChar(550)
+  Account         String   @db.VarChar(550)
+  DateFrom        DateTime @db.DateTime(6)
+  DateTo          DateTime @db.DateTime(6)
+  BillNo          String   @db.VarChar(550)
+  Percentage      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Location        String   @db.VarChar(550)
+  InsuredValue    Decimal  @default(0.0000) @db.Decimal(19, 4)
+  PropertyInsured String   @db.VarChar(550)
+  Constraction    String   @db.VarChar(550)
+  Occupancy       String   @db.VarChar(550)
+  Boundaries      String   @db.VarChar(550)
+  Mortgage        String   @db.VarChar(550)
+  Warranties      String   @db.VarChar(550)
+}
+
+model mpolicy {
+  PolicyNo           String   @id @db.VarChar(255)
+  Account            String   @db.VarChar(255)
+  Location           String   @db.VarChar(255)
+  DateFrom           DateTime @db.DateTime(6)
+  DateTo             DateTime @db.DateTime(6)
+  PointOfOrigin      String   @db.VarChar(500)
+  PointofDestination String   @db.VarChar(500)
+  Vessel             String   @db.VarChar(255)
+  AdditionalInfo     String   @db.VarChar(255)
+  SubjectInsured     String   @db.VarChar(255)
+  Consignee          String   @db.VarChar(255)
+  InsuredValue       Decimal  @default(0.0000) @db.Decimal(19, 4)
+  Percentage         Decimal  @default(0.0000) @db.Decimal(19, 4)
+}
+
+model bpolicy {
+  PolicyNo       String   @id @db.VarChar(255)
+  Account        String   @db.VarChar(255)
+  PolicyType     String?  @db.VarChar(255)
+  Percentage     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  BidDate        DateTime @db.DateTime(6)
+  BidTime        DateTime @db.DateTime(6)
+  Obligee        String   @db.VarChar(255)
+  UnitDetail     String   @db.Text
+  BondValue      Decimal  @default(0.0000) @db.Decimal(19, 4)
+  NotaryName     String   @db.VarChar(100)
+  TaxCerNo       String   @db.VarChar(255)
+  IssuedLocation String   @db.VarChar(50)
+  NIssued        DateTime @db.DateTime(6)
+  CapacityAs     String   @db.VarChar(255)
+  TaxCerNoCorp   String   @db.VarChar(255)
+  IssuedLoctCorp String   @db.VarChar(255)
+  CIssued        DateTime @db.DateTime(6)
+  Officer        String   @default("") @db.VarChar(255)
+  OPosition      String   @default("") @db.VarChar(255)
+  Validity       String   @default("") @db.VarChar(255)
+}
+
+model msprpolicy {
+  PolicyNo         String   @id @db.VarChar(20)
+  Account          String   @db.VarChar(100)
+  PeriodFrom       DateTime @db.DateTime(6)
+  PeriodTo         DateTime @db.DateTime(6)
+  Location         String   @db.VarChar(255)
+  Saferoom         String   @db.VarChar(255)
+  OriginPoint      String   @db.VarChar(255)
+  DestinationPoint String   @db.VarChar(255)
+  Method           String   @db.VarChar(255)
+  Guard            Int      @db.SmallInt
+  Messenger        Int      @db.SmallInt
+  SecI             Decimal  @db.Decimal(19, 4)
+  SecIPremium      Decimal  @db.Decimal(19, 4)
+  SecIB            Decimal  @db.Decimal(19, 4)
+  SecIPremiumB     Decimal  @db.Decimal(19, 4)
+  SecII            Decimal  @db.Decimal(19, 4)
+  SecIIPremium     Decimal  @db.Decimal(19, 4)
+}
+
+model papolicy {
+  PolicyNo   String   @id @db.VarChar(20)
+  Account    String   @db.VarChar(250)
+  sumInsured Decimal  @db.Decimal(19, 4)
+  PeriodFrom DateTime @db.DateTime(6)
+  PeriodTo   DateTime @db.DateTime(6)
+  Location   String   @db.VarChar(255)
+}
+
+model cglpolicy {
+  PolicyNo   String   @id @db.VarChar(20)
+  Account    String   @db.VarChar(250)
+  address    String   @db.VarChar(250)
+  sumInsured Decimal  @db.Decimal(19, 4)
+  PeriodFrom DateTime @db.DateTime(6)
+  PeriodTo   DateTime @db.DateTime(6)
+  Location   String   @db.VarChar(255)
+  LimitA     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  LimitB     Decimal  @default(0.0000) @db.Decimal(19, 4)
+}
+
+model policy_account {
+  Account     String   @unique @db.VarChar(225)
+  Description String   @db.Text
+  AccountCode String   @db.VarChar(225)
+  COM         Boolean
+  TPL         Boolean
+  MAR         Boolean
+  FIRE        Boolean
+  G02         Boolean
+  G13         Boolean
+  G16         Boolean
+  MSPR        Boolean
+  PA          Boolean
+  CGL         Boolean
+  Inactive    Boolean
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+model mortgagee {
+  Policy    String   @db.VarChar(100)
+  Mortgagee String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model subline {
+  ID          String   @id @default(uuid())
+  Line        String   @db.Text
+  SublineName String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+model words {
+  Wordings String  @db.VarChar(20)
+  SType    Boolean
+  Phrase   String  @db.VarChar(8000)
+  WORD_ID  Int     @id @default(autoincrement())
+}
+
+
 model system_logs {
   action       String   @db.Text
   logs_id      Int      @id @default(autoincrement())
@@ -106,4 +358,155 @@ model system_logs {
   user_id      String   @db.Text
   account_type String   @db.Text
   module       String   @db.Text
+}
+
+model rates {
+  ID        String   @id @default(uuid())
+  Account   String?  @db.VarChar(250)
+  Line      String?  @db.VarChar(250)
+  Type      String?  @db.VarChar(250)
+  Rate      String?  @db.VarChar(250)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model sub_account {
+  Sub_Acct    String   @id @default(uuid())
+  Description String   @db.Text
+  ShortName   String   @db.VarChar(225)
+  Acronym     String   @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  update      DateTime @default(now())
+}
+
+
+
+model contact_details {
+  contact_details_id String          @id @default(uuid())
+  email              String          @default("") @db.VarChar(2255)
+  mobile             String          @default("") @db.VarChar(225)
+  telephone          String          @default("") @db.VarChar(225)
+  entry_agent        entry_agent?
+  entry_client       entry_client?
+  entry_supplier     entry_supplier?
+}
+
+model entry_agent {
+  entry_agent_id           String          @id
+  firstname                String          @default("") @db.VarChar(225)
+  lastname                 String          @default("") @db.VarChar(225)
+  middlename               String          @default("") @db.VarChar(225)
+  address                  String          @db.Text
+  agent_contact_details_id String          @unique(map: "Entry_Agent_agent_contact_details_id_key")
+  createdAt                DateTime        @default(now())
+  update                   DateTime        @default(now())
+  contact_details          contact_details @relation(fields: [agent_contact_details_id], references: [contact_details_id], map: "Entry_Agent_agent_contact_details_id_fkey")
+  sub_account              String          @db.VarChar(500)
+  suffix                   String          @default("") @db.VarChar(550)
+  position                   String          @default("") @db.VarChar(550)
+}
+
+model entry_client {
+  entry_client_id           String          @id
+  sale_officer              String          @default("") @db.VarChar(225)
+  firstname                 String          @default("") @db.VarChar(225)
+  lastname                  String          @default("") @db.VarChar(225)
+  middlename                String          @default("") @db.VarChar(225)
+  company                   String          @default("") @db.VarChar(225)
+  address                   String          @default("") @db.VarChar(225)
+  option                    String          @default("") @db.VarChar(225)
+  sub_account               String          @default("") @db.VarChar(225)
+  client_mortgagee          String          @default("") @db.VarChar(550)
+  client_branch             String          @default("") @db.VarChar(550)
+  chassis                   String          @default("") @db.VarChar(550)
+  engine                    String          @default("") @db.VarChar(550)
+  createdAt                 DateTime        @default(now())
+  update                    DateTime        @default(now())
+  client_contact_details_id String          @unique(map: "Entry_Client_client_contact_details_id_key")
+  contact_details           contact_details @relation(fields: [client_contact_details_id], references: [contact_details_id], map: "Entry_Client_client_contact_details_id_fkey")
+  suffix                    String          @default("") @db.VarChar(550)
+  tin                       String          @default("") @db.VarChar(550)
+  auth_representative       String          @default("") @db.VarChar(550)
+}
+
+model entry_employee {
+  entry_employee_id String @id
+  firstname         String @default("") @db.VarChar(225)
+  middlename        String @default("") @db.VarChar(225)
+  lastname          String @default("") @db.VarChar(225)
+  sub_account       String @default("") @db.VarChar(225)
+  suffix            String @default("") @db.VarChar(550)
+  address   String   @db.Text
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
+}
+
+model entry_fixed_assets {
+  entry_fixed_assets_id String   @id
+  description           String   @db.Text
+  remarks               String   @db.Text
+  fullname              String   @db.VarChar(225)
+  createdAt             DateTime @default(now())
+  update                DateTime @default(now())
+  sub_account           String   @db.VarChar(500)
+}
+
+model entry_others {
+  entry_others_id String   @id
+  description     String   @db.Text
+  remarks         String   @db.Text
+  createdAt       DateTime @default(now())
+  update          DateTime @default(now())
+  sub_account     String   @db.VarChar(500)
+}
+
+model entry_supplier {
+  entry_supplier_id           String          @id
+  supplier_contact_details_id String          @unique(map: "Entry_Supplier_supplier_contact_details_id_key")
+  firstname                   String          @default("") @db.VarChar(225)
+  lastname                    String          @default("") @db.VarChar(225)
+  middlename                  String          @default("") @db.VarChar(225)
+  company                     String          @default("") @db.VarChar(225)
+  address                     String          @default("") @db.VarChar(225)
+  VAT_Type                    String          @default("") @db.VarChar(225)
+  option                      String          @default("") @db.VarChar(225)
+  tin_no                      String          @db.Text
+  createdAt                   DateTime        @default(now())
+  update                      DateTime        @default(now())
+  contact_details             contact_details @relation(fields: [supplier_contact_details_id], references: [contact_details_id], map: "Entry_Supplier_supplier_contact_details_id_fkey")
+  sub_account                 String          @db.VarChar(500)
+}
+
+model id_sequence {
+  seq_id     String @id @default(uuid())
+  type       String @unique(map: "Id_Sequence_type_key") @db.VarChar(100)
+  last_count String @db.VarChar(100)
+  year       String @db.VarChar(2)
+  month      String @db.VarChar(2)
+}
+
+model ctplregistration {
+  ctplId        String   @id
+  Prefix        String?  @db.VarChar(50)
+  NumSeriesFrom String   @db.VarChar(450)
+  NumSeriesTo   String   @db.VarChar(450)
+  Cost          String?  @db.VarChar(150)
+  CreatedBy     String?  @db.VarChar(50)
+  createdAt     DateTime @default(now())
+  update        DateTime @default(now())
+  ctplType      String?  @db.VarChar(250)
+}
+
+model ctplprefix {
+  prefixId   Int      @id @default(autoincrement())
+  prefixName String   @db.VarChar(50)
+  createdAt  DateTime @default(now())
+  update     DateTime @default(now())
+}
+
+model ctpltype {
+  typeId    Int      @id @default(autoincrement())
+  typeName  String   @db.VarChar(50)
+  createdAt DateTime @default(now())
+  update    DateTime @default(now())
 }

@@ -4,6 +4,8 @@ import { PrismaClient } from "@prisma/client";
 import Claims from "./Claims";
 import Imbersement from "./Imbersement";
 import Report from "./Report";
+import Production from "./Production";
+import Reference from "./Reference";
 
 const router = express.Router();
 export const prisma = new PrismaClient();
@@ -14,6 +16,8 @@ router.get("/test", (req, res) => {
 router.use(Authentication);
 router.use(ValidateToken);
 router.use(Claims);
+router.use(Production);
+router.use(Reference);
 router.use(Imbersement);
 router.use(Report);
 router.post("/logout", logout);

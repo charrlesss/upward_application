@@ -2167,7 +2167,7 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
         const headerRow = worksheet.addRow([
           "CHEQUE FROM",
           "CLIENT'S NAME",
-          "POLICY NO",
+          "POLICY NO", 
           "UNIT INSURED",
           "TYPE OF CLAIM",
           "AMOUNT OF CLAIM",

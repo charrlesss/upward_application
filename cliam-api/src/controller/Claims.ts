@@ -51,7 +51,7 @@ Claims.post("/get-claim-id", async (req, res): Promise<any> => {
       success: false,
     });
   }
-}); 
+});
 Claims.post("/get-reference-id", async (req, res): Promise<any> => {
   try {
     const reference = await generateUniqueClaimID();
@@ -76,8 +76,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
 
     if (req.body.department === "UMIS") {
       database = "upward_insurance_umis";
-    } else {
+    } else if (req.body.department === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
+    } else {
+      database = "claims";
     }
 
     const totalGross = await prisma.$queryRawUnsafe(
@@ -451,43 +453,14 @@ Claims.post("/search-claim", async (req, res): Promise<any> => {
         b.MotorNo
     FROM
         claims.claims a
-            LEFT JOIN
-        (SELECT 
-            b.IDNo,
-                b.PolicyType,
-                b.PolicyNo,
-                'UCSMI' AS Department,
-                IF(c.company <> ''
-                    AND c.company IS NOT NULL, c.company, CONCAT(IF(c.lastname <> ''
-                    AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
-                d.ChassisNo,
-                d.MotorNo
-        FROM
-            new_upward_insurance_ucsmi.policy b
-        LEFT JOIN new_upward_insurance_ucsmi.entry_client c ON b.IDNo = c.entry_client_id
-        LEFT JOIN new_upward_insurance_ucsmi.vpolicy d ON b.policyNo = d.PolicyNo 
-        UNION ALL 
-        SELECT 
-            b.IDNo,
-                b.PolicyType,
-                b.PolicyNo,
-                'UMIS' AS Department,
-                IF(c.company <> ''
-                    AND c.company IS NOT NULL, c.company, CONCAT(IF(c.lastname <> ''
-                    AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
-                d.ChassisNo,
-                d.MotorNo
-        FROM
-            upward_insurance_umis.policy b
-        LEFT JOIN upward_insurance_umis.entry_client c ON b.IDNo = c.entry_client_id
-        LEFT JOIN upward_insurance_umis.vpolicy d ON b.policyNo = d.PolicyNo) b ON a.policyNo = b.PolicyNo
+        LEFT JOIN (${unionTable}) b ON a.policyNo = b.PolicyNo
     WHERE
         a.claim_id LIKE ?
-            OR b.ChassisNo LIKE ?
-            OR b.MotorNo LIKE ?
-            OR b.PolicyNo LIKE ?
-            OR b.IDNo LIKE ?
-            OR b.Name LIKE ?
+        OR b.ChassisNo LIKE ?
+        OR b.MotorNo LIKE ?
+        OR b.PolicyNo LIKE ?
+        OR b.IDNo LIKE ?
+        OR b.Name LIKE ?
     ORDER BY claim_id
     LIMIT 100
       `;
@@ -520,35 +493,7 @@ Claims.post("/search-policy", async (req, res): Promise<any> => {
       SELECT 
           *
       FROM
-          (SELECT 
-              a.IDNo,
-                  a.PolicyType,
-                  a.PolicyNo,
-                  'UCSMI' AS Department,
-                  IF(b.company <> ''
-                      AND b.company IS NOT NULL, b.company, CONCAT(IF(b.lastname <> ''
-                      AND b.lastname IS NOT NULL, CONCAT(b.lastname, ', '), ''), b.firstname, IF(b.suffix <> '' AND b.suffix IS NOT NULL, CONCAT(', ', b.suffix), ''))) AS Name,
-                  c.ChassisNo,
-                  c.MotorNo
-          FROM
-              new_upward_insurance_ucsmi.policy a
-          LEFT JOIN new_upward_insurance_ucsmi.entry_client b ON a.IDNo = b.entry_client_id
-          LEFT JOIN new_upward_insurance_ucsmi.vpolicy c ON a.PolicyNo = c.PolicyNo 
-          UNION ALL
-           SELECT 
-              a.IDNo,
-                  a.PolicyType,
-                  a.PolicyNo,
-                  'UMIS' AS Department,
-                  IF(b.company <> ''
-                      AND b.company IS NOT NULL, b.company, CONCAT(IF(b.lastname <> ''
-                      AND b.lastname IS NOT NULL, CONCAT(b.lastname, ', '), ''), b.firstname, IF(b.suffix <> '' AND b.suffix IS NOT NULL, CONCAT(', ', b.suffix), ''))) AS Name,
-                  c.ChassisNo,
-                  c.MotorNo
-          FROM
-              upward_insurance_umis.policy a
-          LEFT JOIN upward_insurance_umis.entry_client b ON a.IDNo = b.entry_client_id
-          LEFT JOIN upward_insurance_umis.vpolicy c ON a.PolicyNo = c.PolicyNo) a
+          (${unionTable}) a
       WHERE
           a.ChassisNo LIKE ?
               OR a.MotorNo LIKE ?
@@ -585,10 +530,12 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
 
-    if (req.body.department === "UMIS") {
+     if (req.body.department === "UMIS") {
       database = "upward_insurance_umis";
-    } else {
+    } else if (req.body.department === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
+    } else {
+      database = "claims";
     }
 
     const claimDetails: any = await prisma.$queryRawUnsafe(
@@ -1077,7 +1024,7 @@ Claims.post("/check-code", async (req, res): Promise<any> => {
       success: false,
     });
   }
-});      
+});
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -1115,7 +1062,6 @@ Claims.post(
         fs.rmSync(mainDir, { recursive: true, force: true });
       }
 
-      
       let updatedbasicDocuments = [];
       if (uploadedBasicFiles.length > 0) {
         updatedbasicDocuments = basicDocuments.map((itm: any) => {
@@ -1304,7 +1250,6 @@ Claims.post(
   upload.fields([{ name: "files" }, { name: "basic" }]),
   async (req, res): Promise<any> => {
     try {
-
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
       const mainDir = path.join(uploadDir, claimId);
@@ -1331,7 +1276,7 @@ Claims.post(
       const basicDocuments = JSON.parse(req.body.basicDocuments);
       const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
 
-      console.log(uploadedBasicFiles)
+      console.log(uploadedBasicFiles);
 
       if (fs.existsSync(mainDir)) {
         fs.rmSync(mainDir, { recursive: true, force: true });
@@ -2180,4 +2125,50 @@ async function generateUniqueClaimID() {
   return `${uniqueID}`;
 }
 
+const unionTable = `
+     SELECT 
+            b.IDNo,
+                b.PolicyType,
+                b.PolicyNo,
+                'CLAIMS' AS Department,
+                IF(c.company <> ''
+                    AND c.company IS NOT NULL, c.company, CONCAT(IF(c.lastname <> ''
+                    AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
+                d.ChassisNo,
+                d.MotorNo
+        FROM
+            claims.policy b
+        LEFT JOIN claims.entry_client c ON b.IDNo = c.entry_client_id
+        LEFT JOIN claims.vpolicy d ON b.policyNo = d.PolicyNo 
+    UNION ALL 
+     SELECT 
+            b.IDNo,
+                b.PolicyType,
+                b.PolicyNo,
+                'UCSMI' AS Department,
+                IF(c.company <> ''
+                    AND c.company IS NOT NULL, c.company, CONCAT(IF(c.lastname <> ''
+                    AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
+                d.ChassisNo,
+                d.MotorNo
+        FROM
+            new_upward_insurance_ucsmi.policy b
+        LEFT JOIN new_upward_insurance_ucsmi.entry_client c ON b.IDNo = c.entry_client_id
+        LEFT JOIN new_upward_insurance_ucsmi.vpolicy d ON b.policyNo = d.PolicyNo 
+        UNION ALL 
+        SELECT 
+            b.IDNo,
+                b.PolicyType,
+                b.PolicyNo,
+                'UMIS' AS Department,
+                IF(c.company <> ''
+                    AND c.company IS NOT NULL, c.company, CONCAT(IF(c.lastname <> ''
+                    AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
+                d.ChassisNo,
+                d.MotorNo
+        FROM
+            upward_insurance_umis.policy b
+        LEFT JOIN upward_insurance_umis.entry_client c ON b.IDNo = c.entry_client_id
+        LEFT JOIN upward_insurance_umis.vpolicy d ON b.policyNo = d.PolicyNo
+    `;
 export default Claims;
