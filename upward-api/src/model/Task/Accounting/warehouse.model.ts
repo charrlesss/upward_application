@@ -213,7 +213,7 @@ export async function getApprovedRCPNo(req: Request) {
   SELECT DISTINCT
       b.RCPNo
   FROM
-      PDC A
+      pdc A
           INNER JOIN
       (SELECT 
           A.RCPNo, A.PNNo, b.CheckNo, a.Status
@@ -241,7 +241,7 @@ export async function loadList(req: Request, RCPNo: string) {
         CAST(COUNT(b.CheckNo)  as char) as NoOfChecks,
         b.Reason
     FROM
-        PDC A
+        pdc A
             INNER JOIN
         (SELECT 
             A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
@@ -265,7 +265,7 @@ export async function loadList(req: Request, RCPNo: string) {
         CAST(COUNT(b.CheckNo)  as char) as NoOfChecks,
         b.Reason
     FROM
-        PDC A
+        pdc A
             INNER JOIN
         (SELECT 
             A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
