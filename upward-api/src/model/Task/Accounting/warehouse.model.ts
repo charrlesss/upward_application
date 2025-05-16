@@ -119,14 +119,14 @@ export async function getApprovedPulloutWarehouseCheckList(
   SELECT 
   B.RCPNo,
   B.PNNo,
-  a.Name,
+  A.Name,
   convert(COUNT(B.CheckNo),CHAR) NoOfChecks,
   B.Reason
 FROM
   pdc A
     INNER JOIN
 (SELECT 
-    A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
+    A.RCPNo, A.PNNo, B.CheckNo, A.Status, A.Reason
 FROM
       pullout_request A
 INNER JOIN  pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
@@ -135,7 +135,7 @@ WHERE
     PDC_Status = 'Stored'
     AND B.Status = 'APPROVED' 
     AND B.RCPNo like ?
-GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
+GROUP BY B.RCPNo , B.PNNo , A.Name , B.Reason
 ORDER BY B.RCPNo
   `;
   return await prisma.$queryRawUnsafe(query, `%${RCPNo}%`);
@@ -216,7 +216,7 @@ export async function getApprovedRCPNo(req: Request) {
       pdc A
           INNER JOIN
       (SELECT 
-          A.RCPNo, A.PNNo, B.CheckNo, a.Status
+          A.RCPNo, A.PNNo, B.CheckNo, A.Status
       FROM
           pullout_request A
       INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
@@ -237,14 +237,14 @@ export async function loadList(req: Request, RCPNo: string) {
     SELECT 
         B.RCPNo,
         B.PNNo,
-        a.Name,
+        A.Name,
         CAST(COUNT(B.CheckNo)  as char) as NoOfChecks,
         B.Reason
     FROM
         pdc A
             INNER JOIN
         (SELECT 
-            A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
+            A.RCPNo, A.PNNo, B.CheckNo, A.Status, A.Reason
         FROM
             pullout_request A
         INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
@@ -253,7 +253,7 @@ export async function loadList(req: Request, RCPNo: string) {
         PDC_Status = 'Stored'
             AND B.Status = 'APPROVED'
             and B.RCPNo = ? 
-    GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
+    GROUP BY B.RCPNo , B.PNNo , A.Name , B.Reason
     ORDER BY B.RCPNo`;
     return await prisma.$queryRawUnsafe(query, RCPNo);
   }
@@ -261,14 +261,14 @@ export async function loadList(req: Request, RCPNo: string) {
     SELECT 
         B.RCPNo,
         B.PNNo,
-        a.Name,
+        A.Name,
         CAST(COUNT(B.CheckNo)  as char) as NoOfChecks,
         B.Reason
     FROM
         pdc A
             INNER JOIN
         (SELECT 
-            A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
+            A.RCPNo, A.PNNo, B.CheckNo, A.Status, A.Reason
         FROM
             pullout_request A
         INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
@@ -276,7 +276,7 @@ export async function loadList(req: Request, RCPNo: string) {
     WHERE
         PDC_Status = 'Stored'
             AND B.Status = 'APPROVED'
-    GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
+    GROUP BY B.RCPNo , B.PNNo , A.Name , B.Reason
     ORDER BY B.RCPNo`;
   return await prisma.$queryRawUnsafe(query);
 }
