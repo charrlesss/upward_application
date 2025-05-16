@@ -98,15 +98,15 @@ export async function getApprovedPulloutWarehouse(RCPNo: string, req: Request) {
         pdc A
           INNER JOIN
       (SELECT 
-          A.RCPNo, A.PNNo, b.CheckNo, a.Status
+          A.RCPNo, A.PNNo, B.CheckNo, a.Status
       FROM
             pullout_request A
       left JOIN   pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
           AND A.Check_No = B.CheckNo
   WHERE
       PDC_Status = 'Stored'
-      AND b.Status = 'APPROVED'
-      OR b.RCPNo LIKE ?
+      AND B.Status = 'APPROVED'
+      OR B.RCPNo LIKE ?
   ORDER BY B.RCPNo
   `;
   return await prisma.$queryRawUnsafe(query, `%${RCPNo}%`);
@@ -118,24 +118,24 @@ export async function getApprovedPulloutWarehouseCheckList(
   const query = `
   SELECT 
   B.RCPNo,
-  b.PNNo,
+  B.PNNo,
   a.Name,
-  convert(COUNT(b.CheckNo),CHAR) NoOfChecks,
-  b.Reason
+  convert(COUNT(B.CheckNo),CHAR) NoOfChecks,
+  B.Reason
 FROM
   pdc A
     INNER JOIN
 (SELECT 
-    A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
+    A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
 FROM
       pullout_request A
 INNER JOIN  pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
     AND A.Check_No = B.CheckNo
 WHERE
     PDC_Status = 'Stored'
-    AND b.Status = 'APPROVED' 
-    AND b.RCPNo like ?
-GROUP BY B.RCPNo , b.PNNo , a.Name , b.Reason
+    AND B.Status = 'APPROVED' 
+    AND B.RCPNo like ?
+GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
 ORDER BY B.RCPNo
   `;
   return await prisma.$queryRawUnsafe(query, `%${RCPNo}%`);
@@ -211,19 +211,19 @@ export async function getApprovedRCPNo(req: Request) {
   union all
   select * from (
   SELECT DISTINCT
-      b.RCPNo
+      B.RCPNo
   FROM
       pdc A
           INNER JOIN
       (SELECT 
-          A.RCPNo, A.PNNo, b.CheckNo, a.Status
+          A.RCPNo, A.PNNo, B.CheckNo, a.Status
       FROM
           pullout_request A
       INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
           AND A.Check_No = B.CheckNo
   WHERE
       PDC_Status = 'Stored'
-          AND b.Status = 'APPROVED'
+          AND B.Status = 'APPROVED'
   ORDER BY B.RCPNo
   ) a
 `;
@@ -236,47 +236,47 @@ export async function loadList(req: Request, RCPNo: string) {
     const query = `
     SELECT 
         B.RCPNo,
-        b.PNNo,
+        B.PNNo,
         a.Name,
-        CAST(COUNT(b.CheckNo)  as char) as NoOfChecks,
-        b.Reason
+        CAST(COUNT(B.CheckNo)  as char) as NoOfChecks,
+        B.Reason
     FROM
         pdc A
             INNER JOIN
         (SELECT 
-            A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
+            A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
         FROM
             pullout_request A
         INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
             AND A.Check_No = B.CheckNo
     WHERE
         PDC_Status = 'Stored'
-            AND b.Status = 'APPROVED'
-            and b.RCPNo = ? 
-    GROUP BY B.RCPNo , b.PNNo , a.Name , b.Reason
+            AND B.Status = 'APPROVED'
+            and B.RCPNo = ? 
+    GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
     ORDER BY B.RCPNo`;
     return await prisma.$queryRawUnsafe(query, RCPNo);
   }
   const query = `
     SELECT 
         B.RCPNo,
-        b.PNNo,
+        B.PNNo,
         a.Name,
-        CAST(COUNT(b.CheckNo)  as char) as NoOfChecks,
-        b.Reason
+        CAST(COUNT(B.CheckNo)  as char) as NoOfChecks,
+        B.Reason
     FROM
         pdc A
             INNER JOIN
         (SELECT 
-            A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
+            A.RCPNo, A.PNNo, B.CheckNo, a.Status, a.Reason
         FROM
             pullout_request A
         INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo) B ON A.PNo = B.PNNo
             AND A.Check_No = B.CheckNo
     WHERE
         PDC_Status = 'Stored'
-            AND b.Status = 'APPROVED'
-    GROUP BY B.RCPNo , b.PNNo , a.Name , b.Reason
+            AND B.Status = 'APPROVED'
+    GROUP BY B.RCPNo , B.PNNo , a.Name , B.Reason
     ORDER BY B.RCPNo`;
   return await prisma.$queryRawUnsafe(query);
 }
