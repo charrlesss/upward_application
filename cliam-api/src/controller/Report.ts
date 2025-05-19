@@ -111,7 +111,8 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -214,11 +215,16 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
         key: "status",
         style: { width: 80, textAlign: "left" },
       },
+      {
+        label: "Remarks",
+        key: "remarks",
+        style: { width: 150, textAlign: "left" },
+      },
     ];
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_WIDTH = 1500; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -401,7 +407,8 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -459,6 +466,7 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
         { key: "amount_claim", width: 22 },
         { key: "date_approved", width: 22 },
         { key: "status", width: 22 },
+        { key: "remarks", width: 70 },
       ],
       data: data,
       beforeDraw: (props: any, worksheet: any) => {
@@ -494,6 +502,7 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
           "Amount of Claim",
           "Date Settled",
           "Status of Claim",
+          "Remarks",
         ]);
         headerRow.font = { bold: true };
         props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
@@ -547,7 +556,8 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -657,11 +667,16 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
         key: "status",
         style: { width: 80, textAlign: "left" },
       },
+      {
+        label: "Remarks",
+        key: "remarks",
+        style: { width: 150, textAlign: "left" },
+      },
     ];
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_WIDTH = 1600; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -841,7 +856,8 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -897,6 +913,7 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         { key: "date_approved", width: 22 },
         { key: "name_ttpd", width: 50 },
         { key: "status", width: 22 },
+        { key: "remarks", width: 70 },
       ],
       data: data,
       beforeDraw: (props: any, worksheet: any) => {
@@ -933,6 +950,7 @@ Report.post("/report/ongoing-excel", async (req, res) => {
           "Date Settled",
           "Name of TTPD",
           "Status of Claim",
+          "Remarks",
         ]);
         headerRow.font = { bold: true };
         props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
@@ -986,7 +1004,8 @@ Report.post("/report/denied-pdf", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -1082,11 +1101,16 @@ Report.post("/report/denied-pdf", async (req, res) => {
         key: "status",
         style: { width: 80, textAlign: "left" },
       },
+      {
+        label: "Remarks",
+        key: "remarks",
+        style: { width: 150, textAlign: "left" },
+      },
     ];
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_WIDTH = 1550; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -1266,7 +1290,8 @@ Report.post("/report/denied-excel", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -1322,6 +1347,7 @@ Report.post("/report/denied-excel", async (req, res) => {
         { key: "amount_claim", width: 22 },
         { key: "name_ttpd", width: 22 },
         { key: "status", width: 22 },
+        { key: "remarks", width: 70 },
       ],
       data: data,
       beforeDraw: (props: any, worksheet: any) => {
@@ -1357,6 +1383,7 @@ Report.post("/report/denied-excel", async (req, res) => {
           "Amount of Claim",
           "Name of TPPD",
           "Status of Claim",
+          "Remarks",
         ]);
         headerRow.font = { bold: true };
         props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
@@ -1410,7 +1437,8 @@ Report.post("/report/cancel-pdf", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -1509,13 +1537,18 @@ Report.post("/report/cancel-pdf", async (req, res) => {
       {
         label: "Status of Claim",
         key: "status",
-        style: { width: 80, textAlign: "left" },
+        style: { width: 100, textAlign: "left" },
+      },
+      {
+        label: "Remarks",
+        key: "remarks",
+        style: { width: 150, textAlign: "left" },
       },
     ];
 
     const outputFilePath = path.join(__dirname, "manok.pdf");
 
-    const PAGE_WIDTH = 1440; // A4 Portrait width
+    const PAGE_WIDTH = 1550; // A4 Portrait width
     const PAGE_HEIGHT = 595; // A4 Portrait height
     const MARGINS = {
       top: 100,
@@ -1695,7 +1728,8 @@ Report.post("/report/cancel-excel", async (req, res) => {
         b.name_ttpd,
         b.claimStatus,
         b.date_approved,
-        if(b.status = 'Approved','Settled',b.status) as status
+        if(b.status = 'Approved','Settled',b.status) as status,
+        b.remarks
       `,
       where: `
       where 
@@ -1751,6 +1785,7 @@ Report.post("/report/cancel-excel", async (req, res) => {
         { key: "amount_approved", width: 22 },
         { key: "name_ttpd", width: 22 },
         { key: "status", width: 22 },
+        { key: "remarks", width: 70 },
       ],
       data: data,
       beforeDraw: (props: any, worksheet: any) => {
@@ -1786,6 +1821,7 @@ Report.post("/report/cancel-excel", async (req, res) => {
           "Amount Approved",
           "Name of TPPD",
           "Status of Claim",
+          "Remarks",
         ]);
         headerRow.font = { bold: true };
         props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
@@ -2118,7 +2154,7 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
       itm.amount_imbursement = formatNumber(
         parseFloat(itm.amount_imbursement.toString().replace(/,/g, ""))
       );
-        itm.amount_approved = formatNumber(
+      itm.amount_approved = formatNumber(
         parseFloat(itm.amount_approved.toString().replace(/,/g, ""))
       );
       return itm;
@@ -2167,7 +2203,7 @@ Report.post("/report/reimbursement-excel", async (req, res) => {
         const headerRow = worksheet.addRow([
           "CHEQUE FROM",
           "CLIENT'S NAME",
-          "POLICY NO", 
+          "POLICY NO",
           "UNIT INSURED",
           "TYPE OF CLAIM",
           "AMOUNT OF CLAIM",
