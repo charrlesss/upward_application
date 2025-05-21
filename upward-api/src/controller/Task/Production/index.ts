@@ -7,9 +7,11 @@ import MSPRPolicy from "./msprpolicy";
 import PAPolicy from "./papolicy";
 import CGLPolicy from "./cglpolicy";
 import Policy from "./policy";
+import RenewalNotice from "./renewalnotice";
 
 const Production = express.Router();
 
+Production.use("/production", RenewalNotice);
 Production.use("/production", VehiclePolicy);
 Production.use("/production", FirePolicy);
 Production.use("/production", MarinePolicy);

@@ -40,29 +40,33 @@ interface PDFReportGeneratorProps {
   adjustTitleFontSize: number;
 }
 
-function pageNumber(doc:PDFKit.PDFDocument,PAGE_WIDTH:number ,PAGE_HEIGHT:number){
-   const range = doc.bufferedPageRange();
-    let i;
-    let end;
-  
-    for (
-      i = range.start, end = range.start + range.count, range.start <= end;
-      i < end;
-      i++
-    ) {
-      doc.font("Helvetica")
-      doc.switchToPage(i);
-      doc.text(
-        `Page ${i + 1} of ${range.count}`,
-        PAGE_WIDTH - 80,
-        PAGE_HEIGHT - 30
-      );
-      doc.text(
-        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
-        20,
-        PAGE_HEIGHT - 30
-      );
-    }
+function pageNumber(
+  doc: PDFKit.PDFDocument,
+  PAGE_WIDTH: number,
+  PAGE_HEIGHT: number
+) {
+  const range = doc.bufferedPageRange();
+  let i;
+  let end;
+
+  for (
+    i = range.start, end = range.start + range.count, range.start <= end;
+    i < end;
+    i++
+  ) {
+    doc.font("Helvetica");
+    doc.switchToPage(i);
+    doc.text(
+      `Page ${i + 1} of ${range.count}`,
+      PAGE_WIDTH - 80,
+      PAGE_HEIGHT - 30
+    );
+    doc.text(
+      `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+      20,
+      PAGE_HEIGHT - 30
+    );
+  }
 }
 class PDFReportGenerator {
   public data: Array<any> = [];
@@ -508,12 +512,12 @@ class PDFReportGenerator {
     });
   }
 
-  generatePDF(res: Response) {
+  generatePDF(res: Response, addPageNumber = true) {
     const outputFilePath = "manok.pdf";
     const doc = new PDFDocument({
       size: [this.PAGE_WIDTH, this.PAGE_HEIGHT],
       margin: 0,
-      bufferPages:true
+      bufferPages: true,
     });
 
     const writeStream = fs.createWriteStream(outputFilePath);
@@ -549,11 +553,9 @@ class PDFReportGenerator {
         // this.drawPageNumber(doc, currentPage, 0, this);
         // pageNumber(doc,this.PAGE_WIDTH,this.PAGE_HEIGHT)
         doc.addPage({
-          
           size: [this.PAGE_WIDTH, this.PAGE_HEIGHT],
           margin: 0,
-          bufferPages:true
-
+          bufferPages: true,
         });
 
         currentPage += 1;
@@ -567,7 +569,9 @@ class PDFReportGenerator {
       this.beforePerPageDraw(this, doc);
     }
     // this.drawPageNumber(doc, currentPage, 0, this);
-    pageNumber(doc,this.PAGE_WIDTH,this.PAGE_HEIGHT)
+    if (addPageNumber) {
+      pageNumber(doc, this.PAGE_WIDTH, this.PAGE_HEIGHT);
+    }
     doc.end();
     writeStream.on("finish", (e: any) => {
       console.log(`PDF created successfully at: ${outputFilePath}`);
@@ -585,8 +589,6 @@ class PDFReportGenerator {
       });
     });
   }
-
-
 }
 
 export default PDFReportGenerator;

@@ -52,6 +52,7 @@ Deposit.get("/get-cash-collection", async (req, res) => {
 });
 Deposit.get("/get-check-collection", async (req, res) => {
   try {
+    
     res.send({
       message: "Successfully Get Check Collection.",
       success: true,
