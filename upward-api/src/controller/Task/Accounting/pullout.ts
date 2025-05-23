@@ -26,7 +26,7 @@ import { VerifyToken } from "../../Authentication";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { prisma } from "../..";
 import PDFDocument from "pdfkit";
-import fs from 'fs'
+import fs from "fs";
 const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
@@ -503,7 +503,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
 
     const newData = req.body.tableData;
 
-    let PAGE_WIDTH = 580;
+    let PAGE_WIDTH = 612;
     let PAGE_HEIGHT = 792;
 
     const headers = [
@@ -638,14 +638,9 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
       yAxis += rowHeight + 3;
     });
     let xs = 10;
-    doc.text(`Prepared : _______________________`, 20 + xs, PAGE_HEIGHT - 70, {
-      align: "left",
-      width: 200,
-    });
-
     doc.text(
-      `Checked : _______________________`,
-      20 + xs + 200,
+      `Received By : _______________________`,
+      20 + xs,
       PAGE_HEIGHT - 70,
       {
         align: "left",
@@ -653,15 +648,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
       }
     );
 
-    doc.text(
-      `Approved : _______________________`,
-      20 + xs + 400,
-      PAGE_HEIGHT - 70,
-      {
-        align: "left",
-        width: 200,
-      }
-    );
+
 
     doc.text(
       `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
@@ -693,7 +680,6 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
         });
       });
     });
-
   } catch (error: any) {
     console.log(error.message);
     res.send({
