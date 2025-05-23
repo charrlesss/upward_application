@@ -8,6 +8,41 @@ import { formatNumber } from "../Accounting/collection";
 
 const RenewalNotice = express.Router();
 
+RenewalNotice.post("/get-balance", async (req, res) => {
+  try {
+    const totalGross = await prisma.$queryRawUnsafe(
+      `SELECT TotalDue FROM policy where PolicyNo = ?`,
+      req.body.policyNo
+    );
+    const totalPaidDeposit = await prisma.$queryRawUnsafe(
+      `SELECT  ifNull(SUM(Credit),0)  as totalDeposit FROM journal where Source_Type = 'OR' and GL_Acct = '1.03.01' and ID_No = ?`,
+      req.body.policyNo
+    );
+    const totalPaidReturned = await prisma.$queryRawUnsafe(
+      `SELECT ifNull(SUM(Debit),0) as totalReturned FROM journal where Source_Type = 'RC'   and GL_Acct = '1.03.01' and ID_No = ?`,
+      req.body.policyNo
+    );
+    const totalDiscount = await prisma.$queryRawUnsafe(
+      `SELECT ifNull(SUM(Debit),0)  as discount FROM journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
+      req.body.policyNo
+    );
+
+    res.send({
+      message: "Search Successfully",
+      success: true,
+      payment: {
+        totalGross,
+        totalPaidDeposit,
+        totalPaidReturned,
+        totalDiscount,
+      },
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({ message: err.message, success: false, data: [] });
+  }
+});
+
 RenewalNotice.post("/search-policy-renewal-notice-com", async (req, res) => {
   try {
     const qry = `
@@ -431,15 +466,16 @@ async function PDFCOM(res: Response, req: Request) {
 
       const PAGE_WIDTH_WITH_MARGIN = PAGE_WIDTH - 60;
 
-      doc.text("MAY 17, 2025", 30, 150, {
+      doc.text(format(new Date(), "MMMM dd, yyyy"), 30, 150, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "right",
       });
-
-      doc.text("ALBER SALIM GRANADA MASSAB JR. ", 30, 165, {
-        width: PAGE_WIDTH_WITH_MARGIN,
-        align: "left",
-      });
+      if (data.length > 0) {
+        doc.text(data[0].cID_No, 30, 165, {
+          width: PAGE_WIDTH_WITH_MARGIN,
+          align: "left",
+        });
+      }
 
       doc.fontSize(9);
       doc.font("Helvetica");
@@ -478,7 +514,7 @@ async function PDFCOM(res: Response, req: Request) {
       });
 
       doc.text(
-        "Indicate below. With that, we are hoping that you will continue to trust our company by rendering good insurance services, and for being covered and protected beyond that date. Also your insurance coverage is adjusted to the current market value.",
+        "Indicated below. With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
         30,
         250,
         {
@@ -530,21 +566,17 @@ async function PDFCOM(res: Response, req: Request) {
           return parseFloat(value.toString().replace(/,/g, ""));
         }
 
-        console.log(
-          req.body.premiumEBIRef,
-          req.body.premiumTPPDRef,
-          req.body.premiumAPARef
-        );
-
         const evsv1 = stringToNum(data[0].EstimatedValue);
         const ownDamage = stringToNum(data[0].ODamage);
         const newEvsv1 = evsv1 - evsv1 * 0.1;
-        const newEvsvComSec3 = newEvsv1 * (parseFloat(req.body.premiumSec3Ref) / 100);
+        const newEvsvComSec3 =
+          newEvsv1 * (parseFloat(req.body.premiumSec3Ref) / 100);
 
         const evsv2 = stringToNum(data[0].EstimatedValue);
         const aog = stringToNum(data[0].AOG);
         const newEvsv2 = evsv1 - evsv1 * 0.1;
-        const newEvsvComCustomPercent = newEvsv2 * (parseFloat(req.body.premiumAOFRef) / 100);
+        const newEvsvComCustomPercent =
+          newEvsv2 * (parseFloat(req.body.premiumAOFRef) / 100);
 
         const bodilyInjury1 = stringToNum(data[0].BodilyInjury);
         const secIVA = stringToNum(data[0].Sec4A);
@@ -576,7 +608,7 @@ async function PDFCOM(res: Response, req: Request) {
         const evat2 = subTotal2 * 0.12;
 
         const lgt1 = stringToNum(data[0].LGovTax);
-        const lgt2 = subTotal2 * (parseFloat(req.body.premiumAOGRef) / 100) ;
+        const lgt2 = subTotal2 * (parseFloat(req.body.premiumAOGRef) / 100);
 
         const grossPrem1 = stringToNum(data[0].TotalDue);
         const grossPrem2 = subTotal2 + docStamp2 + evat2 + lgt2;
@@ -838,7 +870,7 @@ async function PDFCOM(res: Response, req: Request) {
       doc.fontSize(9);
       nextpdy = nextpdy + 30;
       doc.text(
-        "For further details and quiries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
+        "For further details and queries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
         30,
         nextpdy,
         {
@@ -1110,13 +1142,13 @@ async function PDFFIRE(res: Response, req: Request) {
         align: "left",
       });
       doc.font("Helvetica");
-      doc.text("which will expire on the date ", 410, 240, {
+      doc.text("which will expire on the date Indicated below.", 360, 240, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
 
       doc.text(
-        "Indicate below. With that, we are hoping that you will continue to trust our company by rendering good insurance services, and for being covered and protected beyond that date. Also your insurance coverage is adjusted to the current market value.",
+        " With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
         30,
         250,
         {
@@ -1187,7 +1219,7 @@ async function PDFFIRE(res: Response, req: Request) {
       doc.fontSize(9);
       nextpdy = nextpdy + 30;
       doc.text(
-        "For further details and quiries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
+        "For further details and queries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
         30,
         nextpdy,
         {
@@ -1452,13 +1484,13 @@ async function PDFMAR(res: Response, req: Request) {
         align: "left",
       });
       doc.font("Helvetica");
-      doc.text("which will expire on the date ", 410, 240, {
+      doc.text("which will expire on the date Indicated below.", 373, 240, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
 
       doc.text(
-        "Indicate below. With that, we are hoping that you will continue to trust our company by rendering good insurance services, and for being covered and protected beyond that date. Also your insurance coverage is adjusted to the current market value.",
+        "With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
         30,
         250,
         {
@@ -1540,7 +1572,7 @@ async function PDFMAR(res: Response, req: Request) {
       doc.fontSize(9);
       nextpdy = nextpdy + 30;
       doc.text(
-        "For further details and quiries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
+        "For further details and queries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
         30,
         nextpdy,
         {
@@ -1811,7 +1843,7 @@ async function PDFPA(res: Response, req: Request) {
       });
 
       doc.text(
-        "Indicate below. With that, we are hoping that you will continue to trust our company by rendering good insurance services, and for being covered and protected beyond that date. Also your insurance coverage is adjusted to the current market value.",
+        "Indicated below. With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
         30,
         250,
         {
@@ -1877,7 +1909,7 @@ async function PDFPA(res: Response, req: Request) {
       doc.fontSize(9);
       nextpdy = nextpdy + 30;
       doc.text(
-        "For further details and quiries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
+        "For further details and queries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
         30,
         nextpdy,
         {
