@@ -8,21 +8,21 @@ import {
   getApprovedPulloutWarehouseCheckList,
   getApprovedPulloutWarehouseCheckListSelected,
   getApprovedRCPNo,
-  loadList
+  loadList,
 } from "../../../model/Task/Accounting/warehouse.model";
 import saveUserLogs from "../../../lib/save_user_logs";
 import { VerifyToken } from "../../Authentication";
 
 const Warehouse = express.Router();
 
-Warehouse.post('/warehouse/load-list',async (req,res)=>{
-  try{
+Warehouse.post("/warehouse/load-list", async (req, res) => {
+  try {
     res.send({
       message: `Successfully Get Data`,
       success: true,
-      list: await loadList(req,req.body.RCPNo)
+      list: await loadList(req, req.body.RCPNo),
     });
-  }catch(err:any){
+  } catch (err: any) {
     console.log(err.message);
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
@@ -30,16 +30,15 @@ Warehouse.post('/warehouse/load-list',async (req,res)=>{
       data: [],
     });
   }
-})
-Warehouse.get('/warehouse/get-pullout-rcpno',async (req,res)=>{
-  try{
-    console.log('qweqw')
+});
+Warehouse.post("/warehouse/get-pullout-rcpno", async (req, res) => {
+  try {
     res.send({
       message: `Successfully Get Data`,
       success: true,
-      rcpn:  await getApprovedRCPNo(req),
+      data: await getApprovedRCPNo(req),
     });
-  }catch(err:any){
+  } catch (err: any) {
     console.log(err.message);
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
@@ -47,7 +46,7 @@ Warehouse.get('/warehouse/get-pullout-rcpno',async (req,res)=>{
       data: [],
     });
   }
-})
+});
 Warehouse.post(
   "/warehouse/search-pdc-checks-client-policy",
   async (req, res) => {
@@ -250,24 +249,21 @@ Warehouse.post("/warehouse/save", async (req, res) => {
     });
   }
 });
-Warehouse.post(
-  "/warehouse/report",
-  async (req, res) => {
-    try {
-      res.send({
-        message: "successfully",
-        success: true,
-        data:  await getWarehouseSearch(req.body.query ,req)
-      });
-    } catch (err: any) {
-      console.log(err.message);
-      res.send({
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-        success: false,
-        data: [],
-      });
-    }
+Warehouse.post("/warehouse/report", async (req, res) => {
+  try {
+    res.send({
+      message: "successfully",
+      success: true,
+      data: await getWarehouseSearch(req.body.query, req),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
   }
-);
+});
 
 export default Warehouse;

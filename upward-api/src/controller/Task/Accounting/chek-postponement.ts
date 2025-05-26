@@ -1,56 +1,36 @@
 import express from "express";
-import {
-  approvalCodePostponement,
-  checkPostponementRequestAutoID,
-  createPostponement,
-  createPostponementDetails,
-  getCheckPostponementPNNo,
-  getSelectedCheckPostponementPNNo,
-  searchEditPostponentRequest,
-  searchSelectedEditPostponentRequest,
-  updateOnCancelPostponentRequest,
-  updateOnCancelPostponentRequestDetails,
-  updatePostponementStatus,
-  updateApprovalPostponementCode,
-  findApprovalPostponementCode,
-  searchPDCCLients,
-  getRCPNList,
-  getRCPNDetails,
-  deleteOnUpdate,
-} from "../../../model/Task/Accounting/chek-postponement.model";
 import { getUserById } from "../../../model/StoredProcedure";
-import { updateAnyId } from "../../../model/Task/Accounting/pullout.model";
 import { format } from "date-fns";
 import sendEmail from "../../../lib/sendEmail";
 import generateRandomNumber from "../../../lib/generateRandomNumber";
-import saveUserLogs from "../../../lib/save_user_logs";
-import { VerifyToken } from "../../Authentication";
-import generateUniqueUUID from "../../../lib/generateUniqueUUID";
-import { Request } from "express";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../../controller";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 const CheckPostponement = express.Router();
+const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
+const UCSMIEmailToSend = ["charlespalencia0721@gmail.com"];
 
-const UMISEmailToSend = [
-  "upwardinsurance.grace@gmail.com",
-  "lva_ancar@yahoo.com",
-  "upwardinsurance.grace@gmail.com",
-];
-const UCSMIEmailToSend = [
-  "upward.csmi@yahoo.com",
-  "upward.csmi@gmail.com",
-  "upwardinsurance.grace@gmail.com",
-];
+// const UMISEmailToSend = [
+//   "upwardinsurance.grace@gmail.com",
+//   "lva_ancar@yahoo.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
+// const UCSMIEmailToSend = [
+//   "upward.csmi@yahoo.com",
+//   "upward.csmi@gmail.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
 
 // ========================= REQUEST =================================
+
 CheckPostponement.post(
   "/check-postponement/request/load-pnno",
   async (req, res) => {
     try {
-
-      console.log(req.body)
+      console.log(req.body);
       setTimeout(async () => {
         // Step 2: Create `tmp_numbers` table
         await prisma.$executeRawUnsafe(`
@@ -284,7 +264,7 @@ CheckPostponement.post(
   async (req, res) => {
     try {
       const data = await prisma.$queryRawUnsafe(
-        ` select '' as  RPCDNo  union all SELECT RPCDNo FROM postponement  Where Status = 'PENDING' and Branch = 'HO'`
+        `  SELECT RPCDNo FROM postponement  Where Status = 'PENDING' and Branch = 'HO'`
       );
 
       res.send({
@@ -446,7 +426,9 @@ CheckPostponement.post(
           Status: "PENDING",
           Branch: req.body.BranchRef,
           Prepared_by: req.body.Prepared_By,
-          Surplus: parseFloat(req.body.SurplusRef.replace(/,/g, "") || 0).toFixed(2),
+          Surplus: parseFloat(
+            req.body.SurplusRef.replace(/,/g, "") || 0
+          ).toFixed(2),
           Deducted_to: req.body.DeductedToRef,
         },
       });
@@ -658,7 +640,204 @@ CheckPostponement.post("/check-postponement/request/edit", async (req, res) => {
   }
 });
 // ========================= APPROVED ===========================
-CheckPostponement.get(
+CheckPostponement.post(
+  "/check-postponement/approved/print",
+  async (req, res) => {
+    try {
+      console.log(req.body);
+
+      const newData = req.body.tableData;
+
+      let PAGE_WIDTH = 612;
+      let PAGE_HEIGHT = 792;
+
+      const headers = [
+        {
+          label: "CHECK NO",
+          key: "CheckNo",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "OLD CHECK DATE",
+          key: "OldDepositDate",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "NEW CHECK DATE",
+          key: "NewDate",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "BANK",
+          key: "Bank",
+          style: { align: "left", width: 80 },
+        },
+        {
+          label: "AMOUNT",
+          key: "Amount",
+          style: { align: "right", width: 60 },
+        },
+           {
+          label: "PENALTY",
+          key: "Penalty",
+          style: { align: "right", width: 60 },
+        },
+        {
+          label: "NUMBER OF DAYS",
+          key: "Datediff",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "REASON",
+          key: "Reason",
+          style: { align: "left", width: 80 },
+        },
+        { label: "SEQ", key: "ln", style: { align: "right", width: 30 } },
+      ];
+
+      const outputFilePath = "manok.pdf";
+      const doc = new PDFDocument({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+
+      const writeStream = fs.createWriteStream(outputFilePath);
+      doc.pipe(writeStream);
+      doc.fontSize(12);
+      doc.text(req.body.reportTitle, 0, 35, {
+        align: "center",
+        baseline: "middle",
+      });
+      doc.text("Post Date Checks Postponement Approved", 0, 52, {
+        align: "center",
+        baseline: "middle",
+      });
+
+      doc.fontSize(8);
+      // first line
+      doc.font("Helvetica-Bold");
+      doc.text("P.N. No. :", 20, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.state.PNo, 85, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica-Bold");
+      doc.text("Reference No :", PAGE_WIDTH - 150, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.state.rcpnNo, PAGE_WIDTH - 80, 85, {
+        align: "left",
+      });
+
+      // second line
+      doc.font("Helvetica-Bold");
+      doc.text("Client Name  :", 20, 100, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.state.Name, 85, 100, {
+        align: "left",
+      });
+
+      let yAxis = 115 + 35;
+
+      doc.font("Helvetica-Bold");
+
+      let hx = 20;
+      headers.forEach((colItm: any, colIndex: number) => {
+        doc.text(colItm.label, hx, yAxis, {
+          align: colItm.style.align === "right" ? "center" : colItm.style.align,
+          width: colItm.style.width,
+        });
+        hx += colItm.style.width;
+      });
+
+      doc
+        .moveTo(10, yAxis + 20)
+        .lineTo(PAGE_WIDTH - 20, yAxis + 20)
+        .stroke();
+
+      yAxis += 27;
+
+      doc.font("Helvetica");
+
+      newData.forEach((rowItm: any, rowIndex: number) => {
+        const rowHeight = Math.max(
+          ...headers.map((itm: any) => {
+            return doc.heightOfString(rowItm[itm.key], {
+              width: itm.style.width  - 5,
+              align: itm.style.align,
+            });
+          })
+        );
+        let x = 20;
+        headers.forEach((colItm: any, colIndex: number) => {
+          doc.text(rowItm[colItm.key], x , yAxis, {
+            align: colItm.style.align,
+            width: colItm.style.width -5,
+          });
+          x += colItm.style.width;
+        });
+
+        yAxis += rowHeight + 3;
+      });
+      let xs = 10;
+      doc.text(
+        `Received By : _______________________`,
+        20 + xs,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
+
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 30,
+        {
+          align: "left",
+        }
+      );
+
+      doc.text(`Page 1 of 1`, PAGE_WIDTH - 120, PAGE_HEIGHT - 30, {
+        align: "right",
+        width: 100,
+      });
+
+      doc.end();
+      writeStream.on("finish", (e: any) => {
+        console.log(`PDF created successfully at: ${outputFilePath}`);
+        const readStream = fs.createReadStream(outputFilePath);
+        readStream.pipe(res);
+
+        readStream.on("end", () => {
+          fs.unlink(outputFilePath, (err) => {
+            if (err) {
+              console.error("Error deleting file:", err);
+            } else {
+              console.log(`File ${outputFilePath} deleted successfully.`);
+            }
+          });
+        });
+      });
+    } catch (error: any) {
+      console.log(`${error.message}`);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+
+CheckPostponement.post(
   "/check-postponement/approve/load-rpcdno",
   async (req, res) => {
     try {
@@ -666,7 +845,7 @@ CheckPostponement.get(
         message: `Update ${req.body.RPCDNoRef} Successfully`,
         success: true,
         data: await prisma.$queryRawUnsafe(
-          `select '' as RPCDNo union all Select RPCDNo from postponement  Where Status = 'PENDING'`
+          ` Select RPCDNo from postponement  Where Status = 'PENDING'`
         ),
       });
     } catch (error: any) {

@@ -577,24 +577,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
     doc.text(req.body.state.Name, 85, 100, {
       align: "left",
     });
-    // doc.font("Helvetica-Bold");
-    // doc.text("Date Received :", PAGE_WIDTH - 150, 100, {
-    //   align: "left",
-    // });
-    // doc.font("Helvetica");
-    // doc.text(req.body.state.Date, PAGE_WIDTH - 80, 100, {
-    //   align: "left",
-    // });
-    // third line
-    // doc.font("Helvetica-Bold");
-    // doc.text("Remarks :", 20, 115, {
-    //   align: "left",
-    // });
-    // doc.font("Helvetica");
-    // doc.text(req.body.state.Remarks, 85, 115, {
-    //   align: "left",
-    //   width: PAGE_WIDTH - 150,
-    // });
+    
     let yAxis = 115 + 35;
 
     doc.font("Helvetica-Bold");

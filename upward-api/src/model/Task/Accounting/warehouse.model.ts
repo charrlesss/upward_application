@@ -207,9 +207,6 @@ export async function updatePDCChecks(
 
 export async function getApprovedRCPNo(req: Request) {
   const query = `
-  select '' as RCPNo
-  union all
-  select * from (
   SELECT DISTINCT
       B.RCPNo
   FROM
@@ -224,8 +221,9 @@ export async function getApprovedRCPNo(req: Request) {
   WHERE
       PDC_Status = 'Stored'
           AND B.Status = 'APPROVED'
+          and B.RCPNo like'%${req.body.search}%'
   ORDER BY B.RCPNo
-  ) a
+  
 `;
 
   return await prisma.$queryRawUnsafe(query);
