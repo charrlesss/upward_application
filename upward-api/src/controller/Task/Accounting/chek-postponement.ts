@@ -10,19 +10,19 @@ import fs from "fs";
 import PDFDocument from "pdfkit";
 
 const CheckPostponement = express.Router();
-const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
-const UCSMIEmailToSend = ["charlespalencia0721@gmail.com"];
+// const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
+// const UCSMIEmailToSend = ["charlespalencia0721@gmail.com"];
 
-// const UMISEmailToSend = [
-//   "upwardinsurance.grace@gmail.com",
-//   "lva_ancar@yahoo.com",
-//   "upwardinsurance.grace@gmail.com",
-// ];
-// const UCSMIEmailToSend = [
-//   "upward.csmi@yahoo.com",
-//   "upward.csmi@gmail.com",
-//   "upwardinsurance.grace@gmail.com",
-// ];
+const UMISEmailToSend = [
+  "upwardinsurance.grace@gmail.com",
+  "lva_ancar@yahoo.com",
+  "upwardinsurance.grace@gmail.com",
+];
+const UCSMIEmailToSend = [
+  "upward.csmi@yahoo.com",
+  "upward.csmi@gmail.com",
+  "upwardinsurance.grace@gmail.com",
+];
 
 // ========================= REQUEST =================================
 
