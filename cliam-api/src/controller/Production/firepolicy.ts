@@ -232,7 +232,8 @@ async function insertFirePolicy(
     totalDueRef,
     strArea,
     cStrArea,
-    fsTaxRef
+    fsTaxRef,
+    department
   }: any,
   req: Request
 ) {
@@ -268,6 +269,7 @@ async function insertFirePolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom:   (parseFloat(agentCommisionRef.replace(/,/g, ''))).toFixed(2),
+      Department: department,
     },
     req
   );

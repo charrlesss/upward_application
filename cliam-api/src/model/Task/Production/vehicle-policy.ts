@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
-
 export async function searchClientByNameOrByID(input: string, req: Request) {
   const qry = `
   select * from (
@@ -353,6 +352,7 @@ export async function createPolicy(
     Journal: boolean;
     AgentID: string;
     AgentCom: string;
+    Department: string;
   },
   req: Request
 ) {

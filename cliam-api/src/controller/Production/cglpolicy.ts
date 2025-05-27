@@ -214,6 +214,7 @@ async function insertCGLPolicy(
     cStrArea,
     addressRef,
     sumInsuredRef,
+    department
   }: any,
   req: Request
 ) {
@@ -242,6 +243,7 @@ async function insertCGLPolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom: agentCommisionRef,
+      Department: department,
     },
     req
   );

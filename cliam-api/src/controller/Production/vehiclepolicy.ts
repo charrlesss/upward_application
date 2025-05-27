@@ -200,7 +200,7 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
   }
 });
 
-VehiclePolicy.post("/temp-to-regular", async (req:any, res:any) => {
+VehiclePolicy.post("/temp-to-regular", async (req: any, res: any) => {
   try {
     const newPolicy = req.body.newPolicyNo;
     const oldPolicy = req.body.oldPolicyNo;
@@ -297,7 +297,7 @@ VehiclePolicy.post("/temp-to-regular", async (req:any, res:any) => {
         "1.03.01",
         oldPolicy,
         "1.03.03",
-        'P/R'
+        "P/R"
       );
       await _prisma.$executeRawUnsafe(
         ` UPDATE journal
@@ -306,9 +306,9 @@ VehiclePolicy.post("/temp-to-regular", async (req:any, res:any) => {
         "4.02.01",
         oldPolicy,
         "4.02.07",
-        'A/P'
+        "A/P"
       );
-      
+
       await _prisma.$executeRawUnsafe(
         ` UPDATE journal
             SET ID_No = ?
@@ -324,7 +324,6 @@ VehiclePolicy.post("/temp-to-regular", async (req:any, res:any) => {
         newPolicy,
         oldPolicy
       );
-     
     });
 
     res.send({
@@ -680,9 +679,7 @@ VehiclePolicy.post("/search-policy-selected", async (req, res) => {
     res.send({ message: err.message, success: false, data1: [], data2: [] });
   }
 });
-VehiclePolicy.post("/save", async (req, res:any) => {
-
-
+VehiclePolicy.post("/save", async (req, res: any) => {
   try {
     let dt: any = await prisma.$queryRawUnsafe(
       `SELECT * FROM policy as Policy  WHERE PolicyNo = '${req.body.policyNoRef}' `
@@ -727,16 +724,20 @@ VehiclePolicy.post("/save", async (req, res:any) => {
     // const cStrArea = "Head Office";
     await insertNewVPolicy({ ...req.body, cStrArea, strArea }, req);
 
-    await saveUserLogs(prisma,req, req.body.policyNoRef, "add", "Vehicle Policy");
+    await saveUserLogs(
+      prisma,
+      req,
+      req.body.policyNoRef,
+      "add",
+      "Vehicle Policy"
+    );
     res.send({ message: "Create Vehicle Policy Successfully", success: true });
   } catch (err: any) {
     console.log(err.message);
     res.send({ message: err.message, success: false });
   }
 });
-VehiclePolicy.post("/com-update-regular", async (req, res:any) => {
-
-
+VehiclePolicy.post("/com-update-regular", async (req, res: any) => {
   try {
     if (
       !(await saveUserLogsCode(
@@ -788,8 +789,7 @@ VehiclePolicy.post("/com-update-regular", async (req, res:any) => {
   }
 });
 
-VehiclePolicy.post("/com-update-regular-tpl", async (req, res:any) => {
-
+VehiclePolicy.post("/com-update-regular-tpl", async (req, res: any) => {
   try {
     if (
       !(await saveUserLogsCode(
@@ -1066,6 +1066,7 @@ async function insertNewVPolicy(
     form_action,
     rateCostRef = 0,
     remarksRef,
+    department,
   }: any,
   req: Request
 ) {
@@ -1093,6 +1094,7 @@ async function insertNewVPolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom: agentCommisionRef,
+      Department: department,
     },
     req
   );
@@ -1421,11 +1423,10 @@ VehiclePolicy.get(
     }
   }
 );
-VehiclePolicy.post("/tpl-add-vehicle-policy", async (req, res:any) => {
+VehiclePolicy.post("/tpl-add-vehicle-policy", async (req, res: any) => {
   // convertToPassitive(req);
   const { sub_account, client_id, PolicyAccount, PolicyNo, Denomination } =
     req.body;
-
 
   try {
     if (await findPolicy(PolicyNo, req)) {
@@ -1455,14 +1456,14 @@ VehiclePolicy.post("/tpl-add-vehicle-policy", async (req, res:any) => {
     // const cStrArea = "Head Office";
     await insertNewVPolicy({ ...req.body, cStrArea, strArea }, req);
 
-    await saveUserLogs(prisma,req, PolicyNo, "add", "Vehicle Policy");
+    await saveUserLogs(prisma, req, PolicyNo, "add", "Vehicle Policy");
     res.send({ message: "Create Vehicle Policy Successfully", success: true });
   } catch (err: any) {
     console.log(err.message);
     res.send({ message: err.message, success: false });
   }
 });
-VehiclePolicy.post("/tpl-update-vehicle-policy", async (req, res:any) => {
+VehiclePolicy.post("/tpl-update-vehicle-policy", async (req, res: any) => {
   convertToPassitive(req);
 
   const {
@@ -1474,7 +1475,15 @@ VehiclePolicy.post("/tpl-update-vehicle-policy", async (req, res:any) => {
     Denomination,
   } = req.body;
   try {
-    if (!(await saveUserLogsCode(req, "update", PolicyNo, "Vehicle Policy",prisma))) {
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "update",
+        PolicyNo,
+        "Vehicle Policy",
+        prisma
+      ))
+    ) {
       return res.send({ message: "Invalid User Code", success: false });
     }
     //get Commision rate
@@ -1526,12 +1535,18 @@ VehiclePolicy.get("/tpl-search-vehicle-policy", async (req, res) => {
     searchVPolicy: getSearch,
   });
 });
-VehiclePolicy.post("/tpl-delete-vehicle-policy", async (req, res:any) => {
-
-
+VehiclePolicy.post("/tpl-delete-vehicle-policy", async (req, res: any) => {
   const { PolicyAccount, form_type, PolicyNo } = req.body;
   try {
-    if (!(await saveUserLogsCode(req, "delete", PolicyNo, "Vehicle Policy",prisma))) {
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "delete",
+        PolicyNo,
+        "Vehicle Policy",
+        prisma
+      ))
+    ) {
       return res.send({ message: "Invalid User Code", success: false });
     }
 
@@ -1540,7 +1555,7 @@ VehiclePolicy.post("/tpl-delete-vehicle-policy", async (req, res:any) => {
     // //delete v policy
     await deleteVehiclePolicy(form_type, PolicyNo, req);
 
-    await saveUserLogs(prisma,req, PolicyNo, "delete", "Vehicle Policy");
+    await saveUserLogs(prisma, req, PolicyNo, "delete", "Vehicle Policy");
     res.send({
       message: "Delete Vehicle Policy Successfully",
       success: true,
@@ -1554,4 +1569,3 @@ VehiclePolicy.post("/tpl-delete-vehicle-policy", async (req, res:any) => {
 });
 
 export default VehiclePolicy;
- 

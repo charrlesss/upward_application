@@ -95,7 +95,7 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
       req.body.policyNo
     );
     const totalDiscount = await prisma.$queryRawUnsafe(
-      `SELECT ifNull(SUM(Debit),0)  as discount FROM upward_insurance_umis.journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
+      `SELECT ifNull(SUM(Debit),0)  as discount FROM ${database}.journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
       req.body.policyNo
     );
 
@@ -107,9 +107,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                 ${
+                   database === "claims"
+                     ? `a.Department`
+                     : database === "upward_insurance_umis"
+                     ? "'UMIS'"
+                     : "'UCSMI'"
+                 } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -161,9 +165,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                 ${
+                   database === "claims"
+                     ? `a.Department`
+                     : database === "upward_insurance_umis"
+                     ? "'UMIS'"
+                     : "'UCSMI'"
+                 } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -207,9 +215,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                ${
+                  database === "claims"
+                    ? `a.Department`
+                    : database === "upward_insurance_umis"
+                    ? "'UMIS'"
+                    : "'UCSMI'"
+                } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -253,9 +265,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                 ${
+                   database === "claims"
+                     ? `a.Department`
+                     : database === "upward_insurance_umis"
+                     ? "'UMIS'"
+                     : "'UCSMI'"
+                 } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -299,9 +315,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                 ${
+                   database === "claims"
+                     ? `a.Department`
+                     : database === "upward_insurance_umis"
+                     ? "'UMIS'"
+                     : "'UCSMI'"
+                 } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -345,9 +365,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+              ${
+                database === "claims"
+                  ? `a.Department`
+                  : database === "upward_insurance_umis"
+                  ? "'UMIS'"
+                  : "'UCSMI'"
+              } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -391,9 +415,13 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
               a.IDNo,
               a.PolicyType,
               a.PolicyNo,
-              '${
-                database === "upward_insurance_umis" ? "UMIS" : "UCSMI"
-              }' AS Department,
+                  ${
+                    database === "claims"
+                      ? `a.Department`
+                      : database === "upward_insurance_umis"
+                      ? "'UMIS'"
+                      : "'UCSMI'"
+                  } AS Department,
               IF(b.company <> ''
                       AND b.company IS NOT NULL,
                   b.company,
@@ -530,7 +558,7 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
 
-     if (req.body.department === "UMIS") {
+    if (req.body.department === "UMIS") {
       database = "upward_insurance_umis";
     } else if (req.body.department === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
@@ -1045,6 +1073,19 @@ Claims.post(
     try {
       const reqFile = req.files as any;
       const claimId = req.body.claimId;
+
+      const findClaimNo: any = await prisma.claims.findUnique({
+        where: { claim_id: claimId },
+      });
+
+      if (findClaimNo) {
+        return res.send({
+          data: [],
+          message: `Claim No. is Already Exist!`,
+          success: false,
+        });
+      }
+
       const policyDetails = JSON.parse(req.body.policyDetails);
       const __metadata = Array.isArray(req.body.metadata)
         ? req.body.metadata
@@ -1275,8 +1316,6 @@ Claims.post(
 
       const basicDocuments = JSON.parse(req.body.basicDocuments);
       const uploadedBasicFiles = (reqFile.basic as Express.Multer.File[]) || [];
-
-      console.log(uploadedBasicFiles);
 
       if (fs.existsSync(mainDir)) {
         fs.rmSync(mainDir, { recursive: true, force: true });

@@ -328,6 +328,7 @@ async function insertBondsPolicy(
     totalDueRef,
     strArea,
     cStrArea,
+    department
   }: any,
   req: Request
 ) {
@@ -370,6 +371,7 @@ async function insertBondsPolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom: agentCommisionRef,
+      Department: department,
     },
     req
   );
@@ -392,7 +394,7 @@ async function insertBondsPolicy(
       IssuedLoctCorp: il2Ref,
       CIssued: di2Ref,
       BondValue: parseFloat(insuredValueRef.replace(/,/g, "")),
-      Percentage: percentageRef,
+      Percentage:parseFloat(percentageRef.replace(/,/g, "")) ,
       Officer: officerRef,
       OPosition: positionRef,
       Validity: validityRef,

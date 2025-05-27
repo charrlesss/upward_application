@@ -230,6 +230,7 @@ async function insertMSPRPolicy(
     totalDueRef,
     strArea,
     cStrArea,
+    department
   }: any,
   req: Request
 ) {
@@ -259,6 +260,7 @@ async function insertMSPRPolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom: agentCommisionRef,
+      Department: department,
     },
     req
   );

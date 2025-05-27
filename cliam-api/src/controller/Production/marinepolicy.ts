@@ -16,7 +16,7 @@ import {
   getWords,
   deleteMarinePolicy,
   deletePolicyFromMarine,
-  getSearchMarinePolicySelected
+  getSearchMarinePolicySelected,
 } from "../../model/Task/Production/marine-policy";
 
 import {
@@ -101,9 +101,8 @@ MarinePolicy.post("/get-marine-policy", (req, res) => {
   }
 });
 
-MarinePolicy.post("/add-marine-policy", async (req, res:any) => {
+MarinePolicy.post("/add-marine-policy", async (req, res: any) => {
   convertToPassitive(req);
-
 
   const { subAccountRef, clientIDRef, accountRef, policyNoRef } = req.body;
 
@@ -184,7 +183,7 @@ MarinePolicy.post(
   }
 );
 
-MarinePolicy.post("/update-marine-policy", async (req, res:any) => {
+MarinePolicy.post("/update-marine-policy", async (req, res: any) => {
   convertToPassitive(req);
 
   const { subAccountRef, clientIDRef, accountRef, policyNoRef } = req.body;
@@ -233,8 +232,7 @@ MarinePolicy.post("/update-marine-policy", async (req, res:any) => {
   }
 });
 
-MarinePolicy.post("/delete-marine-policy", async (req, res:any) => {
-
+MarinePolicy.post("/delete-marine-policy", async (req, res: any) => {
   const { PolicyAccount, PolicyNo } = req.body;
   try {
     if (!(await saveUserLogsCode(req, "delete", PolicyNo, "Marine Policy"))) {
@@ -290,10 +288,11 @@ async function insertMarinePolicy(
     remarks2Ref,
     strArea,
     cStrArea,
+    department
   }: any,
   req: Request
 ) {
-  console.log(req.body)
+  console.log(req.body);
   dateFromRef = defaultFormat(new Date(dateFromRef));
   dateToRef = defaultFormat(new Date(dateToRef));
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));
@@ -318,6 +317,7 @@ async function insertMarinePolicy(
       Journal: false,
       AgentID: agentIdRef,
       AgentCom: agentCommisionRef,
+      Department: department,
     },
     req
   );
@@ -344,7 +344,7 @@ async function insertMarinePolicy(
   for (let i = 0; i <= 1; i++) {
     const wording = "MPolicy";
     const sType = i === 0 ? false : true;
-    const phrase = i === 0 ?   remarks2Ref : remarks1Ref;
+    const phrase = i === 0 ? remarks2Ref : remarks1Ref;
     await createWords(
       {
         Wordings: wording,
