@@ -208,6 +208,7 @@ model policy {
   AgentID      String?  @db.VarChar(100)
   AgentCom     Decimal? @db.Decimal(19, 4)
   Remitted     Boolean  @default(false)
+  Department   String?  @db.VarChar(100)
 }
 
 model fpolicy {
@@ -348,7 +349,6 @@ model words {
   WORD_ID  Int     @id @default(autoincrement())
 }
 
-
 model system_logs {
   action       String   @db.Text
   logs_id      Int      @id @default(autoincrement())
@@ -379,8 +379,6 @@ model sub_account {
   update      DateTime @default(now())
 }
 
-
-
 model contact_details {
   contact_details_id String          @id @default(uuid())
   email              String          @default("") @db.VarChar(2255)
@@ -403,7 +401,7 @@ model entry_agent {
   contact_details          contact_details @relation(fields: [agent_contact_details_id], references: [contact_details_id], map: "Entry_Agent_agent_contact_details_id_fkey")
   sub_account              String          @db.VarChar(500)
   suffix                   String          @default("") @db.VarChar(550)
-  position                   String          @default("") @db.VarChar(550)
+  position                 String          @default("") @db.VarChar(550)
 }
 
 model entry_client {
@@ -430,15 +428,15 @@ model entry_client {
 }
 
 model entry_employee {
-  entry_employee_id String @id
-  firstname         String @default("") @db.VarChar(225)
-  middlename        String @default("") @db.VarChar(225)
-  lastname          String @default("") @db.VarChar(225)
-  sub_account       String @default("") @db.VarChar(225)
-  suffix            String @default("") @db.VarChar(550)
-  address   String   @db.Text
-  createdAt DateTime @default(now())
-  update    DateTime @default(now())
+  entry_employee_id String   @id
+  firstname         String   @default("") @db.VarChar(225)
+  middlename        String   @default("") @db.VarChar(225)
+  lastname          String   @default("") @db.VarChar(225)
+  sub_account       String   @default("") @db.VarChar(225)
+  suffix            String   @default("") @db.VarChar(550)
+  address           String   @db.Text
+  createdAt         DateTime @default(now())
+  update            DateTime @default(now())
 }
 
 model entry_fixed_assets {
