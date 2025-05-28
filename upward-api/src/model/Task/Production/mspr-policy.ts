@@ -3,10 +3,9 @@ import { PrismaList } from "../../connection";
 import { prisma } from "../../../controller/index";
 
 export async function getMSPRRate(Account: string, Line: string, req: Request) {
-
-  const query = `select * from rates where trim(Account)='${Account.trim()}' AND  Line = '${Line}'`;
+  const query = `select * from rates where trim(Account)= ? AND  Line = ?`;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, Account.trim(), Line);
 }
 export async function createMSPRPolicy(data: any, req: Request) {
   return await prisma.msprpolicy.create({ data });
@@ -35,12 +34,12 @@ select
     ) c on b.IDNo = c.IDNo
     left join entry_agent d on b.AgentID = d.entry_agent_id
     where 
-    a.PolicyNo like '%${search}%' or
-     c.ShortName like '%${search}%' 
+    a.PolicyNo like ? or
+     c.ShortName like ? 
     order by b.DateIssued desc
     limit 100
     `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, `%${search}%`, `%${search}%`);
 }
 
 export async function searchSelectedMsprPolicy(policyNo: string) {
@@ -78,25 +77,25 @@ select
           entry_agent  a
     ) d on b.AgentID = d.agentIDNo
     where 
-    a.PolicyNo = '${policyNo}'
+    a.PolicyNo = ?
     `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 
 export async function deleteMsprPolicy(PolicyNo: string, req: Request) {
   const query = `
   delete from msprpolicy 
   where 
-  PolicyNo = '${PolicyNo}'
+  PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 
 export async function deletePolicyFromMspr(policyNo: string, req: Request) {
   const query = `
   delete from policy 
   where 
-  PolicyType = 'MSPR' and PolicyNo = '${policyNo}'
+  PolicyType = 'MSPR' and PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }

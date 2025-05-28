@@ -1,26 +1,26 @@
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
-
-export async function getMarineRate(account: string, line: string, req: Request) {
-
+export async function getMarineRate(
+  account: string,
+  line: string,
+  req: Request
+) {
   const query = `
     select Rate from rates 
     where 
-    Account = '${account}' 
-    and Line = '${line}' 
+    Account = ? 
+    and Line = ? 
     `;
-    console.log(query)
-  return await prisma.$queryRawUnsafe(query);
+  console.log(query);
+  return await prisma.$queryRawUnsafe(query, account, line);
 }
 export async function createMarinePolicy(data: any, req: Request) {
-
   return await prisma.mpolicy.create({
     data,
   });
 }
 export async function searchMarinePolicy(search: string, req: Request) {
-
   const query = `
 select  a.Account,
       a.PolicyNo,
@@ -42,28 +42,25 @@ select  a.Account,
     ) c on b.IDNo = c.IDNo
     left join entry_agent d on b.AgentID = d.entry_agent_id
     where 
-    a.PolicyNo like '%${search}%' or
-    c.ShortName like '%${search}%' 
+    a.PolicyNo like ? or
+    c.ShortName like ? 
     order by b.DateIssued desc
     limit 100
 
     `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, `%${search}%`, `%${search}%`);
 }
 export async function createWords(data: any, req: Request) {
-
   return await prisma.words.create({
     data,
   });
 }
 export async function deleteWords(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
     delete from words where Wordings = 'Mpolicy' and (SType = 1 OR SType = 0)
 `);
 }
 export async function getWords(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
     select * from words where Wordings = 'Mpolicy' and (SType = 1 OR SType = 0)
 `);
@@ -72,22 +69,20 @@ export async function deleteMarinePolicy(PolicyNo: string, req: Request) {
   const query = `
   delete from mpolicy 
   where 
-    PolicyNo = '${PolicyNo}'
+    PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 
 export async function deletePolicyFromMarine(policyNo: string, req: Request) {
-
   const query = `
   delete from policy 
   where 
-  PolicyType = 'MAR' and PolicyNo = '${policyNo}'
+  PolicyType = 'MAR' and PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 export async function getSearchMarinePolicySelected(policyNo: string) {
-
   const query = `
  select  
    a.*,
@@ -122,7 +117,7 @@ export async function getSearchMarinePolicySelected(policyNo: string) {
           entry_agent  a
     ) d on b.AgentID = d.agentIDNo
     where 
-    a.PolicyNo = '${policyNo}'
+    a.PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }

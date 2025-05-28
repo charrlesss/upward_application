@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
-
 export async function createPAPolicy(data: any, req: Request) {
   return await prisma.papolicy.create({ data });
 }
@@ -41,9 +40,9 @@ left join (
           entry_agent  a
     ) d on b.AgentID = d.agentIDNo
     where 
-    a.PolicyNo = '${policyNo}'
+    a.PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 export async function searchPAPolicy(search: string) {
   const query = `
@@ -68,36 +67,36 @@ export async function searchPAPolicy(search: string) {
   ) c on b.IDNo = c.IDNo
   left join entry_agent d on b.AgentID = d.entry_agent_id
   where 
-  a.PolicyNo like '%${search}%' OR
-  c.ShortName like '%${search}%' 
+  a.PolicyNo like ? OR
+  c.ShortName like ? 
   order by b.DateIssued desc
   limit 100
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, `%${search}%`, `%${search}%`);
 }
 
 export async function deletePAPolicy(PolicyNo: string, req: Request) {
   const query = `
   delete from papolicy 
   where 
-   PolicyNo = '${PolicyNo}' 
+   PolicyNo = ? 
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 export async function findPAPolicy(PolicyNo: string, req: Request) {
   const query = `
   select *  from papolicy 
   where 
-   PolicyNo = '${PolicyNo}' and TRIM(PolicyType) = 'PA'
+   PolicyNo = ? and TRIM(PolicyType) = 'PA'
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 
 export async function deletePolicyByPAPolicy(PolicyNo: string, req: Request) {
   const query = `
   delete from policy 
   where 
-   PolicyNo = '${PolicyNo}'
+   PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }

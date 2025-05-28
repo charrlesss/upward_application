@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
 
-
 export async function searchClientByNameOrByID(input: string, req: Request) {
   const qry = `
   select * from (
@@ -18,12 +17,12 @@ export async function searchClientByNameOrByID(input: string, req: Request) {
         entry_client a
     ) a
   where 
-  a.IDNo like '%${input}%' OR
-  a.name like '%${input}%' 
+  a.IDNo like ? OR
+  a.name like ? 
   order by a.name asc
   limit 100
   `;
-  return (await prisma.$queryRawUnsafe(qry)) as any;
+  return (await prisma.$queryRawUnsafe(qry, `%${input}%`, `%${input}%`)) as any;
 }
 export async function searchAgentByNameOrByID(input: string, req: Request) {
   const qry = `
@@ -41,12 +40,12 @@ export async function searchAgentByNameOrByID(input: string, req: Request) {
     ) a
 
     where 
-    a.IDNo like '%${input}%' OR
-    a.name like '%${input}%' 
+    a.IDNo like ? OR
+    a.name like ? 
     order by a.name asc
     limit 100
   `;
-  return (await prisma.$queryRawUnsafe(qry)) as any;
+  return (await prisma.$queryRawUnsafe(qry, `%${input}%`, `%${input}%`)) as any;
 }
 export async function getPolicyAccount(whr: string, req: Request) {
   const qry = `
@@ -129,17 +128,17 @@ export async function getTPL_IDS(search: string, req: Request) {
                     AND Explanation = 'CTPL Registration'
                     AND Source_No_Ref_ID <> ''
                     AND (Remarks = '' OR Remarks IS NULL)
-                    AND Source_No like '%${search}%'
+                    AND Source_No like ?
                     group by Source_No_Ref_ID
                     order by Source_No;
         
         `;
-  console.log(qry);
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(qry, `%${search}%`);
 }
 
 export async function getRateFromTPLUpdate(Source_No: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
       MIN(Source_No) AS Source_No,
       MIN(CAST(Credit AS DECIMAL (20 , 2 ))) as Cost ,
@@ -150,10 +149,12 @@ export async function getRateFromTPLUpdate(Source_No: string, req: Request) {
           Explanation = 'CTPL Registration'
           AND Credit > 0
           AND Remarks IS NULL 
-          AND Source_No = '${Source_No}'
+          AND Source_No = ?
   GROUP BY Source_No_Ref_ID
   ORDER BY Source_No ASC
-  `);
+  `,
+    Source_No
+  );
 }
 
 export async function createJournal(data: any, req: Request) {
@@ -205,11 +206,11 @@ export async function getPolicy(
   const query = `
   SELECT * FROM policy 
   WHERE 
-  Account = '${account}'
-  AND PolicyType = '${form_type}' 
-  AND PolicyNo = '${policy_no}'
+  Account = ?
+  AND PolicyType = ? 
+  AND PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, account, form_type, policy_no);
 }
 export async function getRate(
   account: string,
@@ -220,12 +221,12 @@ export async function getRate(
   const query = `
   select Rate from rates 
   where 
-  trim(Account) = '${account.trim()}' 
-  and trim(Line) = '${line}' 
-  and trim(Type) = '${type}'
+  trim(Account) = ? 
+  and trim(Line) = ?
+  and trim(Type) = ?
   `;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, account.trim(), line, type);
 }
 
 export async function getRateVPolicy(
@@ -237,12 +238,11 @@ export async function getRateVPolicy(
   const query = `
   select Rate from rates 
   where 
-  trim(Account) = '${account.trim()}' 
-  and trim(Line) = '${line}' 
-  and trim(Type) = '${type}'
+  trim(Account) = ? 
+  and trim(Line) =  ? 
+  and trim(Type) = ?  
   `;
-  console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, account.trim(), line, type);
 }
 
 export async function getClientById(entry_client_id: string, req: Request) {
@@ -253,11 +253,9 @@ export async function getClientById(entry_client_id: string, req: Request) {
   entry_client a
     LEFT JOIN
   sub_account b ON a.sub_account = b.Sub_Acct
-  where a.entry_client_id ='${entry_client_id}'
+  where a.entry_client_id = ?
   `;
-  console.log(query);
-
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, entry_client_id);
 }
 
 export async function deletePolicyByVehicle(
@@ -268,11 +266,11 @@ export async function deletePolicyByVehicle(
   const query = `
   delete from policy 
   where 
-  PolicyType = '${form_type}' 
-  and PolicyNo = '${policyNo}'
+  PolicyType = ? 
+  and PolicyNo = ?
   `;
-  console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+
+  return await prisma.$queryRawUnsafe(query, form_type, policyNo);
 }
 
 export async function deletePolicy(
@@ -284,12 +282,12 @@ export async function deletePolicy(
   const query = `
   delete from policy 
   where 
-  Account = '${subAccount}' 
-  and PolicyType = '${form_type}' 
-  and PolicyNo = '${policyNo}'
+  Account = ? 
+  and PolicyType = ? 
+  and PolicyNo = ?
   `;
-  console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+
+  return await prisma.$queryRawUnsafe(query, subAccount, form_type, policyNo);
 }
 
 export async function deleteVehiclePolicy(
@@ -300,9 +298,9 @@ export async function deleteVehiclePolicy(
   const query = `
   delete from vpolicy 
   where 
-   PolicyNo = '${policyNo}'
+   PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 
 export async function deleteJournalBySource(
@@ -313,10 +311,10 @@ export async function deleteJournalBySource(
   const query = `
     delete from journal 
     where 
-    Source_No = '${source_no}' 
-    and Source_Type = '${source_type}'
+    Source_No = ?
+    and Source_Type = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, source_no, source_type);
 }
 
 export async function deleteTPLFromJournalBySource(
@@ -326,11 +324,11 @@ export async function deleteTPLFromJournalBySource(
   const query = `
   delete from journal 
   where 
-  Source_No = '${source_no}' 
+  Source_No = ? 
   and Source_Type = 'GL'
   and Explanation <> 'CTPL Registration'
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, source_no);
 }
 
 export async function createPolicy(
@@ -517,27 +515,36 @@ export async function searchDataVPolicy(
 
             b.PolicyNo is not null and
             a.PolicyNo is not null and
-            a.PolicyType = '${policyType}' and
+            a.PolicyType = ? and
             ${
               isTemp
                 ? "left(a.PolicyNo,3) = 'TP-'and"
                 : "left(a.PolicyNo,3) != 'TP-' and"
             }
         (
-            a.PolicyNo like '%${search}%' or
-            c.ShortName like '%${search}%' or
-             b.PlateNo like '%${search}%' or
-            b.ChassisNo like '%${search}%' or
-           b.MotorNo like '%${search}%' 
+            a.PolicyNo like ? or
+            c.ShortName like ? or
+             b.PlateNo like ? or
+            b.ChassisNo like ? or
+           b.MotorNo like ? 
         )
       ORDER BY a.PolicyNo desc
       LIMIT 100 
   `;
-  return await prisma.$queryRawUnsafe(qry);
+  const params = [
+    policyType,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`,
+  ];
+  return await prisma.$queryRawUnsafe(qry, ...params);
 }
 
 export async function getCostByTPL(Source_No: string, req: Request) {
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
        SELECT 
 				  (Source_No) AS Source_No,
 				  (CAST(Credit AS DECIMAL (20 , 2 ))) as Cost ,
@@ -547,6 +554,8 @@ export async function getCostByTPL(Source_No: string, req: Request) {
 			  WHERE
 					  Explanation = 'CTPL Registration'
 					  AND Credit > 0
-            AND Source_No = '${Source_No}'
-      `);
+            AND Source_No = ?
+      `,
+    Source_No
+  );
 }

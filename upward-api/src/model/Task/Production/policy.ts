@@ -3,7 +3,6 @@ import { clients_view } from "../../db/views";
 import { sanitizeInput } from "../../../lib/sanitizeInput";
 import { prisma } from "../../../controller/index";
 
-
 export async function getPolicySummary(policyNo: string, req: Request) {
   const qryString = clients_view();
   const query = `
@@ -34,10 +33,10 @@ export async function getPolicySummary(policyNo: string, req: Request) {
       left join sub_account f on e.sub_account = f.Sub_Acct
       left join contact_details g on e.contact_details_id = g.contact_details_id
 		WHERE 
-		  a.PolicyNo = '${policyNo}'
+		  a.PolicyNo = ?
         `;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 export async function getClientDetailsFromPolicy(
   clientId: string,
@@ -55,17 +54,16 @@ export async function getClientDetailsFromPolicy(
           from (${qryString}) a
           left join sub_account b on a.sub_account = b.Sub_Acct
           left join contact_details c on a.contact_details_id = c.contact_details_id
-          where a.IDNo = '${clientId}'
+          where a.IDNo = ?
         `;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, clientId);
 }
 export async function getClients(
   search: string,
   hasLimit: boolean = false,
   req: Request
 ) {
-
   const query = `
         SELECT
         a.entry_client_id,
@@ -84,7 +82,8 @@ export async function getClients(
         limit 50
         `;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  const params = [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`];
+  return await prisma.$queryRawUnsafe(query, ...params);
 }
 
 export async function getAgents(
@@ -92,7 +91,6 @@ export async function getAgents(
   hasLimit: boolean = false,
   req: Request
 ) {
-
   const query = `
       SELECT
       a.entry_agent_id,
@@ -107,11 +105,11 @@ export async function getAgents(
       ORDER BY a.createdAt desc
       limit 250
       `;
-  return await prisma.$queryRawUnsafe(query);
+  const params = [`%${search}%`, `%${search}%`, `%${search}%`];
+  return await prisma.$queryRawUnsafe(query, ...params);
 }
 
 export async function getPolicyAccount(type: string, req: Request) {
-
   return await prisma.policy_account.findMany({
     select: {
       Account: true,
@@ -125,43 +123,45 @@ export async function getPolicyAccount(type: string, req: Request) {
 }
 
 export async function policyAccounts(Line: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
     SELECT 
         MAX(Account) as Account 
     FROM
           rates
     WHERE
-        Line = '${Line}'  
+        Line = ?
     GROUP BY Account
     ORDER BY Account asc
-
-  `);
+  `,
+    Line
+  );
 }
 export async function policyTypes(Line: string, Account: string, req: Request) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
       TYPE
     FROM
           rates
     WHERE
-        Line = '${Line}' AND
-        Account = '${Account}'
+        Line = ? AND
+        Account = ?
     GROUP BY TYPE
     ORDER BY TYPE asc
-  `);
+  `,
+    Line,
+    Account
+  );
 }
 
 export async function getPolicyAccountType(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   select SubLineName from subline where line = 'Bonds'
   `);
 }
 
 export async function getPolicyAccountByBonds(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   SELECT Account ,G02, G13, G16 FROM  policy_account WHERE G16 = 1 OR G02 = 1 OR G13 =1 ORDER BY Account
   `);
@@ -172,22 +172,24 @@ export async function getPolicyAccounts(
   line: string,
   req: Request
 ) {
-
-  return await prisma.$queryRawUnsafe(`
+  return await prisma.$queryRawUnsafe(
+    `
   SELECT 
     MAX(Account) as Account
   FROM
       rates
   WHERE
-  Line = '${line}'
-      AND SUBSTRING(type, 1, 3) = '${type}'
+  Line = ?
+      AND SUBSTRING(type, 1, 3) = ?
   group by Account
   ORDER BY Account asc
-  `);
+  `,
+    line,
+    type
+  );
 }
 
 export async function getPolicyType(Line: string, req: Request) {
-
   return await prisma.subline.findMany({
     select: {
       SublineName: true,
@@ -199,22 +201,19 @@ export async function getPolicyType(Line: string, req: Request) {
 }
 
 export async function getRates(type: string, Account: string, req: Request) {
-
   const query = `
-  select distinct type from   rates where Line = 'Vehicle' and SUBSTRING(type,1,3) = '${type}' and Account = '${Account}'
+  select distinct type from   rates where Line = 'Vehicle' and SUBSTRING(type,1,3) = ? and Account = ?
 `;
   console.log(query);
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query,type,Account);
 }
 
 export async function getSubAccount(req: Request) {
-
   const query = `
   SELECT a.Acronym FROM   sub_account a order by Acronym;`;
   return await prisma.$queryRawUnsafe(query);
 }
 export async function getMortgagee(type: string, req: Request) {
-
   const equals: any = {
     COM: "Comprehensive",
     TPL: "TPL",
@@ -233,16 +232,21 @@ export async function getMortgagee(type: string, req: Request) {
   });
 }
 
-export async function executeQuery(qry:string ,IDNo:string ,req:Request) {
-  const queryExec = `select * from (${qry}) a where a.IDNo = '${sanitizeInput(IDNo)}'`
-  console.log(queryExec)
-  return await prisma.$queryRawUnsafe(queryExec)
+export async function executeQuery(qry: string, IDNo: string, req: Request) {
+  const queryExec = `select * from (${qry}) a where a.IDNo = '${sanitizeInput(
+    IDNo
+  )}'`;
+  console.log(queryExec);
+  return await prisma.$queryRawUnsafe(queryExec);
 }
 
-
-export async function __executeQuery(qry:string ,req:any = null) {
-  return await prisma.$queryRawUnsafe(qry)
+export async function __executeQuery(qry: string, req: any = null) {
+  return await prisma.$queryRawUnsafe(qry);
 }
-export async function __executeQueryWithParams(qry:string,params:any[] ,req:Request) {
-  return await prisma.$queryRawUnsafe(qry,...params)
+export async function __executeQueryWithParams(
+  qry: string,
+  params: any[],
+  req: Request
+) {
+  return await prisma.$queryRawUnsafe(qry, ...params);
 }

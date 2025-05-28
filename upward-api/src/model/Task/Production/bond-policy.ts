@@ -2,34 +2,29 @@ import { Request } from "express";
 import { PrismaList } from "../../connection";
 import { prisma } from "../../../controller/index";
 
-
 export async function getBondRate(account: string, type: string, req: Request) {
-
   const query = `
     SELECT * FROM rates WHERE
-     Account = '${account}' 
+     Account = ? 
      AND Line = 'Bonds'
-     AND Type = '${type}'
+     AND Type = ?
       `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, account, type);
 }
 
 export async function createMarinePolicy(data: any, req: Request) {
-
   return await prisma.mpolicy.create({
     data,
   });
 }
 
 export async function createBondsPolicy(data: any, req: Request) {
-
   return await prisma.bpolicy.create({
     data: data,
   });
 }
 
 export async function searchBondsPolicy(search: string, req: Request) {
-
   const query = `
     select  
        a.Account,
@@ -52,16 +47,15 @@ export async function searchBondsPolicy(search: string, req: Request) {
     ) c on b.IDNo = c.IDNo
     left join entry_agent d on b.AgentID = d.entry_agent_id
     where 
-    a.PolicyNo like '%${search}%' or
-    c.ShortName like '%${search}%'  
+    a.PolicyNo like ? or
+    c.ShortName like ?  
     order by b.DateIssued desc
     limit 100
 
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, `%${search}%`, `%${search}%`);
 }
 export async function searchSelectedBondsPolicy(policyNo: string) {
-
   const query = `
     select
         c.*,
@@ -96,10 +90,10 @@ export async function searchSelectedBondsPolicy(policyNo: string) {
           entry_agent  a
     ) d on b.AgentID = d.agentIDNo
     where 
-    a.PolicyNo = '${policyNo}'
+    a.PolicyNo = ?
 
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 
 export async function deleteBondsPolicy(
@@ -107,13 +101,12 @@ export async function deleteBondsPolicy(
   PolicyNo: string,
   req: Request
 ) {
-
   const query = `
   delete from bpolicy 
   where 
-   PolicyNo = '${PolicyNo}'
+   PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 
 export async function deletePolicyFromBond(
@@ -121,28 +114,25 @@ export async function deletePolicyFromBond(
   PolicyNo: string,
   req: Request
 ) {
-
   const query = `
   delete from policy 
   where 
-  PolicyType in (SELECT SublineName FROM subline where Line = 'Bonds') and PolicyNo = '${PolicyNo}'
+  PolicyType in (SELECT SublineName FROM subline where Line = 'Bonds') and PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, PolicyNo);
 }
 
 // SELECT SublineName FROM subline where Line = 'Bonds';
 export async function deletePolicyFromBonds(policyNo: string, req: Request) {
-
   const query = `
   delete from policy 
   where 
-  PolicyType = 'FIRE' and PolicyNo = '${policyNo}'
+  PolicyType = 'FIRE' and PolicyNo = ?
   `;
-  return await prisma.$queryRawUnsafe(query);
+  return await prisma.$queryRawUnsafe(query, policyNo);
 }
 
 export async function getAllBondsType(req: Request) {
-
   return await prisma.$queryRawUnsafe(`
   SELECT SublineName FROM subline where Line = 'Bonds'
   `);
