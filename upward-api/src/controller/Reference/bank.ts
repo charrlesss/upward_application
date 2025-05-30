@@ -7,12 +7,10 @@ import {
   updateBank,
 } from "../../model/Reference/banl.mode.";
 import saveUserLogs from "../../lib/save_user_logs";
-import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
+import { saveUserLogsCode } from "../../lib/saveUserlogsCode";       
 import { VerifyToken } from "../Authentication";
 
 const Bank = express.Router();
-
-
 
 Bank.post("/add-bank", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
@@ -48,7 +46,6 @@ Bank.post("/add-bank", async (req: Request, res: Response) => {
     });
   }
 });
-
 Bank.post("/update-bank", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -81,7 +78,6 @@ Bank.post("/update-bank", async (req: Request, res: Response) => {
     });
   }
 });
-
 Bank.post("/delete-bank", async (req: Request, res: Response) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -111,9 +107,8 @@ Bank.post("/delete-bank", async (req: Request, res: Response) => {
     });
   }
 });
-
 Bank.post("/search-bank", async (req: Request, res: Response) => {
-  const { bankSearch } = req.query;
+ 
   try {
     res.send({
       message: "Search Bank Successfuly",

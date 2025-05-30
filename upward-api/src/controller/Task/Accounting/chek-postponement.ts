@@ -882,13 +882,14 @@ CheckPostponement.post(
           seleCT *, 
           (selecT pnno from postponement where RPCDNo = A.RPCD) as 'PNNO' 
           from postponement_detail A) a 
-      where RPCD = '${req.body.RPCDNo}'   
+      where RPCD = ?   
+      order by OldDepositDate asc
       `;
       console.log(qry);
       res.send({
         message: `Update ${req.body.RPCDNo} Successfully`,
         success: true,
-        data: await prisma.$queryRawUnsafe(qry),
+        data: await prisma.$queryRawUnsafe(qry ,req.body.RPCDNo),
       });
     } catch (error: any) {
       console.log(`${error.message}`);

@@ -126,7 +126,7 @@ export async function deletePolicyFromBond(
 export async function deletePolicyFromBonds(policyNo: string, req: Request) {
   const query = `
   delete from policy 
-  where 
+  where  
   PolicyType = 'FIRE' and PolicyNo = ?
   `;
   return await prisma.$queryRawUnsafe(query, policyNo);
