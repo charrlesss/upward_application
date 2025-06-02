@@ -32,12 +32,12 @@ async function main() {
   app.use(cors(corsOptions));
   app.use(express.static(path.join(__dirname, "static")));
   app.use(express.static(path.join(__dirname, "/static/image/")));
-  // app.use(express.static(path.join(__dirname, "/src/view")));
+  app.use(express.static(path.join(__dirname, "/src/view")));
   app.use("/api", router);
   // creatSampleUser()
-  // app.get("*", (req, res) => {
-  //   res.sendFile(path.join(__dirname, "/src/view/", "index.html"));
-  // });
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "/src/view/", "index.html"));
+  });
   app.listen(PORT, () => console.log(`Listen in port ${PORT}`));
 }
 
