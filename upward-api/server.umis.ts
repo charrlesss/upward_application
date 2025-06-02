@@ -34,7 +34,7 @@ async function main() {
   app.use(cors(corsOptions));
   app.use(express.static(path.join(__dirname, "static")));
   app.use(express.static(path.join(__dirname, "/static/image/")));
-  app.use(express.static(path.join(__dirname, "/src/view")));
+  app.use(express.static(path.join(__dirname, "/src/viewumis")));
 
   app.use((req, res, next) => {
     console.log(`Received ${req.method} from ${req.ip} to ${req.originalUrl}`);

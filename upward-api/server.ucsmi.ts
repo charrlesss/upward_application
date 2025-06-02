@@ -33,7 +33,7 @@ async function main() {
   app.use(cors(corsOptions));
   app.use(express.static(path.join(__dirname, "static")));
   app.use(express.static(path.join(__dirname, "/static/image/")));
-  app.use(express.static(path.join(__dirname, "/src/view")));
+  app.use(express.static(path.join(__dirname, "/src/viewucsmi")));
   app.use("/api", router);
   // creatSampleUser()
   app.get("*", (req, res) => {
