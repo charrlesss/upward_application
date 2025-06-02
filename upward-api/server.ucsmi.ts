@@ -17,6 +17,7 @@ const corsOptions = {
      "https://umis.upwardinsurance.net", 
      "https://ucsmi.upwardinsurance.net", 
      "https://upwardinsurance.net", 
+     'http://192.168.100.220:3000',
     "/", 
     "*"],
   credentials: true,
@@ -24,7 +25,7 @@ const corsOptions = {
 };
 
 async function main() {
-  console.log(hashSync('EMP17008',12))
+  console.log(hashSync('dwight',12))
   const app = express();
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json({ limit: "1000mb" }));
@@ -36,7 +37,7 @@ async function main() {
   app.use("/api", router);
   // creatSampleUser()
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "/src/view/", "index.html"));
+    res.sendFile(path.join(__dirname, "/src/viewucsmi/", "index.html"));
   });
   app.listen(PORT, () => console.log(`Listen in port ${PORT}`));
 }
