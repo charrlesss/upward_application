@@ -387,7 +387,6 @@ Deposit.post("/update-deposit", async (req, res) => {
     });
   }
 });
-
 async function addDeposit(req: any) {
   console.log(req.body);
   const { IDEntryWithPolicy } = qry_id_policy_sub();

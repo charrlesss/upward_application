@@ -13,7 +13,6 @@ export async function loadRCPNApproved(req: Request) {
     `;
   return await prisma.$queryRawUnsafe(qry);
 }
-
 export async function loadRCPNApprovedList(req: Request, RCPN: string) {
   if (RCPN !== "") {
     const qry = `
@@ -47,7 +46,6 @@ export async function deletePulloutRequest(req: Request, RCPNo: string) {
     RCPNo
   );
 }
-
 export async function deletePulloutRequestDetails(req: Request, RCPNo: string) {
   return await prisma.$queryRawUnsafe(
     `
@@ -67,11 +65,9 @@ export async function deletePulloutRequestAutoCodes(
     RCPNo
   );
 }
-
 export async function insertApprovalCode(data: any, req: Request) {
   return await prisma.pullout_auth_codes.create({ data });
 }
-
 export async function updateAnyId(type: string, req: Request) {
   return await prisma.$queryRawUnsafe(
     `
@@ -98,11 +94,9 @@ export async function updateAnyId(type: string, req: Request) {
 export async function createPulloutRequest(data: any, req: Request) {
   return await prisma.pullout_request.create({ data });
 }
-
 export async function createPulloutRequestDetails(data: any, req: Request) {
   return await prisma.pullout_request_details.create({ data });
 }
-
 export async function updateApprovalCode(
   RCPN: string,
   Approved_Code: string,
@@ -121,7 +115,6 @@ export async function updateApprovalCode(
     Approved_Code
   );
 }
-
 export async function loadRequestNumber(req: Request) {
   return await prisma.$queryRawUnsafe(
     `sElect '' as RCPNo union all  Select RCPNo from pullout_request where Status = 'PENDING' and Branch = 'HO' `
@@ -150,21 +143,18 @@ export async function loadDetails(req: Request, RCPNo: string) {
     RCPNo
   );
 }
-
 export async function checkApprovedCode(req: Request, code: string) {
   return await prisma.$queryRawUnsafe(
     `selecT * from pullout_auth_codes where Approved_Code = ? and used_by is null`,
     code
   );
 }
-
 export async function checkApprovedCodeIsUsed(req: Request, RCPN: string) {
   return await prisma.$queryRawUnsafe(
     `selecT * from pullout_auth_codes where RCPN = ? and used_by is not null`,
     RCPN
   );
 }
-
 export async function updateCode(req: Request, username: string, code: string) {
   return await prisma.$queryRawUnsafe(
     `update pullout_auth_codes set used_by = ?, used_datetime = now() where Approved_Code = ? `,

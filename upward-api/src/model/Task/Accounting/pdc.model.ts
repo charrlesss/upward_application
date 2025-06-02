@@ -20,7 +20,7 @@ SELECT
   CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS Shortname,
   aa.entry_agent_id as client_id,
   aa.address
-FROM
+FROM 
   entry_agent aa
 union all
 SELECT 
@@ -208,7 +208,6 @@ export async function checkClientID(id: string, req: Request) {
     ` SELECT * FROM (${withPolicy}) a where a.IDNo = '${id}'`
   );
 }
-
 export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
   const qry = `
   SELECT 
@@ -234,7 +233,6 @@ export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
     `%${search}%`
   );
 }
-
 export async function getCashPayTo(search: string) {
   const _withPolicy = `
 SELECT 
