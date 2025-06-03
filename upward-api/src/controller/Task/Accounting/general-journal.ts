@@ -26,7 +26,10 @@ import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
 import { VerifyToken } from "../../Authentication";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 import PDFReportGenerator from "../../../lib/pdf-generator";
-import { formatNumber, getSum } from "../../Reports/Production/production-report";
+import {
+  formatNumber,
+  getSum,
+} from "../../Reports/Production/production-report";
 const GeneralJournal = express.Router();
 
 /// new
@@ -94,14 +97,14 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
     const PAGE_WIDTH = 635;
     const PAGE_HEIGHT = 792;
     const newData = req.body.generalJournal;
-    console.log(req.body)
+    console.log(req.body);
     newData.push({
       code: "",
       acctName: "",
       IDNo: "",
       ClientName: "TOTAL : ",
-      debit: formatNumber(getSum(newData,'debit')),
-      credit: formatNumber(getSum(newData,'credit')),
+      debit: formatNumber(getSum(newData, "debit")),
+      credit: formatNumber(getSum(newData, "credit")),
     });
 
     newData.push({
@@ -146,78 +149,87 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
       ],
       keys: ["code", "acctName", "IDNo", "ClientName", "debit", "credit"],
       title: "",
-      setRowFontSize:9,
+      setRowFontSize: 9,
       BASE_FONT_SIZE: 8,
       PAGE_WIDTH,
       PAGE_HEIGHT,
       // addMarginInFirstPage: 40,
       MARGIN: { top: 70, right: 40, bottom: 30, left: 40 },
       addHeaderBorderBottom: true,
-      beforeDraw: (pdfReportGenerator: PDFReportGenerator, doc: PDFKit.PDFDocument) => {
-        pdfReportGenerator.borderColumnInRow(newData.length - 4, [
-          { column: 0, key: 'code' },
-          { column: 1, key: 'acctName' },
-          { column: 2, key: 'IDNo' },
-          { column: 3, key: 'ClientName' },
-          { column: 4, key: 'debit' },
-          { column: 5, key: 'credit' }
-        ], {
-          top: true,
-          bottom: false,
-          left: false,
-          right: false
-        });
-        pdfReportGenerator.borderColumnInRow(newData.length - 3, [
-          { column: 0, key: 'code' },
-          { column: 1, key: 'acctName' },
-          { column: 2, key: 'IDNo' },
-          { column: 3, key: 'ClientName' },
-          { column: 4, key: 'debit' },
-          { column: 5, key: 'credit' }
-        ], {
-          top: true,
-          bottom: false,
-          left: false,
-          right: false
-        });
-        pdfReportGenerator.borderColumnInRow(newData.length - 2, [
-          { column: 0, key: 'code' },
-          { column: 1, key: 'acctName' },
-          { column: 2, key: 'IDNo' },
-          { column: 3, key: 'ClientName' },
-          { column: 4, key: 'debit' },
-          { column: 5, key: 'credit' }
-        ], {
-          top: true,
-          bottom: false,
-          left: false,
-          right: false
-        });
+      beforeDraw: (
+        pdfReportGenerator: PDFReportGenerator,
+        doc: PDFKit.PDFDocument
+      ) => {
+        pdfReportGenerator.borderColumnInRow(
+          newData.length - 4,
+          [
+            { column: 0, key: "code" },
+            { column: 1, key: "acctName" },
+            { column: 2, key: "IDNo" },
+            { column: 3, key: "ClientName" },
+            { column: 4, key: "debit" },
+            { column: 5, key: "credit" },
+          ],
+          {
+            top: true,
+            bottom: false,
+            left: false,
+            right: false,
+          }
+        );
+        pdfReportGenerator.borderColumnInRow(
+          newData.length - 3,
+          [
+            { column: 0, key: "code" },
+            { column: 1, key: "acctName" },
+            { column: 2, key: "IDNo" },
+            { column: 3, key: "ClientName" },
+            { column: 4, key: "debit" },
+            { column: 5, key: "credit" },
+          ],
+          {
+            top: true,
+            bottom: false,
+            left: false,
+            right: false,
+          }
+        );
+        pdfReportGenerator.borderColumnInRow(
+          newData.length - 2,
+          [
+            { column: 0, key: "code" },
+            { column: 1, key: "acctName" },
+            { column: 2, key: "IDNo" },
+            { column: 3, key: "ClientName" },
+            { column: 4, key: "debit" },
+            { column: 5, key: "credit" },
+          ],
+          {
+            top: true,
+            bottom: false,
+            left: false,
+            right: false,
+          }
+        );
 
-        
-
-        pdfReportGenerator.setAlignment(newData.length - 4 ,3,'center')
+        pdfReportGenerator.setAlignment(newData.length - 4, 3, "center");
         pdfReportGenerator.boldRow(newData.length - 4);
 
         pdfReportGenerator.SpanRow(newData.length - 3, 0, 6);
-        pdfReportGenerator.setAlignment(newData.length - 3 ,0,'center')
+        pdfReportGenerator.setAlignment(newData.length - 3, 0, "center");
         pdfReportGenerator.boldRow(newData.length - 3);
 
         pdfReportGenerator.SpanRow(newData.length - 2, 0, 6);
-        pdfReportGenerator.setAlignment(newData.length - 2 ,0,'center')
+        pdfReportGenerator.setAlignment(newData.length - 2, 0, "center");
         pdfReportGenerator.boldRow(newData.length - 2);
 
         pdfReportGenerator.SpanRow(newData.length - 1, 0, 6);
-        pdfReportGenerator.setAlignment(newData.length - 1 ,0,'center')
+        pdfReportGenerator.setAlignment(newData.length - 1, 0, "center");
         pdfReportGenerator.boldRow(newData.length - 1);
-   
-
       },
       beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {
-            // 
+        //
         // pdfReportGenerator.boldRow(newData.length - 1);
-
-       
 
         doc.font("Helvetica-Bold");
         doc.fontSize(14);
@@ -235,10 +247,15 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
           align: "left",
           width: 130,
         });
-        doc.text(`Date   : ${format(new Date(req.body.JVDate),'MM/dd/yyyy')}`, PAGE_WIDTH - 155, 65, {
-          align: "left",
-          width: 130,
-        });
+        doc.text(
+          `Date   : ${format(new Date(req.body.JVDate), "MM/dd/yyyy")}`,
+          PAGE_WIDTH - 155,
+          65,
+          {
+            align: "left",
+            width: 130,
+          }
+        );
         doc.fontSize(9);
       },
       drawPageNumber: (
@@ -249,10 +266,15 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
       ) => {
         doc.font("Helvetica");
         const pageNumberText = `Page ${currentPage}`;
-        doc.text(pageNumberText, PAGE_WIDTH - 160, pdfReportGenerator.PAGE_HEIGHT - 35, {
-          align: "right",
-          width: 100,
-        });
+        doc.text(
+          pageNumberText,
+          PAGE_WIDTH - 160,
+          pdfReportGenerator.PAGE_HEIGHT - 35,
+          {
+            align: "right",
+            width: 100,
+          }
+        );
 
         doc.text(
           `Printed: ${format(new Date(), "MM/dd/yyyy, hh:mm a")}`,
@@ -263,7 +285,6 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
             width: 200,
           }
         );
-
       },
     };
     const pdfReportGenerator = new PDFReportGenerator(props);
@@ -644,6 +665,20 @@ GeneralJournal.post("/general-journal/jobs", async (req, res) => {
       response = await MonthlyProductionComputation(
         req.body.jobTransactionDate,
         "FEDERAL PHOENIX",
+        req
+      );
+      break;
+    case "12":
+     const { from: fromNilAstraData, to: toNilAstraDate } = RPTComputationDate(
+        req.body.jobTransactionDate
+      );
+      response = await RPTComputation(
+        (await doRPTTransaction(
+          fromNilAstraData,
+          toNilAstraDate,
+          "N I L - ASTRA",
+          req
+        )) as Array<any>,
         req
       );
       break;

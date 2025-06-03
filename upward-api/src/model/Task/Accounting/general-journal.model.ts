@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Request } from "express";
 import { prisma } from "../../../controller/index";
+import { selectClient } from "./pdc.model";
 
 export async function GenerateGeneralJournalID(req: Request) {
   return await prisma.$queryRawUnsafe(`
@@ -353,6 +354,7 @@ export async function doRPTTransactionLastRow(req: Request) {
       a.entry_others_id = 'O-0124-001';
     `);
 }
+
 export async function doMonthlyProduction(
   account: string,
   month: number,
@@ -405,55 +407,7 @@ export async function doRPTTransaction(
           GROUP BY IDNo) b ON b.IDNo = a.PolicyNo
         left join  (
           SELECT a.IDNo, a.address, a.Shortname as ClientName,a.sub_account , b.ShortName , b.Acronym from (
-          
-    SELECT 
-    'Client' AS Type,
-    aa.entry_client_id AS IDNo,
-    aa.sub_account,
-    CONCAT(aa.lastname, ', ', aa.firstname) AS Shortname,
-    aa.address
-FROM
-      entry_client aa 
-UNION ALL SELECT 
-    'Agent' AS Type,
-    aa.entry_agent_id AS IDNo,
-    aa.sub_account,
-    CONCAT(aa.lastname, ', ', aa.firstname) AS Shortname,
-    aa.address
-FROM
-      entry_agent aa 
-UNION ALL SELECT 
-    'Employee' AS Type,
-    aa.entry_employee_id AS IDNo,
-    aa.sub_account,
-    CONCAT(aa.lastname, ', ', aa.firstname) AS Shortname,
-    aa.address
-FROM
-      entry_employee aa 
-UNION ALL SELECT 
-    'Supplier' AS Type,
-    aa.entry_supplier_id AS IDNo,
-    aa.sub_account,
-    CONCAT(aa.lastname, ', ', aa.firstname) AS Shortname,
-    aa.address
-FROM
-      entry_supplier aa 
-UNION ALL SELECT 
-    'Fixed Assets' AS Type,
-    aa.entry_fixed_assets_id AS IDNo,
-    aa.sub_account,
-    aa.fullname AS Shortname,
-    CONCAT(aa.description, ' - ', aa.remarks) AS address
-FROM
-      entry_fixed_assets aa 
-UNION ALL SELECT 
-    'Others' AS Type,
-    aa.entry_others_id AS IDNo,
-    aa.sub_account,
-    aa.description AS Shortname,
-    CONCAT(aa.description, ' - ', aa.remarks) AS address
-FROM
-      entry_others aa
+          ${selectClient}
            ) a
           left join   sub_account b on a.sub_account = b.Sub_Acct
           ) d on a.IDNo = d.IDNo
