@@ -112,7 +112,8 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -146,11 +147,21 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = itm.date_approved !== "" ? format(new Date(itm.date_report), "MM/dd/yyyy") : "";
-      itm.date_received =  itm.date_approved !== "" ? format(new Date(itm.date_received), "MM/dd/yyyy") : "";
+      itm.date_report =
+        itm.date_approved !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_approved !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+          : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
           : "";
       return itm;
     });
@@ -192,7 +203,7 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
       },
       {
         label: "Date of Claim",
-        key: "date_report",
+        key: "date_accident",
         style: { width: 80, textAlign: "left" },
       },
       {
@@ -408,7 +419,8 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -448,6 +460,11 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
 
@@ -461,7 +478,7 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
         { key: "PlateNo", width: 25 },
         { key: "ChassisNo", width: 30 },
         { key: "date_received", width: 22 },
-        { key: "date_report", width: 22 },
+        { key: "date_accident", width: 22 },
         { key: "claim_type", width: 22 },
         { key: "amount_claim", width: 22 },
         { key: "date_approved", width: 22 },
@@ -557,7 +574,8 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -593,6 +611,10 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+          : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
           : "";
       return itm;
     });
@@ -634,7 +656,7 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
       },
       {
         label: "Date of Claim",
-        key: "date_report",
+        key: "date_accident",
         style: { width: 80, textAlign: "left" },
       },
       {
@@ -857,7 +879,8 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -894,6 +917,10 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
 
@@ -907,7 +934,7 @@ Report.post("/report/ongoing-excel", async (req, res) => {
         { key: "PlateNo", width: 25 },
         { key: "ChassisNo", width: 30 },
         { key: "date_received", width: 22 },
-        { key: "date_report", width: 22 },
+        { key: "date_accident", width: 22 },
         { key: "claim_type", width: 22 },
         { key: "amount_claim", width: 22 },
         { key: "date_approved", width: 22 },
@@ -1005,7 +1032,8 @@ Report.post("/report/denied-pdf", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -1043,6 +1071,11 @@ Report.post("/report/denied-pdf", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
     const headers = [
@@ -1078,7 +1111,7 @@ Report.post("/report/denied-pdf", async (req, res) => {
       },
       {
         label: "Date of Claim",
-        key: "date_report",
+        key: "date_accident",
         style: { width: 80, textAlign: "left" },
       },
       {
@@ -1291,7 +1324,8 @@ Report.post("/report/denied-excel", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -1329,6 +1363,10 @@ Report.post("/report/denied-excel", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
 
@@ -1342,7 +1380,7 @@ Report.post("/report/denied-excel", async (req, res) => {
         { key: "PlateNo", width: 25 },
         { key: "ChassisNo", width: 30 },
         { key: "date_received", width: 22 },
-        { key: "date_report", width: 22 },
+        { key: "date_accident", width: 22 },
         { key: "claim_type", width: 22 },
         { key: "amount_claim", width: 22 },
         { key: "name_ttpd", width: 22 },
@@ -1438,7 +1476,8 @@ Report.post("/report/cancel-pdf", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -1476,6 +1515,10 @@ Report.post("/report/cancel-pdf", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
     const headers = [
@@ -1511,7 +1554,7 @@ Report.post("/report/cancel-pdf", async (req, res) => {
       },
       {
         label: "Date of Claim",
-        key: "date_report",
+        key: "date_accident",
         style: { width: 80, textAlign: "left" },
       },
       {
@@ -1729,7 +1772,8 @@ Report.post("/report/cancel-excel", async (req, res) => {
         b.claimStatus,
         b.date_approved,
         if(b.status = 'Approved','Settled',b.status) as status,
-        b.remarks
+        b.remarks,
+        b.date_accident
       `,
       where: `
       where 
@@ -1767,6 +1811,10 @@ Report.post("/report/cancel-excel", async (req, res) => {
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
           : "";
+      itm.date_accident =
+        itm.date_accident !== ""
+          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+          : "";
       return itm;
     });
 
@@ -1779,7 +1827,7 @@ Report.post("/report/cancel-excel", async (req, res) => {
         { key: "ChassisNo", width: 30 },
         { key: "PlateNo", width: 25 },
         { key: "date_received", width: 22 },
-        { key: "date_report", width: 22 },
+        { key: "date_accident", width: 22 },
         { key: "claim_type", width: 22 },
         { key: "amount_claim", width: 22 },
         { key: "amount_approved", width: 22 },
