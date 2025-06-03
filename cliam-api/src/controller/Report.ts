@@ -148,11 +148,11 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
 
     const data = result.map((itm: any) => {
       itm.date_report =
-        itm.date_approved !== ""
+        itm.date_report !== ""
           ? format(new Date(itm.date_report), "MM/dd/yyyy")
           : "";
       itm.date_received =
-        itm.date_approved !== ""
+        itm.date_received !== ""
           ? format(new Date(itm.date_received), "MM/dd/yyyy")
           : "";
       itm.date_approved =
@@ -454,8 +454,14 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -606,8 +612,14 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -911,8 +923,14 @@ Report.post("/report/ongoing-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -1065,8 +1083,14 @@ Report.post("/report/denied-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -1357,8 +1381,14 @@ Report.post("/report/denied-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -1509,8 +1539,14 @@ Report.post("/report/cancel-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
@@ -1805,8 +1841,14 @@ Report.post("/report/cancel-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report = format(new Date(itm.date_report), "MM/dd/yyyy");
-      itm.date_received = format(new Date(itm.date_received), "MM/dd/yyyy");
+      itm.date_report =
+        itm.date_report !== ""
+          ? format(new Date(itm.date_report), "MM/dd/yyyy")
+          : "";
+      itm.date_received =
+        itm.date_received !== ""
+          ? format(new Date(itm.date_received), "MM/dd/yyyy")
+          : "";
       itm.date_approved =
         itm.date_approved !== ""
           ? format(new Date(itm.date_approved), "MM/dd/yyyy")
