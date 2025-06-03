@@ -12,6 +12,103 @@ import PDFDocument from "pdfkit";
 import { format } from "date-fns";
 
 fs.ensureDirSync(uploadDir);
+
+Claims.post("/get-document", async (req, res) => {
+  try {
+    console.log(req.body);
+    const claimDocument: Array<any> = await prisma.$queryRawUnsafe(
+      `select documents from claims_details where claim_id = ?`,
+      req.body.claimNo
+    );
+    const claimBasicDocument: Array<any> = await prisma.$queryRawUnsafe(
+      `SELECT basicDocuments FROM claims where claim_id = ?;`,
+      req.body.claimNo
+    );
+    const basicdocumentsArray = JSON.parse(
+      claimBasicDocument[0].basicDocuments
+    );
+    const claimsdocumentsArray = JSON.parse(claimDocument[0].documents);
+
+    let PAGE_WIDTH = 612;
+    let PAGE_HEIGHT = 792;
+
+    const outputFilePath = "manok.pdf";
+    const doc = new PDFDocument({
+      size: [PAGE_WIDTH, PAGE_HEIGHT],
+      margin: 0,
+      bufferPages: true,
+    });
+
+    const writeStream = fs.createWriteStream(outputFilePath);
+    doc.pipe(writeStream);
+
+    basicdocumentsArray.forEach((itm: any) => {
+      if (itm.files.length > 0) {
+        let startX = 20;
+        let startY = 20;
+        for (let i = 0; i < itm.files.length; i++) {
+          const file = itm.files[i];
+          const label = itm.remarks[i];
+          const imageWidth = 200;
+          const imageHeigth = 200;
+          doc.image(
+            path.join(
+              __dirname,
+              `../../static/claim-files/${req.body.claimNo}/${file}`
+            ),
+            startX,
+            startY,
+            {
+              fit: [imageWidth, imageHeigth],
+            }
+          );
+          startY += imageHeigth;
+          startY += 10;
+          doc.text(label, startX, startY);
+
+          startY += 20;
+        }
+        doc.addPage({
+          margin: 0,
+          size: [PAGE_WIDTH, PAGE_HEIGHT],
+          bufferPages: true,
+        });
+      }
+    });
+
+    doc.end();
+    writeStream.on("finish", () => {
+      console.log(`PDF created successfully at: ${outputFilePath}`);
+      const readStream = fs.createReadStream(outputFilePath);
+      readStream.pipe(res);
+
+      readStream.on("end", () => {
+        fs.unlink(outputFilePath, (err) => {
+          if (err) {
+            console.error("Error deleting file:", err);
+          } else {
+            console.log(`File ${outputFilePath} deleted successfully.`);
+          }
+        });
+      });
+    });
+  } catch (error: any) {
+    console.log(error);
+    if (error.code === "P2028") {
+      res.send({
+        data: [],
+        message: `⚠️ Transaction cut off due to a network issue!`,
+        success: false,
+      });
+    } else {
+      res.send({
+        data: [],
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+      });
+    }
+  }
+});
 Claims.post("/get-claim-id", async (req, res): Promise<any> => {
   try {
     const currentMonth: any = await prisma.$queryRawUnsafe(`
