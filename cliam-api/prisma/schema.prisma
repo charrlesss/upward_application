@@ -48,7 +48,7 @@ model claims_details {
   claim_id               String    @db.VarChar(50)
   document_id            String    @db.VarChar(50)
   claim_type             String    @db.VarChar(550)
-  date_report            DateTime  @default(now())
+  date_report            DateTime? 
   date_accident          DateTime  @default(now())
   date_received          DateTime?
   date_approved          DateTime?

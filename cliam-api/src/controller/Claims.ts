@@ -1310,16 +1310,16 @@ Claims.post(
               date_report:
                 metadata.date_report_not_formated !== ""
                   ? new Date(metadata.date_report_not_formated)
-                  : undefined,
+                  : null,
               date_accident: new Date(metadata.date_accident_not_formated),
               date_received:
                 metadata.date_receive_not_formated !== ""
                   ? new Date(metadata.date_receive_not_formated)
-                  : undefined,
+                  : null,
               date_approved:
                 metadata.date_approved_not_formated !== ""
                   ? new Date(metadata.date_approved_not_formated)
-                  : undefined,
+                  : null,
               status: metadata.status,
               claimStatus: metadata.claimStatus,
               amount_claim: metadata.amount_claim.replace(/,/g, ""),

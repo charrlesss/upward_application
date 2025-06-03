@@ -147,22 +147,19 @@ Report.post("/report/approved-settled-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
     const headers = [
@@ -454,23 +451,19 @@ Report.post("/report/approved-settled-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
 
@@ -612,22 +605,19 @@ Report.post("/report/ongoing-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
     const headers = [
@@ -923,22 +913,19 @@ Report.post("/report/ongoing-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
 
@@ -1083,23 +1070,19 @@ Report.post("/report/denied-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
     const headers = [
@@ -1381,22 +1364,19 @@ Report.post("/report/denied-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
 
@@ -1539,22 +1519,19 @@ Report.post("/report/cancel-pdf", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
     const headers = [
@@ -1841,22 +1818,19 @@ Report.post("/report/cancel-excel", async (req, res) => {
     const result: any = await prisma.$queryRawUnsafe(qry);
 
     const data = result.map((itm: any) => {
-      itm.date_report =
-        itm.date_report !== ""
-          ? format(new Date(itm.date_report), "MM/dd/yyyy")
-          : "";
-      itm.date_received =
-        itm.date_received !== ""
-          ? format(new Date(itm.date_received), "MM/dd/yyyy")
-          : "";
-      itm.date_approved =
-        itm.date_approved !== ""
-          ? format(new Date(itm.date_approved), "MM/dd/yyyy")
-          : "";
-      itm.date_accident =
-        itm.date_accident !== ""
-          ? format(new Date(itm.date_accident), "MM/dd/yyyy")
-          : "";
+      itm.date_report = itm.date_report
+        ? format(new Date(itm.date_report), "MM/dd/yyyy")
+        : "";
+      console.log(itm.date_received);
+      itm.date_received = itm.date_received
+        ? format(new Date(itm.date_received), "MM/dd/yyyy")
+        : "";
+      itm.date_approved = itm.date_approved
+        ? format(new Date(itm.date_approved), "MM/dd/yyyy")
+        : "";
+      itm.date_accident = itm.date_accident
+        ? format(new Date(itm.date_accident), "MM/dd/yyyy")
+        : "";
       return itm;
     });
 
