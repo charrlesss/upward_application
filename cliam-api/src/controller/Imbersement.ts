@@ -5,7 +5,6 @@ import multer from "multer";
 import { v4 as uuidV4 } from "uuid";
 import path from "path";
 import fs from "fs";
-import { Console } from "console";
 
 const uploadDir = path.join(__dirname, "./../../static/reimbursement");
 
@@ -240,6 +239,8 @@ Imbersement.post(
           });
         }
 
+        console.log(updatedbasicDocuments);
+
         delete metadata.isUpdate;
         metadata.amount_claim = parseFloat(
           metadata.amount_claim.replace(/,/g, "")
@@ -319,26 +320,25 @@ Imbersement.post("/delete-imbersement", async (req, res): Promise<any> => {
       if (
         !(await saveUserLogsCode(
           req,
-          "update",
+          "delete",
           req.body.refNo,
-          "Imbersement",
+          "Reimbersement",
           _prisma
         ))
       ) {
         return res.send({ message: "Invalid User Code", success: false });
       }
+
       delete req.body.userCodeConfirmation;
+
+      const mainDir = path.join(uploadDir, req.body.refNo);
+      if (fs.existsSync(mainDir)) {
+        fs.rmSync(mainDir, { recursive: true, force: true });
+      }
 
       await _prisma.$queryRawUnsafe(
         `DELETE FROM claims.reimbursement WHERE refNo = ?`,
         req.body.refNo
-      );
-      await saveUserLogs(
-        _prisma,
-        req,
-        req.body.refNo,
-        "delete",
-        "Reimbersement"
       );
     });
 

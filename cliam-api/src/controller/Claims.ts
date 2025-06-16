@@ -2260,7 +2260,6 @@ async function generateUniqueClaimID() {
 
   return `${uniqueID}`;
 }
-
 const unionTable = `
      SELECT 
             b.IDNo,
