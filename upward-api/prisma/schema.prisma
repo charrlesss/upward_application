@@ -32,6 +32,13 @@ model bank {
   Inactive  Boolean
 }
 
+model careof {
+  careId   Int     @id @default(autoincrement())
+  careOf   String  @db.Text
+  address  String  @db.Text
+  inactive Boolean
+}
+
 model mortgagee {
   Policy    String   @db.VarChar(100)
   Mortgagee String   @unique @db.VarChar(255)
@@ -136,6 +143,7 @@ model vpolicy {
   LocalGovTaxPercent  Decimal? @default(0.0000) @db.Decimal(19, 4)
   TPLTypeSection_I_II String?
   Remarks             String?
+  careOf              String   @default("NONE")
 }
 
 model journal {
@@ -216,6 +224,7 @@ model fpolicy {
   Boundaries      String   @db.VarChar(550)
   Mortgage        String   @db.VarChar(550)
   Warranties      String   @db.VarChar(550)
+  careOf          String   @default("NONE")
 }
 
 model mpolicy {
@@ -232,6 +241,7 @@ model mpolicy {
   Consignee          String   @db.VarChar(255)
   InsuredValue       Decimal  @default(0.0000) @db.Decimal(19, 4)
   Percentage         Decimal  @default(0.0000) @db.Decimal(19, 4)
+  careOf             String   @default("NONE")
 }
 
 model bpolicy {
@@ -255,6 +265,7 @@ model bpolicy {
   Officer        String   @default("") @db.VarChar(255)
   OPosition      String   @default("") @db.VarChar(255)
   Validity       String   @default("") @db.VarChar(255)
+  careOf         String   @default("NONE")
 }
 
 model msprpolicy {
@@ -275,6 +286,7 @@ model msprpolicy {
   SecIPremiumB     Decimal  @db.Decimal(19, 4)
   SecII            Decimal  @db.Decimal(19, 4)
   SecIIPremium     Decimal  @db.Decimal(19, 4)
+  careOf           String   @default("NONE")
 }
 
 model papolicy {
@@ -284,6 +296,7 @@ model papolicy {
   PeriodFrom DateTime @db.DateTime(6)
   PeriodTo   DateTime @db.DateTime(6)
   Location   String   @db.VarChar(255)
+  careOf     String   @default("NONE")
 }
 
 model cglpolicy {
@@ -296,6 +309,7 @@ model cglpolicy {
   Location   String   @db.VarChar(255)
   LimitA     Decimal  @default(0.0000) @db.Decimal(19, 4)
   LimitB     Decimal  @default(0.0000) @db.Decimal(19, 4)
+  careOf     String   @default("NONE")
 }
 
 model chart_account {
@@ -741,7 +755,7 @@ model ledger {
 }
 
 model pdc {
-  PDC_ID           BigInt   @id @default(autoincrement())
+  PDC_ID          BigInt  @id @default(autoincrement())
   Ref_No          String  @db.VarChar(50)
   PNo             String? @db.VarChar(50)
   IDNo            String? @db.VarChar(50)
@@ -1038,7 +1052,7 @@ model entry_agent {
   contact_details          contact_details @relation(fields: [agent_contact_details_id], references: [contact_details_id], map: "Entry_Agent_agent_contact_details_id_fkey")
   sub_account              String          @db.VarChar(500)
   suffix                   String          @default("") @db.VarChar(550)
-  position                   String          @default("") @db.VarChar(550)
+  position                 String          @default("") @db.VarChar(550)
 }
 
 model entry_client {
@@ -1065,15 +1079,15 @@ model entry_client {
 }
 
 model entry_employee {
-  entry_employee_id String @id
-  firstname         String @default("") @db.VarChar(225)
-  middlename        String @default("") @db.VarChar(225)
-  lastname          String @default("") @db.VarChar(225)
-  sub_account       String @default("") @db.VarChar(225)
-  suffix            String @default("") @db.VarChar(550)
-  address   String   @db.Text
-  createdAt DateTime @default(now())
-  update    DateTime @default(now())
+  entry_employee_id String   @id
+  firstname         String   @default("") @db.VarChar(225)
+  middlename        String   @default("") @db.VarChar(225)
+  lastname          String   @default("") @db.VarChar(225)
+  sub_account       String   @default("") @db.VarChar(225)
+  suffix            String   @default("") @db.VarChar(550)
+  address           String   @db.Text
+  createdAt         DateTime @default(now())
+  update            DateTime @default(now())
 }
 
 model entry_fixed_assets {
