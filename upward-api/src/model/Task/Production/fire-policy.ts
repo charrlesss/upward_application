@@ -26,6 +26,7 @@ export async function createFirePolicy(
     Warranties,
     InsuredValue,
     Percentage,
+    careOf
   }: any,
   req: Request
 ) {
@@ -45,6 +46,7 @@ export async function createFirePolicy(
       Warranties,
       InsuredValue,
       Percentage,
+      careOf
     },
   });
 }

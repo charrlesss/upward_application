@@ -356,6 +356,7 @@ async function insertBondsPolicy(
     totalDueRef,
     strArea,
     cStrArea,
+    careOfRef
   }: any,
   req: Request
 ) {
@@ -424,6 +425,7 @@ async function insertBondsPolicy(
       Officer: officerRef,
       OPosition: positionRef,
       Validity: validityRef,
+      careOf: careOfRef,
     },
     req
   );

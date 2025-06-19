@@ -25,6 +25,7 @@ import {
   getPolicyDenomination,
   getPolicySubAccount,
   generateTempID,
+  getPolicyCareOf,
 } from "../../../model/Task/Production/vehicle-policy";
 import {
   __executeQuery,
@@ -465,6 +466,23 @@ VehiclePolicy.get("/sub-account", async (req, res) => {
       message: "search data successfully",
       success: true,
       data: await getPolicySubAccount(req),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      tempId: [],
+    });
+  }
+});
+VehiclePolicy.get("/care-of", async (req, res) => {
+  try {
+    res.send({
+      message: "search data successfully",
+      success: true,
+      data: await getPolicyCareOf(req),
     });
   } catch (error: any) {
     console.log(error.message);
@@ -1093,6 +1111,7 @@ async function insertNewVPolicy(
     form_action,
     rateCostRef = 0,
     remarksRef,
+    careOfRef
   }: any,
   req: Request
 ) {
@@ -1195,6 +1214,7 @@ async function insertNewVPolicy(
       ).toFixed(2),
       TPLTypeSection_I_II: typeRef,
       Remarks: remarksRef,
+      careOf:careOfRef
     },
     req
   );

@@ -48,7 +48,6 @@ ChartAccount.post("/add-chart-account", async (req: Request, res: Response) => {
     });
   }
 });
-
 ChartAccount.post(
   "/update-chart-account",
   async (req: Request, res: Response) => {
@@ -94,7 +93,6 @@ ChartAccount.post(
     }
   }
 );
-
 ChartAccount.post(
   "/delete-chart-account",
   async (req: Request, res: Response) => {
@@ -133,7 +131,6 @@ ChartAccount.post(
     }
   }
 );
-
 ChartAccount.post(
   "/search-chart-account",
   async (req: Request, res: Response) => {
@@ -153,12 +150,10 @@ ChartAccount.post(
     }
   }
 );
-
-
 ChartAccount.post("/practice-journal", async (req: Request, res: Response) => {
   console.log('qweqwe')
   try {
-    const data = await prisma.$queryRawUnsafe(`select * from policy order by PolicyNo Desc limit 10000`)
+    const data = await prisma.$queryRawUnsafe(`select * from policy order by PolicyNo Desc limit 1000`)
     res.send({
       message: "Create Chart Account Successfully!",
       success: true,

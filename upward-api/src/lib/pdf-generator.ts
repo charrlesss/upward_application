@@ -19,7 +19,7 @@ interface PDFReportGeneratorProps {
   boldedRows: Array<number>;
   spanMap: Map<any, any>;
   borderedColumns: Array<any>;
-  beforeDraw: (doc: any, document: PDFKit.PDFDocument) => void | null;
+  beforeDraw: (doc: any, document: PDFKit.PDFDocument) => number;
   beforePerPageDraw: (
     pdfReportGenerator: any,
     doc: PDFKit.PDFDocument
@@ -38,6 +38,7 @@ interface PDFReportGeneratorProps {
   addPadingfFromLeft: any;
   addRowHeight: any;
   adjustTitleFontSize: number;
+  addHeader: boolean;
 }
 
 function pageNumber(
@@ -83,7 +84,13 @@ class PDFReportGenerator {
   public boldedRows: Array<number> = [];
   public spanMap = new Map();
   public borderedColumns: Array<any>;
-  public beforeDraw = (doc: any, document: PDFKit.PDFDocument) => {};
+  public beforeDraw = (
+    doc: any,
+    document: PDFKit.PDFDocument,
+    startY: number
+  ) => {
+    return 0;
+  };
   public beforePerPageDraw = (
     pdfReportGenerator: any,
     doc: PDFKit.PDFDocument
@@ -107,6 +114,7 @@ class PDFReportGenerator {
   public addPadingfFromLeft: any = null;
   public addRowHeight: any = null;
   public adjustTitleFontSize: number = 3;
+  public addHeader: boolean = true;
 
   constructor(props: PDFReportGeneratorProps) {
     this.data = props.data;
@@ -143,6 +151,7 @@ class PDFReportGenerator {
     this.addPadingfFromLeft = props.addPadingfFromLeft || null;
     this.addRowHeight = props.addRowHeight || null;
     this.adjustTitleFontSize = props.adjustTitleFontSize || 3;
+    this.addHeader = props.addHeader !== undefined ? props.addHeader : true;
   }
 
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
@@ -224,8 +233,8 @@ class PDFReportGenerator {
     return maxHeight;
   }
 
-  drawTitleAndHeader(doc: PDFKit.PDFDocument, startY: number) {
-    let currentY = startY + 25;
+  drawTitleAndHeader(doc: PDFKit.PDFDocument, startY: number, sh: number = 25) {
+    let currentY = startY + sh;
     const titleLines = this.title.split("\n");
 
     doc
@@ -337,7 +346,7 @@ class PDFReportGenerator {
     }
 
     if (this.setRowFontSize > 0) {
-      doc.fontSize(9);
+      doc.fontSize(8);
     }
 
     let startX = this.MARGIN.left;
@@ -531,13 +540,19 @@ class PDFReportGenerator {
 
     let startY = this.MARGIN.top + 60;
     let currentPage = 1;
-    startY = this.drawTitleAndHeader(
-      doc,
-      this.MARGIN.top / 2 + this.addMarginInFirstPage
-    );
 
+    if (this.addHeader) {
+      startY = this.drawTitleAndHeader(
+        doc,
+        this.MARGIN.top / 2 + this.addMarginInFirstPage
+      );
+    }
     if (this.beforeDraw) {
-      this.beforeDraw(this, doc);
+      startY = this.beforeDraw(this, doc, startY) || startY;
+    }
+
+    if (!this.addHeader) {
+      startY = this.drawTitleAndHeader(doc, startY, -10);
     }
 
     this.data.forEach((row: any, rowIndex: any) => {

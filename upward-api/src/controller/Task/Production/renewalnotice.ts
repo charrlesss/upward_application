@@ -451,9 +451,14 @@ async function PDFCOM(res: Response, req: Request) {
       doc.font("Helvetica-Bold");
       doc.text("UPWARD", 155, 30);
 
-      doc.fontSize(9);
-      doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
-
+      if (process.env.DEPARTMENT === "UMIS") {
+        doc.fontSize(9);
+        doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
+      }
+      if (process.env.DEPARTMENT === "UCSMI") {
+        doc.fontSize(9);
+        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, 80);
+      }
       doc.fontSize(20);
       doc.text("RENEWAL NOTICE", 0, 120, {
         width: PAGE_WIDTH,
@@ -997,7 +1002,7 @@ async function PDFCOM(res: Response, req: Request) {
   const pdfReportGenerator = new PDFReportGenerator(props);
   return pdfReportGenerator.generatePDF(res, false);
 }
-async function PDFFIRE(res: Response, req: Request) {                                                                                           
+async function PDFFIRE(res: Response, req: Request) {
   const data: any = await prisma.$queryRawUnsafe(
     `
     SELECT 
@@ -1086,9 +1091,14 @@ async function PDFFIRE(res: Response, req: Request) {
       doc.font("Helvetica-Bold");
       doc.text("UPWARD", 155, 30);
 
-      doc.fontSize(9);
-      doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
-
+      if (process.env.DEPARTMENT === "UMIS") {
+        doc.fontSize(9);
+        doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
+      }
+      if (process.env.DEPARTMENT === "UCSMI") {
+        doc.fontSize(9);
+        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, 80);
+      }
       doc.fontSize(20);
       doc.text("RENEWAL NOTICE", 0, 120, {
         width: PAGE_WIDTH,
@@ -1428,9 +1438,14 @@ async function PDFMAR(res: Response, req: Request) {
       doc.font("Helvetica-Bold");
       doc.text("UPWARD", 155, 30);
 
-      doc.fontSize(9);
-      doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
-
+      if (process.env.DEPARTMENT === "UMIS") {
+        doc.fontSize(9);
+        doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
+      }
+      if (process.env.DEPARTMENT === "UCSMI") {
+        doc.fontSize(9);
+        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, 80);
+      }
       doc.fontSize(20);
       doc.text("RENEWAL NOTICE", 0, 120, {
         width: PAGE_WIDTH,
@@ -1781,9 +1796,14 @@ async function PDFPA(res: Response, req: Request) {
       doc.font("Helvetica-Bold");
       doc.text("UPWARD", 155, 30);
 
-      doc.fontSize(9);
-      doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
-
+      if (process.env.DEPARTMENT === "UMIS") {
+        doc.fontSize(9);
+        doc.text("MANAGEMENT INSURANCE SERVICES", 245, 80);
+      }
+      if (process.env.DEPARTMENT === "UCSMI") {
+        doc.fontSize(9);
+        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, 80);
+      }
       doc.fontSize(20);
       doc.text("RENEWAL NOTICE", 0, 120, {
         width: PAGE_WIDTH,

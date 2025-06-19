@@ -241,6 +241,7 @@ async function insertCGLPolicy(
     cStrArea,
     addressRef,
     sumInsuredRef,
+    careOfRef
   }: any,
   req: Request
 ) {
@@ -285,6 +286,7 @@ async function insertCGLPolicy(
       LimitB: parseFloat((pdPremium || "0.00").replace(/,/g, "")),
       address: addressRef,
       sumInsured: parseFloat((sumInsuredRef || "0.00").replace(/,/g, "")),
+     careOf: careOfRef,
     },
     req
   );

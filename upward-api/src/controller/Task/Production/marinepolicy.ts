@@ -289,7 +289,7 @@ MarinePolicy.post("/delete-marine-policy", async (req, res) => {
 
 async function insertMarinePolicy(
   {
-    sub_account,
+    subAccountRef,
     clientIDRef,
     clientNameRef,
     agentIdRef,
@@ -317,6 +317,7 @@ async function insertMarinePolicy(
     remarks2Ref,
     strArea,
     cStrArea,
+    careOfRef,
   }: any,
   req: Request
 ) {
@@ -329,7 +330,7 @@ async function insertMarinePolicy(
     {
       IDNo: clientIDRef,
       Account: accountRef,
-      SubAcct: sub_account,
+      SubAcct: subAccountRef,
       PolicyType: "MAR",
       PolicyNo: policyNoRef,
       DateIssued: dateIssuedRef,
@@ -363,7 +364,8 @@ async function insertMarinePolicy(
       SubjectInsured: subjectMatterInsuredRef,
       Consignee: consigneeRef,
       InsuredValue: parseFloat(insuredValueRef.replace(/,/g, "")),
-      Percentage: percentageRef,
+      Percentage:parseFloat(percentageRef.replace(/,/g, "")) ,
+      careOf: careOfRef,
     },
     req
   );
@@ -384,7 +386,7 @@ async function insertMarinePolicy(
   //debit
   await createJournal(
     {
-      Branch_Code: sub_account,
+      Branch_Code: subAccountRef,
       Date_Entry: dateIssuedRef,
       Source_Type: "PL",
       Source_No: policyNoRef,
@@ -406,7 +408,7 @@ async function insertMarinePolicy(
   //credit
   await createJournal(
     {
-      Branch_Code: sub_account,
+      Branch_Code: subAccountRef,
       Date_Entry: dateIssuedRef,
       Source_Type: "PL",
       Source_No: policyNoRef,

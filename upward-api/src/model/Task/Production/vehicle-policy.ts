@@ -70,6 +70,10 @@ export async function getPolicySubAccount(req: Request) {
   const qry = `SELECT Acronym FROM sub_account ORDER BY Acronym`;
   return (await prisma.$queryRawUnsafe(qry)) as any;
 }
+export async function getPolicyCareOf(req: Request) {
+  const qry = `SELECT * FROM careof`;
+  return (await prisma.$queryRawUnsafe(qry)) as any;
+}
 export async function generateTempID(req: Request) {
   const qry = `
   SELECT 
@@ -408,6 +412,7 @@ export async function createVehiclePolicy(
     LocalGovTaxPercent: string;
     TPLTypeSection_I_II: string;
     Remarks: string;
+    careOf: string;
   },
   req: Request
 ) {

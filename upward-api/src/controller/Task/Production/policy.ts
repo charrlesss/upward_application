@@ -146,7 +146,6 @@ Policy.get("/policy-accounts-by-line", async (req, res) => {
     });
   }
 });
-
 Policy.get("/get-policy-account-types", async (req, res) => {
   try {
     res.send({
@@ -164,7 +163,6 @@ Policy.get("/get-policy-account-types", async (req, res) => {
     });
   }
 });
-
 Policy.get("/get-policy-account-bonds", async (req, res) => {
   try {
     res.send({
