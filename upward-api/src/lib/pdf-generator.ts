@@ -39,7 +39,8 @@ interface PDFReportGeneratorProps {
   addRowHeight: any;
   adjustTitleFontSize: number;
   addHeader: boolean;
-  drawOnColumn: (row: any, doc: PDFKit.PDFDocument,  startY: number) => void;
+  drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => void;
+  adjustRowHeight: number;
 }
 
 function pageNumber(
@@ -116,7 +117,12 @@ class PDFReportGenerator {
   public addRowHeight: any = null;
   public adjustTitleFontSize: number = 3;
   public addHeader: boolean = true;
-  public drawOnColumn: (row: any, doc: PDFKit.PDFDocument,  startY: number) => void;
+  public drawOnColumn: (
+    row: any,
+    doc: PDFKit.PDFDocument,
+    startY: number
+  ) => void;
+  public adjustRowHeight: number = 0;
 
   constructor(props: PDFReportGeneratorProps) {
     this.data = props.data;
@@ -155,6 +161,8 @@ class PDFReportGenerator {
     this.adjustTitleFontSize = props.adjustTitleFontSize || 3;
     this.addHeader = props.addHeader !== undefined ? props.addHeader : true;
     this.drawOnColumn = props.drawOnColumn;
+    this.adjustRowHeight =
+      props.adjustRowHeight !== undefined ? props.adjustRowHeight : 0;
   }
 
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
@@ -401,9 +409,8 @@ class PDFReportGenerator {
           | undefined;
         cellValue = row[key];
       }
-      let startY_ = startY + 5
+      let startY_ = startY + 5;
       if (alignRow && colIndex === alignRow.columnIndex) {
-        
         doc.text(cellValue?.toString() || "", startX + 5, startY_, {
           width: colWidth - 10,
           align: alignRow.align,
@@ -524,8 +531,7 @@ class PDFReportGenerator {
       // Move to the next column (or skip spanned columns)
       startX += colWidth;
     });
-
-    this.drawOnColumn(row, doc, startY);
+    if (this.drawOnColumn) this.drawOnColumn(row, doc, startY);
   }
 
   generatePDF(res: Response, addPageNumber = true) {
@@ -563,7 +569,8 @@ class PDFReportGenerator {
     }
 
     this.data.forEach((row: any, rowIndex: any) => {
-      const rowHeight = this.calculateRowHeight(doc, row, rowIndex);
+      const rowHeight =
+        this.calculateRowHeight(doc, row, rowIndex) - this.adjustRowHeight;
 
       if (
         startY + rowHeight + this.scaledRowHeight >

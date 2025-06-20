@@ -188,6 +188,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           GrossPremium: "",
           solo: true,
         },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
+        },
       ];
       data.push(...newData);
     }
@@ -235,6 +244,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           GrossPremium: "",
           solo: true,
         },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
+        },
       ];
       data.push(...newData);
     }
@@ -272,6 +290,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
             parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
           ),
           solo: false,
+        },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
         },
       ];
       data.push(...newData);
@@ -320,6 +347,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           GrossPremium: "",
           solo: true,
         },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
+        },
       ];
       data.push(...newData);
     }
@@ -367,6 +403,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           GrossPremium: "",
           solo: true,
         },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
+        },
       ];
       data.push(...newData);
     }
@@ -413,6 +458,15 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           To: "",
           GrossPremium: "",
           solo: true,
+        },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
         },
       ];
       data.push(...newData);
@@ -471,6 +525,16 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     }
   }
 
+  const headerIndexes = getIndexes(
+    data,
+    (item: any) => item?.header === true || item?.solo === false
+  );
+
+  const gapPerRowIndexes = getIndexes(
+    data,
+    (item: any) => item?.gapPerRow === true
+  );
+
   let PAGE_WIDTH = 650;
   let PAGE_HEIGHT = 841;
 
@@ -491,6 +555,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     adjustTitleFontSize: 6,
     setRowFontSize: 6,
     BASE_FONT_SIZE: 6,
+    adjustRowHeight: 8,
     PAGE_WIDTH,
     PAGE_HEIGHT,
     MARGIN: { top: 20, right: 20, bottom: 30, left: 20 },
@@ -567,14 +632,9 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
         });
       }
 
-      const headerIndexes = getIndexes(
-        data,
-        (item: any) => item?.header === true || item?.solo === false
-      );
-      headerIndexes.forEach((itm:any)=>{
+      headerIndexes.forEach((itm: any) => {
         pdfReportGenerator.boldRow(itm);
-      })
-
+      });
       return yAxis;
     },
     drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => {
@@ -602,6 +662,12 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       }
     },
     beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {},
+    addRowHeight: (rowIndex: number) => {
+      if (gapPerRowIndexes.includes(rowIndex)) {
+        return 8;
+      }
+      return 0;
+    },
     drawPageNumber: (
       doc: PDFKit.PDFDocument,
       currentPage: number,
