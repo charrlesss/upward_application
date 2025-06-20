@@ -39,6 +39,7 @@ interface PDFReportGeneratorProps {
   addRowHeight: any;
   adjustTitleFontSize: number;
   addHeader: boolean;
+  drawOnColumn: (row: any, doc: PDFKit.PDFDocument,  startY: number) => void;
 }
 
 function pageNumber(
@@ -115,6 +116,7 @@ class PDFReportGenerator {
   public addRowHeight: any = null;
   public adjustTitleFontSize: number = 3;
   public addHeader: boolean = true;
+  public drawOnColumn: (row: any, doc: PDFKit.PDFDocument,  startY: number) => void;
 
   constructor(props: PDFReportGeneratorProps) {
     this.data = props.data;
@@ -152,6 +154,7 @@ class PDFReportGenerator {
     this.addRowHeight = props.addRowHeight || null;
     this.adjustTitleFontSize = props.adjustTitleFontSize || 3;
     this.addHeader = props.addHeader !== undefined ? props.addHeader : true;
+    this.drawOnColumn = props.drawOnColumn;
   }
 
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
@@ -398,8 +401,10 @@ class PDFReportGenerator {
           | undefined;
         cellValue = row[key];
       }
+      let startY_ = startY + 5
       if (alignRow && colIndex === alignRow.columnIndex) {
-        doc.text(cellValue?.toString() || "", startX + 5, startY + 5, {
+        
+        doc.text(cellValue?.toString() || "", startX + 5, startY_, {
           width: colWidth - 10,
           align: alignRow.align,
         });
@@ -408,7 +413,7 @@ class PDFReportGenerator {
           doc.text(
             cellValue?.toString() || "",
             startX + 5 - this.adjustRowXPostion(rowIndex),
-            startY + 5,
+            startY_,
             {
               width: colWidth - 10,
               align: textHeader,
@@ -418,14 +423,14 @@ class PDFReportGenerator {
           doc.text(
             cellValue?.toString() || "",
             startX + 5 + this.addPadingfFromLeft(rowIndex, colIndex),
-            startY + 5,
+            startY_,
             {
               width: colWidth - 10,
               align: textHeader,
             }
           );
         } else {
-          doc.text(cellValue?.toString() || "", startX + 5, startY + 5, {
+          doc.text(cellValue?.toString() || "", startX + 5, startY_, {
             width: colWidth - 10,
             align: textHeader,
           });
@@ -519,6 +524,8 @@ class PDFReportGenerator {
       // Move to the next column (or skip spanned columns)
       startX += colWidth;
     });
+
+    this.drawOnColumn(row, doc, startY);
   }
 
   generatePDF(res: Response, addPageNumber = true) {

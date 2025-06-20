@@ -135,7 +135,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     qry("cglpolicy")
   )) as Array<any>;
 
-  const data = [];
+  const data: Array<any> = [];
   if (COMDATA.length > 0) {
     data.push({
       PolicyNo: "COMPREHENSIVE",
@@ -471,21 +471,20 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     }
   }
 
-  console.log(data);
   let PAGE_WIDTH = 650;
   let PAGE_HEIGHT = 841;
 
   const props: any = {
     addHeader: false,
     data: data,
-    columnWidths: [100, 200, 80, 80, 80, 80],
+    columnWidths: [150, 200, 70, 60, 60, 70],
     headers: [
       { headerName: "POLICY NO", textAlign: "left" },
       { headerName: "INSURED", textAlign: "left" },
-      { headerName: "PREMIUM", textAlign: "left" },
+      { headerName: "PREMIUM", textAlign: "right" },
       { headerName: "FROM", textAlign: "left" },
       { headerName: "TO", textAlign: "left" },
-      { headerName: "GROSS PREMIUM", textAlign: "left" },
+      { headerName: "GROSS PREMIUM", textAlign: "right" },
     ],
     keys: ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"],
     title: "",
@@ -551,6 +550,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
         { label: "ADDRESS", value: "asdasdasdasd" },
         { label: "ACCT. BAL.", value: "123123" },
       ];
+
       for (const itm of arrayHeaderData) {
         yAxis += 12;
         doc.text(itm.label, 30, yAxis, {
@@ -566,7 +566,40 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           align: "left",
         });
       }
+
+      const headerIndexes = getIndexes(
+        data,
+        (item: any) => item?.header === true || item?.solo === false
+      );
+      headerIndexes.forEach((itm:any)=>{
+        pdfReportGenerator.boldRow(itm);
+      })
+
       return yAxis;
+    },
+    drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => {
+      if (row.header) {
+        startY = startY + 13;
+        if (row.PolicyNo === "COMPREHENSIVE") {
+          doc.moveTo(25, startY).lineTo(95, startY).stroke();
+          doc.moveTo(25, startY).lineTo(95, startY).stroke();
+        } else if (row.PolicyNo === "FIRE") {
+          doc.moveTo(25, startY).lineTo(43, startY).stroke();
+          doc.moveTo(25, startY).lineTo(43, startY).stroke();
+        } else if (row.PolicyNo === "MARINE") {
+          doc.moveTo(25, startY).lineTo(56, startY).stroke();
+          doc.moveTo(25, startY).lineTo(56, startY).stroke();
+        } else if (row.PolicyNo === "BONDS") {
+          doc.moveTo(25, startY).lineTo(53, startY).stroke();
+          doc.moveTo(25, startY).lineTo(53, startY).stroke();
+        } else if (row.PolicyNo === "GPA") {
+          doc.moveTo(25, startY).lineTo(41, startY).stroke();
+          doc.moveTo(25, startY).lineTo(41, startY).stroke();
+        } else if (row.PolicyNo === "CGL") {
+          doc.moveTo(25, startY).lineTo(41, startY).stroke();
+          doc.moveTo(25, startY).lineTo(41, startY).stroke();
+        }
+      }
     },
     beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {},
     drawPageNumber: (
@@ -580,4 +613,12 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
   return pdfReportGenerator.generatePDF(res, false);
 });
 
+const getIndexes = (array: Array<any>, condition: any) => {
+  return array.reduce((indexes, item, index) => {
+    if (condition(item)) {
+      indexes.push(index); // Store the index if condition is met
+    }
+    return indexes;
+  }, []);
+};
 export default StatementOfAccount;
