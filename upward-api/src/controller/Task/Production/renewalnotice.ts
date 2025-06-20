@@ -130,7 +130,6 @@ FROM
       message: "Search Successfully",
       success: true,
       Balance,
-   
     });
   } catch (err: any) {
     console.log(err.message);
@@ -1979,9 +1978,9 @@ async function PDFPA(res: Response, req: Request) {
           { label: "Property Insured", value: req.body.PAPropertyInsured },
           {
             label: "Total Premium",
-            value: formatNumber(
-              parseFloat(data[0].TotalPremium.toString().replace(/,/g, ""))
-            ),
+            value: `${formatNumber(
+              parseFloat(data[0].TotalDue.toString().replace(/,/g, ""))
+            )} (will vary on updated list of employees)`,
           },
         ];
 
@@ -2020,9 +2019,26 @@ async function PDFPA(res: Response, req: Request) {
 
       nextpdy = pdy;
 
-      doc.font("Helvetica");
-      doc.fontSize(9);
+      doc.font("Helvetica-Bold");
+      doc.fontSize(10);
       nextpdy = nextpdy + 30;
+      doc.text("NOTE:", 70, nextpdy, {
+        width: 50,
+        align: "left",
+      });
+      doc.fontSize(9);
+      doc.font("Helvetica");
+      doc.text(
+        "Subject to submission of updated employee details.",
+        102,
+        nextpdy + 2,
+        {
+          width: PAGE_WIDTH_WITH_MARGIN - 50,
+          align: "left",
+        }
+      );
+
+      nextpdy = nextpdy + 20;
       doc.text(
         "For further details and queries, please feel free to get in touch with us. Again, thank you for considering our company for your protection and security.",
         30,
