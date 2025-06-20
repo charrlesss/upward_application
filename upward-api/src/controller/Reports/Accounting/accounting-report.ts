@@ -943,6 +943,8 @@ async function SubsidiaryLedger(req: Request, res: Response) {
               HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
               ORDER BY qryJournal.GL_Acct;
             `;
+
+            
         } else {
           // Query excluding 'BF' and 'BFS' for specific GL code with ID filter
           Qry = `
@@ -968,7 +970,6 @@ async function SubsidiaryLedger(req: Request, res: Response) {
       } else {
       }
 
-      console.log(Qry);
       dt = await prisma.$queryRawUnsafe(Qry);
 
       // If we get results, insert them into xSubsidiary

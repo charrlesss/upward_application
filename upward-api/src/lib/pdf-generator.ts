@@ -41,6 +41,8 @@ interface PDFReportGeneratorProps {
   addHeader: boolean;
   drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => void;
   adjustRowHeight: number;
+  addHeaderPerpage: boolean;
+  drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => void;
 }
 
 function pageNumber(
@@ -122,7 +124,9 @@ class PDFReportGenerator {
     doc: PDFKit.PDFDocument,
     startY: number
   ) => void;
+  public drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => void;
   public adjustRowHeight: number = 0;
+  public addHeaderPerpage: boolean = true;
 
   constructor(props: PDFReportGeneratorProps) {
     this.data = props.data;
@@ -163,6 +167,9 @@ class PDFReportGenerator {
     this.drawOnColumn = props.drawOnColumn;
     this.adjustRowHeight =
       props.adjustRowHeight !== undefined ? props.adjustRowHeight : 0;
+    this.addHeaderPerpage =
+      props.addHeaderPerpage !== undefined ? props.addHeaderPerpage : true;
+    this.drawSubReport = props.drawSubReport;
   }
 
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
@@ -289,8 +296,7 @@ class PDFReportGenerator {
           | "right"
           | undefined,
       });
-
-      if (this.addHeaderBorderTop) {
+      if (this.addHeaderBorderTop ) {
         doc
           .moveTo(startX, headerStartY + maxHeaderHeight - 2)
           .lineTo(startX + colWidth, headerStartY + maxHeaderHeight - 2)
@@ -588,11 +594,28 @@ class PDFReportGenerator {
         });
 
         currentPage += 1;
-        startY = this.drawTitleAndHeader(doc, this.MARGIN.top / 2);
+        if (this.addHeaderPerpage) {
+          startY = this.drawTitleAndHeader(doc, this.MARGIN.top / 2);
+        } else {
+          startY = this.MARGIN.top;
+        }
       }
       this.drawRow(doc, row, rowIndex, startY);
       startY += rowHeight;
     });
+
+    const SUBREPORT_HEIGHT = 150;
+    const remainingSpace = this.PAGE_HEIGHT - startY - this.MARGIN.bottom;
+
+    if (remainingSpace < SUBREPORT_HEIGHT) {
+      doc.addPage({
+        size: [this.PAGE_WIDTH, this.PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+      startY = this.MARGIN.top;
+    }
+    if (this.drawSubReport) this.drawSubReport(doc, startY);
 
     if (this.beforePerPageDraw) {
       this.beforePerPageDraw(this, doc);

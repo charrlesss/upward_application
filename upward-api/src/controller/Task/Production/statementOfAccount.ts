@@ -401,15 +401,6 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           From: "",
           To: "",
           GrossPremium: "",
-          solo: true,
-        },
-        {
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
           gapPerRow: true,
         },
       ];
@@ -482,6 +473,16 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     });
   }
 
+  data.push({
+    PolicyNo: "",
+    Insured: "",
+    Premium: "",
+    From: "",
+    To: "",
+    GrossPremium: "97,863.66",
+    total: true,
+  });
+
   function bondsYear(itm: any) {
     const PolicyType = itm.PolicyType.trim();
     if (PolicyType === "G02") {
@@ -527,7 +528,8 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
 
   const headerIndexes = getIndexes(
     data,
-    (item: any) => item?.header === true || item?.solo === false
+    (item: any) =>
+      item?.header === true || item?.solo === false || item?.total === true
   );
 
   const gapPerRowIndexes = getIndexes(
@@ -540,6 +542,8 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
 
   const props: any = {
     addHeader: false,
+    addHeaderPerpage: false,
+    addHeaderBorderBottom: true,
     data: data,
     columnWidths: [150, 200, 70, 60, 60, 70],
     headers: [
@@ -556,37 +560,38 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     setRowFontSize: 6,
     BASE_FONT_SIZE: 6,
     adjustRowHeight: 8,
+    addHeaderBorderTop: true,
     PAGE_WIDTH,
     PAGE_HEIGHT,
-    MARGIN: { top: 20, right: 20, bottom: 30, left: 20 },
+    MARGIN: { top: 160, right: 20, bottom: 30, left: 20 },
     beforeDraw: (
       pdfReportGenerator: PDFReportGenerator,
       doc: PDFKit.PDFDocument
     ) => {
       let yAxis = 20;
-      doc.image(
-        path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
-        30,
-        yAxis,
-        {
-          fit: [120, 120],
-        }
-      );
+      // doc.image(
+      //   path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+      //   30,
+      //   yAxis,
+      //   {
+      //     fit: [120, 120],
+      //   }
+      // );
 
       yAxis += 10;
-      doc.fontSize(60);
-      doc.font("Helvetica-Bold");
-      doc.text("UPWARD", 155, yAxis);
+      // doc.fontSize(60);
+      // doc.font("Helvetica-Bold");
+      // doc.text("UPWARD", 155, yAxis);
       yAxis += 50;
 
-      if (process.env.DEPARTMENT === "UMIS") {
-        doc.fontSize(9);
-        doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
-      }
-      if (process.env.DEPARTMENT === "UCSMI") {
-        doc.fontSize(9);
-        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
-      }
+      // if (process.env.DEPARTMENT === "UMIS") {
+      //   doc.fontSize(9);
+      //   doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
+      // }
+      // if (process.env.DEPARTMENT === "UCSMI") {
+      //   doc.fontSize(9);
+      //   doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
+      // }
 
       yAxis += 40;
       doc.font("Helvetica");
@@ -603,11 +608,11 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       });
 
       yAxis += 10;
-      doc.fontSize(9);
-      doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
-        width: PAGE_WIDTH - 60,
-        align: "right",
-      });
+      // doc.fontSize(9);
+      // doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
+      //   width: PAGE_WIDTH - 60,
+      //   align: "right",
+      // });
       doc.fontSize(8);
 
       const arrayHeaderData = [
@@ -661,7 +666,39 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
         }
       }
     },
-    beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {},
+    beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {
+      let yAxis = 20;
+      doc.image(
+        path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+        30,
+        yAxis,
+        {
+          fit: [120, 120],
+        }
+      );
+
+      yAxis += 10;
+      doc.fontSize(60);
+      doc.font("Helvetica-Bold");
+      doc.text("UPWARD", 155, yAxis);
+      yAxis += 50;
+
+      if (process.env.DEPARTMENT === "UMIS") {
+        doc.fontSize(9);
+        doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
+      }
+      if (process.env.DEPARTMENT === "UCSMI") {
+        doc.fontSize(9);
+        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
+      }
+
+      yAxis += 60;
+      doc.fontSize(9);
+      doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
+        width: PAGE_WIDTH - 60,
+        align: "right",
+      });
+    },
     addRowHeight: (rowIndex: number) => {
       if (gapPerRowIndexes.includes(rowIndex)) {
         return 8;
@@ -674,6 +711,99 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       totalPages: number,
       pdfReportGenerator: any
     ) => {},
+    drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => {
+      startY += 10;
+      doc.fontSize(10);
+      doc.font("Helvetica-Bold");
+      doc.text("**ATTACHED COPY OF COMPREHENSIVE BONDS 7 GPA**", 30, startY, {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      });
+
+      startY += 30;
+
+      doc.fontSize(7);
+      doc.font("Helvetica");
+      doc.text("Prepared by:", 100, startY, {
+        width: 100,
+        align: "center",
+      });
+      doc.text("Checked by:", 250, startY, {
+        width: 100,
+        align: "center",
+      });
+      doc.text("Noted by:", 400, startY, {
+        width: 100,
+        align: "center",
+      });
+
+      startY += 30;
+      doc.fontSize(7);
+      doc.font("Helvetica-Bold");
+      doc.text("ADacula", 100, startY, {
+        width: 100,
+        align: "center",
+      });
+      doc.text("MGBLlanera", 250, startY, {
+        width: 100,
+        align: "center",
+      });
+      doc.text("LVAquino", 400, startY, {
+        width: 100,
+        align: "center",
+      });
+      startY += 20;
+      doc.text(
+        "Received by:       ________________________________",
+        30,
+        startY,
+        {
+          width: 300,
+          align: "left",
+        }
+      );
+      startY += 15;
+      doc.text(
+        "Date:                    ________________________________",
+        30,
+        startY,
+        {
+          width: 300,
+          align: "left",
+        }
+      );
+      startY += 15;
+      doc.fontSize(6);
+      doc.text(
+        `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
+        30,
+        startY,
+        {
+          width: 500,
+          align: "left",
+        }
+      );
+      startY += 9;
+      doc.text(
+        `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
+        30,
+        startY,
+        {
+          width: 500,
+          align: "left",
+        }
+      );
+      startY += 9;
+      doc.text(
+        `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
+        30,
+        startY,
+        {
+          width: 500,
+          align: "left",
+        }
+      );
+    },
   };
   const pdfReportGenerator = new PDFReportGenerator(props);
   return pdfReportGenerator.generatePDF(res, false);

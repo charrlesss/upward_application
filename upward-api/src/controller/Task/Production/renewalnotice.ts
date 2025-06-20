@@ -10,32 +10,127 @@ const RenewalNotice = express.Router();
 
 RenewalNotice.post("/get-balance", async (req, res) => {
   try {
-    const totalGross = await prisma.$queryRawUnsafe(
-      `SELECT TotalDue FROM policy where PolicyNo = ?`,
+    const ssQRy = `
+     SELECT
+                format(qryJournal.mDebit,2) as Debit,
+                format(qryJournal.mCredit,2) as Credit
+          FROM (
+            SELECT
+    Journal.Branch_Code,
+    CASE
+        WHEN
+            Journal.Source_Type = 'BFD'
+                OR Journal.Source_Type = 'AB'
+                OR Journal.Source_Type = 'BF'
+                OR Journal.Source_Type = 'BFS'
+        THEN
+            DATE_ADD(Journal.Date_Entry,
+                INTERVAL 1 DAY)
+        ELSE Journal.Date_Entry
+    END AS Date_Query,
+    Journal.Date_Entry,
+    Journal.Source_Type,
+    Journal.Source_No,
+    Journal.Explanation,
+    Journal.Payto,
+    Journal.GL_Acct,
+    Chart_Account.Acct_Title AS mShort,
+    Chart_Account.Short,
+    Journal.ID_No,
+    Journal.Check_Collect,
+    Journal.Check_Date,
+    Journal.Check_No AS Checked,
+    Journal.Check_Bank AS Bank,
+    Journal.Check_Return,
+    Journal.Check_Deposit,
+    Journal.Check_Reason,
+    Journal.Debit AS mDebit,
+    Journal.Credit AS mCredit,
+    Journal.TC,
+    Journal.Remarks,
+    Books.Books_Desc,
+    Books.Hide_Code,
+    Books.Number,
+    Books.Book_Code,
+    Journal.Sub_Acct,
+    IFNULL(SubAccount.ShortName, '') AS mSub_Acct,
+    IFNULL(ID_Entry.Shortname, '') AS mID,
+    Journal.AutoNo AS Auto,
+    Journal.Check_No
+FROM
+    chart_account AS Chart_Account RIGHT OUTER JOIN
+    (SELECT
+        id_entry.IDNo,
+            IFNULL(b.Acronym, 'HO') AS Sub_Acct,
+            IFNULL(b.ShortName, 'Head Office') AS ShortName,
+            id_entry.ShortName AS client_name
+    FROM
+        (SELECT
+        IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
+            aa.entry_client_id AS IDNo,
+            aa.sub_account
+    FROM
+        entry_client aa UNION ALL SELECT
+        CONCAT(IF(aa.lastname IS NOT NULL
+                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
+            aa.entry_agent_id AS IDNo,
+            aa.sub_account
+    FROM
+        entry_agent aa UNION ALL SELECT
+        CONCAT(IF(aa.lastname IS NOT NULL
+                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
+            aa.entry_employee_id AS IDNo,
+            aa.sub_account
+    FROM
+        entry_employee aa UNION ALL SELECT
+        aa.fullname AS ShortName,
+            aa.entry_fixed_assets_id AS IDNo,
+            sub_account
+    FROM
+        entry_fixed_assets aa UNION ALL SELECT
+        aa.description AS ShortName,
+            aa.entry_others_id AS IDNo,
+            aa.sub_account
+    FROM
+        entry_others aa UNION ALL SELECT
+        IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
+            aa.entry_supplier_id AS IDNo,
+            aa.sub_account
+    FROM
+        entry_supplier aa) id_entry
+    LEFT JOIN sub_account b ON id_entry.sub_account = b.Sub_Acct)
+    ID_Entry RIGHT OUTER JOIN
+        journal AS Journal LEFT OUTER JOIN
+        policy AS Policy ON Journal.ID_No = Policy.PolicyNo ON ID_Entry.IDNo = Journal.ID_No LEFT OUTER JOIN
+        sub_account AS SubAccount ON Journal.Sub_Acct = SubAccount.Sub_Acct ON Chart_Account.Acct_Code = Journal.GL_Acct LEFT OUTER JOIN
+        books AS Books ON Journal.Source_Type = Books.Code
+        ) qryJournal
+          WHERE qryJournal.Date_Entry 
+            AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
+            AND qryJournal.GL_Acct = '1.03.01'
+          AND qryJournal.ID_No = ?
+          ORDER BY  qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;
+      `;
+    const subsi = (await prisma.$queryRawUnsafe(
+      ssQRy,
       req.body.policyNo
-    );
-    const totalPaidDeposit = await prisma.$queryRawUnsafe(
-      `SELECT  ifNull(SUM(Credit),0)  as totalDeposit FROM journal where Source_Type = 'OR' and GL_Acct = '1.03.01' and ID_No = ?`,
-      req.body.policyNo
-    );
-    const totalPaidReturned = await prisma.$queryRawUnsafe(
-      `SELECT ifNull(SUM(Debit),0) as totalReturned FROM journal where Source_Type = 'RC'   and GL_Acct = '1.03.01' and ID_No = ?`,
-      req.body.policyNo
-    );
-    const totalDiscount = await prisma.$queryRawUnsafe(
-      `SELECT ifNull(SUM(Debit),0)  as discount FROM journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
-      req.body.policyNo
-    );
+    )) as Array<any>;
+    let Balance = 0;
+    if (subsi.length > 0) {
+      for (const itm of subsi) {
+        Balance +=
+          parseFloat(itm.Debit.toString().replace(/,/g, "")) -
+          parseFloat(itm.Credit.toString().replace(/,/g, ""));
+      }
+    }
 
     res.send({
       message: "Search Successfully",
       success: true,
-      payment: {
-        totalGross,
-        totalPaidDeposit,
-        totalPaidReturned,
-        totalDiscount,
-      },
+      Balance,
+   
     });
   } catch (err: any) {
     console.log(err.message);
@@ -1109,12 +1204,12 @@ async function PDFFIRE(res: Response, req: Request) {
 
       const PAGE_WIDTH_WITH_MARGIN = PAGE_WIDTH - 60;
 
-      doc.text("MAY 17, 2025", 30, 150, {
+      doc.text(format(new Date(), "MMMM dd, yyyy"), 30, 150, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "right",
       });
 
-      doc.text("ALBER SALIM GRANADA MASSAB JR. ", 30, 165, {
+      doc.text(data[0].cID_No, 30, 165, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
@@ -1193,15 +1288,17 @@ async function PDFFIRE(res: Response, req: Request) {
         for (let i = 0; i < policyDetails.length; i++) {
           const itm = policyDetails[i];
           doc.font("Helvetica");
+
           const valueHeight = doc.heightOfString(itm.value, {
-            width: PAGE_WIDTH_WITH_MARGIN - 160,
+            width: PAGE_WIDTH_WITH_MARGIN - 200,
             align: "left",
           });
+
+          let adjust = 11;
           if (i === 6) {
-            pdy += (Math.round(valueHeight) || 10) + 15;
-          } else {
-            pdy += (Math.round(valueHeight) || 10) + 1;
+            adjust = 16;
           }
+          pdy += Math.round(valueHeight) + adjust;
 
           doc.text(itm.label, 70, pdy, {
             width: 150,
@@ -1209,11 +1306,11 @@ async function PDFFIRE(res: Response, req: Request) {
           });
           doc.font("Helvetica-Bold");
           doc.text(":", 220, pdy, {
-            width: PAGE_WIDTH_WITH_MARGIN,
+            width: 10,
             align: "left",
           });
           doc.text(itm.value, 240, pdy, {
-            width: PAGE_WIDTH_WITH_MARGIN - 160,
+            width: PAGE_WIDTH_WITH_MARGIN - 200,
             align: "left",
           });
         }
@@ -1456,12 +1553,12 @@ async function PDFMAR(res: Response, req: Request) {
 
       const PAGE_WIDTH_WITH_MARGIN = PAGE_WIDTH - 60;
 
-      doc.text("MAY 17, 2025", 30, 150, {
+      doc.text(format(new Date(), "MMMM dd, yyyy"), 30, 150, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "right",
       });
 
-      doc.text("ALBER SALIM GRANADA MASSAB JR. ", 30, 165, {
+      doc.text(data[0].cID_No, 30, 165, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
@@ -1814,12 +1911,12 @@ async function PDFPA(res: Response, req: Request) {
 
       const PAGE_WIDTH_WITH_MARGIN = PAGE_WIDTH - 60;
 
-      doc.text("MAY 17, 2025", 30, 150, {
+      doc.text(format(new Date(), "MMMM dd, yyyy"), 30, 150, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "right",
       });
 
-      doc.text("ALBER SALIM GRANADA MASSAB JR. ", 30, 165, {
+      doc.text(data[0].cID_No, 30, 165, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
