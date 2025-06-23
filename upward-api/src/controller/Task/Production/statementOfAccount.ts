@@ -2,7 +2,7 @@ import express from "express";
 import { prisma } from "../..";
 import path from "path";
 import { differenceInYears, format, formatDate } from "date-fns";
-import PDFDocument from "pdfkit";
+import PDFDocument, { toString } from "pdfkit";
 import fs from "fs";
 import { selectClient } from "../../../model/Task/Accounting/pdc.model";
 import { formatNumber } from "../Accounting/collection";
@@ -116,6 +116,17 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
   left join policy b on a.PolicyNo = b.PolicyNo
   left join (${selectClient}) c on b.IDNo = c.IDNo
   where a.careOf = '${req.body.careOf}';`;
+
+  const careOf: Array<any> = await prisma.$queryRawUnsafe(
+    `
+    SELECT 
+      careOf, address
+    FROM
+        upward_insurance_umis.careof
+    WHERE
+        careOf = ? AND inactive = 0;`,
+    req.body.careOf
+  );
 
   const COMDATA = (await prisma.$queryRawUnsafe(qry("vpolicy"))) as Array<any>;
   const FIREDATA = (await prisma.$queryRawUnsafe(qry("fpolicy"))) as Array<any>;
@@ -473,13 +484,24 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     });
   }
 
+  const getTotal = data.reduce((t, itm) => {
+    return (
+      t +
+      parseFloat(
+        (itm.GrossPremium && itm.GrossPremium !== "" ? itm.GrossPremium : 0)
+          .toString()
+          .replace(/,/g, "")
+      )
+    );
+  }, 0);
+
   data.push({
     PolicyNo: "",
     Insured: "",
     Premium: "",
     From: "",
     To: "",
-    GrossPremium: "97,863.66",
+    GrossPremium: formatNumber(getTotal),
     total: true,
   });
 
@@ -537,15 +559,14 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     (item: any) => item?.gapPerRow === true
   );
 
-  let PAGE_WIDTH = 650;
+  let PAGE_WIDTH = 660;
   let PAGE_HEIGHT = 841;
 
   const props: any = {
     addHeader: false,
     addHeaderPerpage: false,
-    addHeaderBorderBottom: true,
     data: data,
-    columnWidths: [150, 200, 70, 60, 60, 70],
+    columnWidths: [150, 200, 70, 60, 60, 80],
     headers: [
       { headerName: "POLICY NO", textAlign: "left" },
       { headerName: "INSURED", textAlign: "left" },
@@ -564,6 +585,20 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
     PAGE_WIDTH,
     PAGE_HEIGHT,
     MARGIN: { top: 160, right: 20, bottom: 30, left: 20 },
+    addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => {
+      doc.fontSize(7);
+
+      doc
+        .moveTo(20, startY + 10)
+        .lineTo(PAGE_WIDTH - 20, startY + 10)
+        .stroke();
+
+      doc.text("COVERAGE", 450, startY + 14, {
+        width: 70,
+        align: "center",
+      });
+      doc.fontSize(7);
+    },
     beforeDraw: (
       pdfReportGenerator: PDFReportGenerator,
       doc: PDFKit.PDFDocument
@@ -594,7 +629,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       // }
 
       yAxis += 40;
-      doc.font("Helvetica");
+      doc.font("Helvetica-Bold");
       doc.fontSize(8);
       doc.text("STATEMENT OF ACCOUNT", 30, yAxis, {
         width: PAGE_WIDTH - 30,
@@ -616,9 +651,9 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       doc.fontSize(8);
 
       const arrayHeaderData = [
-        { label: "ACCT. NAME", value: "tttttttttweqweqwe" },
-        { label: "ADDRESS", value: "asdasdasdasd" },
-        { label: "ACCT. BAL.", value: "123123" },
+        { label: "ACCT. NAME", value: careOf[0].careOf },
+        { label: "ADDRESS", value: careOf[0].address },
+        { label: "ACCT. BAL.", value: formatNumber(getTotal) },
       ];
 
       for (const itm of arrayHeaderData) {
@@ -631,10 +666,27 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           width: 10,
           align: "left",
         });
-        doc.text(itm.value, 130, yAxis, {
-          width: PAGE_WIDTH - 30,
-          align: "left",
-        });
+        if (itm.label === "ACCT. BAL.") {
+          doc.text(itm.value, 130, yAxis, {
+            width: 60,
+            align: "right",
+          });
+          doc
+            .moveTo(130, yAxis - 3)
+            .lineTo(195, yAxis - 3)
+            .stroke();
+
+          yAxis += 10;
+
+          doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
+          yAxis += 2;
+          doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
+        } else {
+          doc.text(itm.value, 130, yAxis, {
+            width: PAGE_WIDTH - 30,
+            align: "left",
+          });
+        }
       }
 
       headerIndexes.forEach((itm: any) => {
@@ -664,6 +716,21 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
           doc.moveTo(25, startY).lineTo(41, startY).stroke();
           doc.moveTo(25, startY).lineTo(41, startY).stroke();
         }
+      } else if (row.total) {
+        doc
+          .moveTo(PAGE_WIDTH - 80, startY + 2)
+          .lineTo(PAGE_WIDTH - 20, startY + 2)
+          .stroke();
+        startY += 15;
+        doc
+          .moveTo(PAGE_WIDTH - 80, startY)
+          .lineTo(PAGE_WIDTH - 20, startY)
+          .stroke();
+        startY += 2;
+        doc
+          .moveTo(PAGE_WIDTH - 80, startY)
+          .lineTo(PAGE_WIDTH - 20, startY)
+          .stroke();
       }
     },
     beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {
@@ -698,6 +765,24 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
         width: PAGE_WIDTH - 60,
         align: "right",
       });
+      doc.text(
+        "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
+        30,
+        PAGE_HEIGHT - 30,
+        {
+          width: PAGE_WIDTH - 30,
+          align: "center",
+        }
+      );
+      doc.text(
+        "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
+        30,
+        PAGE_HEIGHT - 18,
+        {
+          width: PAGE_WIDTH - 30,
+          align: "center",
+        }
+      );
     },
     addRowHeight: (rowIndex: number) => {
       if (gapPerRowIndexes.includes(rowIndex)) {
@@ -715,7 +800,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
       startY += 10;
       doc.fontSize(10);
       doc.font("Helvetica-Bold");
-      doc.text("**ATTACHED COPY OF COMPREHENSIVE BONDS 7 GPA**", 30, startY, {
+      doc.text(req.body.attachment, 30, startY, {
         width: PAGE_WIDTH - 30,
         align: "center",
       });
@@ -773,7 +858,7 @@ StatementOfAccount.post("/soa/generate-soa", async (req, res) => {
         }
       );
       startY += 15;
-      doc.fontSize(6);
+      doc.fontSize(7);
       doc.text(
         `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
         30,

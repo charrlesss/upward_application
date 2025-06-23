@@ -43,6 +43,7 @@ interface PDFReportGeneratorProps {
   adjustRowHeight: number;
   addHeaderPerpage: boolean;
   drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => void;
+  addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => void;
 }
 
 function pageNumber(
@@ -128,6 +129,8 @@ class PDFReportGenerator {
   public adjustRowHeight: number = 0;
   public addHeaderPerpage: boolean = true;
 
+  public addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => void;
+
   constructor(props: PDFReportGeneratorProps) {
     this.data = props.data;
     this.columnWidths = props.columnWidths;
@@ -170,6 +173,7 @@ class PDFReportGenerator {
     this.addHeaderPerpage =
       props.addHeaderPerpage !== undefined ? props.addHeaderPerpage : true;
     this.drawSubReport = props.drawSubReport;
+    this.addDrawingOnHeader = props.addDrawingOnHeader;
   }
 
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
@@ -276,6 +280,9 @@ class PDFReportGenerator {
     let maxHeaderHeight = this.scaledRowHeight;
 
     doc.fontSize(this.scaledFontSize + 2);
+
+    if (this.addDrawingOnHeader) this.addDrawingOnHeader(doc, startY);
+
     this.headers.forEach((header, colIndex) => {
       const colWidth = this.scaledColumns[colIndex] || 50;
       const textHeight = doc.heightOfString(header.headerName, {
@@ -289,14 +296,17 @@ class PDFReportGenerator {
       const colWidth = this.scaledColumns[colIndex] || 50;
       doc.text(header.headerName, startX + 5, headerStartY + 5, {
         width: colWidth - 10,
-        align: header.textAlign as
-          | "left"
-          | "center"
-          | "justify"
-          | "right"
-          | undefined,
+        align:
+          header.textAlign === "right"
+            ? "center"
+            : (header.textAlign as
+                | "left"
+                | "center"
+                | "justify"
+                | "right"
+                | undefined),
       });
-      if (this.addHeaderBorderTop ) {
+      if (this.addHeaderBorderTop) {
         doc
           .moveTo(startX, headerStartY + maxHeaderHeight - 2)
           .lineTo(startX + colWidth, headerStartY + maxHeaderHeight - 2)
@@ -571,7 +581,7 @@ class PDFReportGenerator {
     }
 
     if (!this.addHeader) {
-      startY = this.drawTitleAndHeader(doc, startY, -10);
+      startY = this.drawTitleAndHeader(doc, startY, -5);
     }
 
     this.data.forEach((row: any, rowIndex: any) => {
@@ -594,6 +604,7 @@ class PDFReportGenerator {
         });
 
         currentPage += 1;
+
         if (this.addHeaderPerpage) {
           startY = this.drawTitleAndHeader(doc, this.MARGIN.top / 2);
         } else {
@@ -604,18 +615,20 @@ class PDFReportGenerator {
       startY += rowHeight;
     });
 
-    const SUBREPORT_HEIGHT = 150;
-    const remainingSpace = this.PAGE_HEIGHT - startY - this.MARGIN.bottom;
+    if (this.drawSubReport) {
+      const SUBREPORT_HEIGHT = 150;
+      const remainingSpace = this.PAGE_HEIGHT - startY - this.MARGIN.bottom;
 
-    if (remainingSpace < SUBREPORT_HEIGHT) {
-      doc.addPage({
-        size: [this.PAGE_WIDTH, this.PAGE_HEIGHT],
-        margin: 0,
-        bufferPages: true,
-      });
-      startY = this.MARGIN.top;
+      if (remainingSpace < SUBREPORT_HEIGHT) {
+        doc.addPage({
+          size: [this.PAGE_WIDTH, this.PAGE_HEIGHT],
+          margin: 0,
+          bufferPages: true,
+        });
+        startY = this.MARGIN.top;
+      }
+      this.drawSubReport(doc, startY);
     }
-    if (this.drawSubReport) this.drawSubReport(doc, startY);
 
     if (this.beforePerPageDraw) {
       this.beforePerPageDraw(this, doc);
