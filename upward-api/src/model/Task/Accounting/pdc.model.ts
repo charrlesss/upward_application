@@ -233,6 +233,33 @@ export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
     `%${search}%`
   );
 }
+
+export async function getPdcPolicyIdAndCLientId500(search: string, req: Request) {
+  const qry = `
+  SELECT 
+      *
+  FROM
+      (${withPolicy}) a
+  WHERE
+      a.Name IS NOT NULL AND a.IDNo LIKE ?
+          OR a.chassis LIKE ?
+          OR a.Name LIKE ?
+  ORDER BY CASE
+      WHEN name REGEXP '^[A-Za-z]' THEN 1
+      WHEN name LIKE 'APARES%' THEN 0
+      ELSE 2
+  END , name ASC
+  limit 500      
+  `;
+
+  return await prisma.$queryRawUnsafe(
+    qry,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
+}
+
 export async function getCashPayTo(search: string) {
   const _withPolicy = `
 SELECT 

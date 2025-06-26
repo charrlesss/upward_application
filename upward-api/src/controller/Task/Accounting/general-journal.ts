@@ -361,6 +361,7 @@ GeneralJournal.post(
             ID_No: item.IDNo,
             VAT_Type: item.vatType,
             OR_Invoice_No: item.invoice,
+            VATItemNo:item.rowIndex
           },
           req
         );

@@ -13,6 +13,7 @@ import {
   getPdcUpload,
   checkClientID,
   getCashPayTo,
+  getPdcPolicyIdAndCLientId500,
 } from "../../../model/Task/Accounting/pdc.model";
 import saveUserLogs from "../../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
@@ -242,6 +243,22 @@ PDC.post("/update-pdc", async (req, res) => {
 PDC.post("/search-pdc-policy-id", async (req, res) => {
   try {
     const data = await getPdcPolicyIdAndCLientId(req.body.search, req);
+    res.send({
+      data,
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      bondsPolicy: null,
+    });
+  }
+});
+PDC.post("/search-pdc-policy-ids", async (req, res) => {
+  try {
+    const data = await getPdcPolicyIdAndCLientId500(req.body.search, req);
     res.send({
       data,
       success: true,

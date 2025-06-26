@@ -27,7 +27,7 @@ export async function getChartOfAccount(search: string, req: Request) {
             AND a.Inactive = 0
             AND a.Acct_Type = 'Detail'
             ORDER BY a.Acct_Code ASC
-    LIMIT 50;
+    LIMIT 500;
     `,
     `%${search}%`,
     `%${search}%`,
@@ -138,7 +138,7 @@ FROM
     a.IDNo LIKE ?
         OR a.Shortname LIKE ?
     ORDER BY a.Shortname
-    LIMIT 50;
+    LIMIT 500;
       `,
     `%${search}%`,
     `%${search}%`
@@ -156,7 +156,7 @@ export async function getTransactionAccount(search: string, req: Request) {
         (a.Code LIKE ?
             OR a.Description LIKE ?)
     ORDER BY a.Description
-    LIMIT 50;
+    LIMIT 500;
     `,
     `%${search}%`,
     `%${search}%`
@@ -303,8 +303,8 @@ export async function searchGeneralJournal(search: string, req: Request) {
         LEFT(a.Explanation, 7) <> '-- Void'
             AND (a.Source_No LIKE ?
             OR a.Explanation LIKE ?)
-    ORDER BY a.Source_No desc
-    LIMIT 50
+    ORDER BY a.Date_Entry desc
+    LIMIT 500
       `;
   return await prisma.$queryRawUnsafe(sql, `%${search}%`, `%${search}%`);
 }
@@ -335,8 +335,7 @@ export async function getSelectedSearchGeneralJournal(
         a.VATItemNo AS TempID
     FROM
       journal_voucher a where a.Source_No = ?
-      order by 
-      a.GL_Acct
+      order by a.VATItemNo ,a.Date_Entry
       `,
     Source_No
   );
