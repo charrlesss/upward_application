@@ -10,11 +10,14 @@ import {
   getClientCheckedList,
   getCollections,
   getDrCodeAndTitle,
+  getOutputTax,
+  getSearchCheckFromClientId,
   getSearchCollection,
   getTransactionBanksDetails,
   getTransactionBanksDetailsDebit,
   getTransactionDescription,
   printModel,
+  searchCheckFromClientId,
   updateCollectionIDSequence,
   updatePDCCheck,
 } from "../../../model/Task/Accounting/collection.model";
@@ -34,6 +37,65 @@ import { getSum } from "../../Reports/Production/production-report";
 
 const Collection = express.Router();
 
+/// NEW
+Collection.post("/search-checks-from-client-id", async (req, res) => {
+  try {
+    console.log(req.body);
+    const data = await searchCheckFromClientId(req.body.search, req.body.PNo);
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/get-search-checks-from-client-id", async (req, res) => {
+  try {
+    console.log(req.body);
+
+    const data = await getSearchCheckFromClientId(
+      req.body.checkNo,
+      req.body.PNo
+    );
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.get("/get-data-from-output-tax", async (req, res) => {
+  try {
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data: await getOutputTax(),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+
+/// OLD
 Collection.get("/get-client-checked-by-id", async (req, res) => {
   const { PNo, searchCheckedList } = req.query;
 
@@ -349,7 +411,7 @@ Collection.post("/print-or", async (req, res) => {
       outputFilePath,
       footerText: "Original Copy",
       dataToPrint,
-      reportTitle:req.body.reportTitle
+      reportTitle: req.body.reportTitle,
     });
     const PAGE_HEIGHT__ = PAGE_HEIGHT / 2 - 20;
     if (totalHeight > PAGE_HEIGHT__) {
@@ -363,7 +425,7 @@ Collection.post("/print-or", async (req, res) => {
         outputFilePath,
         footerText: "Duplicate Copy",
         dataToPrint,
-        reportTitle:req.body.reportTitle
+        reportTitle: req.body.reportTitle,
       });
       doc.addPage();
       drawOfficialReceiptPDF({
@@ -375,7 +437,7 @@ Collection.post("/print-or", async (req, res) => {
         outputFilePath,
         footerText: "Triplicate Copy",
         dataToPrint,
-        reportTitle:req.body.reportTitle
+        reportTitle: req.body.reportTitle,
       });
       doc.end();
       writeStream.on("finish", (e: any) => {
@@ -407,7 +469,7 @@ Collection.post("/print-or", async (req, res) => {
         dataToPrint,
         adjustHeigth: PAGE_HEIGHT / 2,
         dashOn: true,
-        reportTitle:req.body.reportTitle
+        reportTitle: req.body.reportTitle,
       });
       doc.addPage();
       drawOfficialReceiptPDF({
@@ -419,7 +481,7 @@ Collection.post("/print-or", async (req, res) => {
         outputFilePath,
         footerText: "Triplicate Copy",
         dataToPrint,
-        reportTitle:req.body.reportTitle
+        reportTitle: req.body.reportTitle,
       });
     }
 
@@ -458,7 +520,7 @@ function drawOfficialReceiptPDF({
   dataToPrint,
   adjustHeigth = 0,
   dashOn = false,
-  reportTitle
+  reportTitle,
 }: any) {
   if (dashOn) {
     doc
@@ -673,18 +735,25 @@ function drawOfficialReceiptPDF({
     align: "left",
     width: 80,
   });
-  doc.font("Helvetica-Bold"); 
+  doc.font("Helvetica-Bold");
 
   for (let index = 0; index < dataToPrint.debit.length; index++) {
     autoAdjustTextHeigth(
       doc,
-      dataToPrint.debit[index].Payment.toLowerCase() === 'cash' ? dataToPrint.debit[index].Payment : `${dataToPrint.debit[index].Payment}    ${format(new Date(dataToPrint.debit[index].Check_Date),'MM/dd/yyyy')} - ${dataToPrint.debit[index].Check_No} - ${dataToPrint.debit[index].Bank_Branch}`,
+      dataToPrint.debit[index].Payment.toLowerCase() === "cash"
+        ? dataToPrint.debit[index].Payment
+        : `${dataToPrint.debit[index].Payment}    ${format(
+            new Date(dataToPrint.debit[index].Check_Date),
+            "MM/dd/yyyy"
+          )} - ${dataToPrint.debit[index].Check_No} - ${
+            dataToPrint.debit[index].Bank_Branch
+          }`,
       112,
       215 + rowH + adjustHeigth,
       400,
       22
     );
-    console.log(dataToPrint.debit[index])
+    console.log(dataToPrint.debit[index]);
 
     autoAdjustTextHeigth(
       doc,
@@ -695,7 +764,6 @@ function drawOfficialReceiptPDF({
       22,
       "right"
     );
-
 
     rowH += 13;
   }

@@ -28,6 +28,10 @@ export async function removeBank(Bank_Code: string, req: Request) {
 
 export async function getBanks(bankSearch: string) {
   return await prisma.$queryRawUnsafe(
-    `select IF(a.Inactive = 0 , 'YES','NO') as Inactive,a.Bank_Code,a.Bank from bank a where a.Bank_Code LIKE '%${bankSearch}%' OR   a.Bank LIKE '%${bankSearch}%'`
+    `select IF(a.Inactive = 0 , 'YES','NO') as Inactive,a.Bank_Code,a.Bank from bank a 
+    where 
+    a.Bank_Code LIKE ? OR a.Bank LIKE ?`,
+    `%${bankSearch}%`,
+    `%${bankSearch}%`
   );
 }

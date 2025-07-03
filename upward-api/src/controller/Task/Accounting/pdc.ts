@@ -272,22 +272,7 @@ PDC.post("/search-pdc-policy-ids", async (req, res) => {
     });
   }
 });
-PDC.post("/search-pay-to", async (req, res) => {
-  try {
-    const data = await getCashPayTo(req.body.search);
-    res.send({
-      data,
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
+
 PDC.get("/search-pdc-policy-id", async (req, res) => {
   try {
     const { searchPdcPolicyIds } = req.query;

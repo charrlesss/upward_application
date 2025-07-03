@@ -216,7 +216,7 @@ ORDER BY CASE
     WHEN name LIKE 'APARES%' THEN 0
     ELSE 2
 END , name ASC
-limit 50      
+limit 500      
 
   `;
 
@@ -389,7 +389,7 @@ export async function searchCashDisbursement(search: string, req: Request) {
             AND (a.Source_No LIKE ?
             OR a.Explanation LIKE ?)
             ORDER BY a.Date_Entry  desc, Source_No desc 
-    LIMIT 50;
+    LIMIT 500;
     `,
     `%${search}%`,
     `%${search}%`

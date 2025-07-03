@@ -3,6 +3,65 @@ import { PrismaList } from "../../connection";
 import { selectClient } from "./pdc.model";
 import { prisma } from "../../../controller/index";
 
+export async function searchCheckFromClientId(search: string, PNo: string) {
+  const query = `
+    SELECT
+              Check_No AS Check_No,
+              date_FORMAT(Check_Date,'%b. %d, %Y') AS Check_Date,
+            FORMAT(CAST(REPLACE(Check_Amnt, ',', '') AS DECIMAL(10,2)), 2) AS Amount,
+            CONCAT(Bank.Bank, '/', Branch) AS Bank_Branch
+          FROM pdc as PDC
+          left join bank as Bank  on Bank.Bank_Code = PDC.Bank
+          WHERE (
+            Check_No LIKE ?
+            OR PDC.Bank  LIKE ?
+            OR Branch LIKE ?)
+            AND (PNo = ? )
+            AND (ORNum IS NULL OR ORNum = '')
+          ORDER BY PDC.Check_Date
+          limit 500
+  `;
+
+  return await prisma.$queryRawUnsafe(
+    query,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`,
+    PNo
+  );
+}
+export async function getSearchCheckFromClientId(CheckNo: string, PNo: string) {
+  const query = `
+  SELECT
+    Check_No,
+    Check_Date,
+    Check_Amnt,
+    bank.Bank as Bank,
+    CONCAT(bank.Bank, '/', Branch)  AS BName,
+    Branch,
+    Remarks
+  FROM pdc
+  LEFT JOIN bank  ON pdc.Bank = bank.Bank_Code
+  WHERE PNo = ? AND Check_No = ?
+  `;
+
+  return await prisma.$queryRawUnsafe(query, PNo, CheckNo);
+}
+export async function getOutputTax() {
+  return {
+    chart_account: await prisma.$queryRawUnsafe(
+      "select chart_account.Acct_Code,chart_account.Acct_Title from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code WHERE Description = 'Output Tax'"
+    ),
+    transaction_code: await prisma.$queryRawUnsafe(
+      "select Code from transaction_code WHERE Description = 'Output Tax'"
+    ),
+    chart_account_cash: await prisma.$queryRawUnsafe(
+      "select * from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code WHERE Code = 'CSH'"
+    ),
+    bank: await prisma.$queryRawUnsafe("select * from bank"),
+  };
+}
+
 export async function getClientCheckedList(
   search: string,
   PNo: string,
@@ -80,7 +139,6 @@ export async function postTransactionBanksDetails(code: string, req: Request) {
 }
 
 export async function getTransactionDescription(req: Request) {
-  
   const query = `
         SELECT 
           transaction_code.*, 
@@ -186,7 +244,6 @@ export async function getCollections(
   );
 }
 export async function getSearchCollection(ORNo: string, req: Request) {
-  
   return await prisma.$queryRawUnsafe(
     `
   SELECT 

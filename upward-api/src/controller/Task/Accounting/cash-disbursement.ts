@@ -25,6 +25,7 @@ import {
 } from "../../Reports/Production/production-report";
 import PDFDocument from "pdfkit";
 import fs from "fs";
+import { getCashPayTo } from "../../../model/Task/Accounting/pdc.model";
 
 const CashDisbursement = express.Router();
 
@@ -808,6 +809,22 @@ CashDisbursement.post("/cash-disbursement/print", async (req, res) => {
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
+    });
+  }
+});
+CashDisbursement.post("/cash-disbursement/search-pay-to", async (req, res) => {
+  try {
+    const data = await getCashPayTo(req.body.search);
+    res.send({
+      data,
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      bondsPolicy: null,
     });
   }
 });

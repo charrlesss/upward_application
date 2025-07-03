@@ -200,6 +200,7 @@ BondPolicy.post("/add-bonds-policy", async (req, res) => {
 });
 BondPolicy.post("/search-bonds-policy", async (req, res) => {
   try {
+    console.log(req.body)
     res.send({
       message: "Successfully search data",
       success: true,

@@ -108,7 +108,7 @@ Bank.post("/delete-bank", async (req: Request, res: Response) => {
   }
 });
 Bank.post("/search-bank", async (req: Request, res: Response) => {
- 
+  console.log(req.body)
   try {
     res.send({
       message: "Search Bank Successfuly",

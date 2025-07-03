@@ -80,8 +80,8 @@ export async function searchPettyCash(search: string, req: Request) {
             OR a.Payee LIKE ?
             OR a.Explanation LIKE ?)
     GROUP BY a.PC_Date , PC_No , a.Payee , a.Explanation
-    ORDER BY a.PC_Date DESC
-    LIMIT 50
+    ORDER BY a.PC_Date desc
+    LIMIT 500
     `,
     `%${search}%`,
     `%${search}%`,

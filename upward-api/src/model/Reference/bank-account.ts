@@ -50,12 +50,18 @@ export async function searchChartAccountModel(search: string) {
       chart_account
       WHERE
       Inactive = 0
-            AND (Acct_Code LIKE '%%' OR Short LIKE '%%'
-            OR Acct_Title LIKE '%%')
+            AND (Acct_Code LIKE ? 
+            OR Short LIKE ?
+            OR Acct_Title LIKE ?)
       ORDER BY Acct_Code
       LIMIT 100
       `;
-  return await prisma.$queryRawUnsafe(qry);
+  return await prisma.$queryRawUnsafe(
+    qry,
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+  );
 }
 export async function searchClientModel(search: string) {
   const qry = `

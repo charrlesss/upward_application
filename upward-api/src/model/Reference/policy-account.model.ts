@@ -36,19 +36,21 @@ export async function searchPolicy(
   policySearch: string,
   hasLimit: boolean = false
 ) {
-  const query = ` SELECT 
-  a.Account,
-  a.Description,
-  a.AccountCode,
-  a.COM,
-  a.TPL,
-  a.MAR,
-  a.FIRE,
-  a.G02,
-  a.G13,
-  a.G16,
-  a.MSPR,
-  a.CGL,
+  const query = ` 
+  SELECT 
+    a.Account,
+    a.Description,
+    a.AccountCode,
+    a.COM,
+    a.TPL,
+    a.MAR,
+    a.FIRE,
+    a.G02,
+    a.G13,
+    a.G16,
+    a.MSPR,
+    a.PA,
+    a.CGL,
     a.Inactive,
   (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) as createdAt
 FROM

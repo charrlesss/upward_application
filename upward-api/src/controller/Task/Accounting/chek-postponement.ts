@@ -73,7 +73,8 @@ CheckPostponement.post(
 `);
 
         // Step 7: Final SELECT query to fetch data
-        const data = await prisma.$queryRawUnsafe(`
+        const data = await prisma.$queryRawUnsafe(
+          `
 
   select * from (
   SELECT 
@@ -101,9 +102,11 @@ CheckPostponement.post(
   HAVING
       COUNT(c.\`Date\`) >= 3
   ) a
-  ORDER BY
-      a.PNo;
-`);
+   where a.PNo like ?
+  ORDER BY a.PNo;
+`,
+          `%${req.body.search}%`
+        );
         await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS \`tmp_numbers\`;`);
         await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS \`TMP\`;`);
 
@@ -264,7 +267,8 @@ CheckPostponement.post(
   async (req, res) => {
     try {
       const data = await prisma.$queryRawUnsafe(
-        `  SELECT RPCDNo FROM postponement  Where Status = 'PENDING' and Branch = 'HO'`
+        `  SELECT RPCDNo FROM postponement  Where Status = 'PENDING' and Branch = 'HO' and RPCDNo like ?`,
+        `%${req.body.search}%`
       );
 
       res.send({
@@ -439,13 +443,14 @@ CheckPostponement.post(
           data: {
             RPCDNo: uuidv4(),
             RPCD: req.body.RPCDNoRef,
-            CheckNo: itm[1],
-            OldCheckDate: defaultFormat(new Date(itm[4])),
-            NewCheckDate: defaultFormat(new Date(itm[5])),
-            Reason: itm[8],
+            CheckNo: itm.CheckNo,
+            OldCheckDate: defaultFormat(new Date(itm.OldDepositDate)),
+            NewCheckDate: defaultFormat(new Date(itm.NewDate)),
+            Reason: itm.Reason,
           },
         });
       }
+
       if (department === "UMIS") {
         for (const toEmail of UMISEmailToSend) {
           await sendRequestEmail({
@@ -519,6 +524,7 @@ CheckPostponement.post(
 );
 CheckPostponement.post("/check-postponement/request/edit", async (req, res) => {
   try {
+    console.log(req.body);
     const department = req.cookies["up-dpm-login"];
     // HEADER
     await prisma.$queryRawUnsafe(
@@ -528,16 +534,19 @@ CheckPostponement.post("/check-postponement/request/edit", async (req, res) => {
       data: {
         RPCDNo: req.body.RPCDNoRef,
         PNNo: req.body.PNNoRef,
-        HoldingFees: req.body.HoldingFeesRef,
-        PenaltyCharge: req.body.PenaltyChargeRef,
+        HoldingFees:
+          req.body.HoldingFeesRef === "" ? "0.00" : req.body.HoldingFeesRef,
+        PenaltyCharge:
+          req.body.PenaltyChargeRef === "" ? "0.00" : req.body.PenaltyChargeRef,
         PaidVia: req.body.HowToBePaidRef,
         PaidInfo: req.body.RemarksRef,
         Date: defaultFormat(new Date()),
         Status: "PENDING",
         Branch: req.body.BranchRef,
         Prepared_by: req.body.Prepared_By,
-        Surplus: req.body.SurplusRef,
-        Deducted_to: req.body.DeductedToRef,
+        Surplus: req.body.SurplusRef === "" ? "0.00" : req.body.SurplusRef,
+        Deducted_to:
+          req.body.DeductedToRef === "" ? "0.00" : req.body.DeductedToRef,
       },
     });
     // DETAILS
@@ -550,10 +559,10 @@ CheckPostponement.post("/check-postponement/request/edit", async (req, res) => {
         data: {
           RPCDNo: uuidv4(),
           RPCD: req.body.RPCDNoRef,
-          CheckNo: itm[1],
-          OldCheckDate: defaultFormat(new Date(itm[4])),
-          NewCheckDate: defaultFormat(new Date(itm[5])),
-          Reason: itm[8],
+          CheckNo: itm.CheckNo,
+          OldCheckDate: defaultFormat(new Date(itm.OldDepositDate)),
+          NewCheckDate: defaultFormat(new Date(itm.NewDate)),
+          Reason: itm.Reason,
         },
       });
     }
@@ -677,7 +686,7 @@ CheckPostponement.post(
           key: "Amount",
           style: { align: "right", width: 60 },
         },
-           {
+        {
           label: "PENALTY",
           key: "Penalty",
           style: { align: "right", width: 60 },
@@ -769,16 +778,16 @@ CheckPostponement.post(
         const rowHeight = Math.max(
           ...headers.map((itm: any) => {
             return doc.heightOfString(rowItm[itm.key], {
-              width: itm.style.width  - 5,
+              width: itm.style.width - 5,
               align: itm.style.align,
             });
           })
         );
         let x = 20;
         headers.forEach((colItm: any, colIndex: number) => {
-          doc.text(rowItm[colItm.key], x , yAxis, {
+          doc.text(rowItm[colItm.key], x, yAxis, {
             align: colItm.style.align,
-            width: colItm.style.width -5,
+            width: colItm.style.width - 5,
           });
           x += colItm.style.width;
         });
@@ -842,10 +851,11 @@ CheckPostponement.post(
   async (req, res) => {
     try {
       res.send({
-        message: `Update ${req.body.RPCDNoRef} Successfully`,
+        message: `Update ${req.body.search} Successfully`,
         success: true,
         data: await prisma.$queryRawUnsafe(
-          ` Select RPCDNo from postponement  Where Status = 'PENDING'`
+          ` Select RPCDNo from postponement  Where Status = 'PENDING' and RPCDNo like ?`,
+          `%${req.body.search}%`
         ),
       });
     } catch (error: any) {
@@ -889,7 +899,7 @@ CheckPostponement.post(
       res.send({
         message: `Update ${req.body.RPCDNo} Successfully`,
         success: true,
-        data: await prisma.$queryRawUnsafe(qry ,req.body.RPCDNo),
+        data: await prisma.$queryRawUnsafe(qry, req.body.RPCDNo),
       });
     } catch (error: any) {
       console.log(`${error.message}`);
@@ -1076,13 +1086,13 @@ function getSelectedCheck(selected: string) {
 function generateTextTable(item: any) {
   return `
   <tr>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[1]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[2]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">₱${item[3]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[4]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[5]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[7]}</td>
-    <td style="border: 1px solid #ddd; padding: 8px">${item[8]}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.CheckNo}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.Bank}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">₱${item.Amount}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.OldDepositDate}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.NewDate}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.Datediff}</td>
+    <td style="border: 1px solid #ddd; padding: 8px">${item.Reason}</td>
   </tr>`;
 }
 async function sendRequestEmail(props: any) {
