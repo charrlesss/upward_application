@@ -126,6 +126,7 @@ CGLPolicy.post("/search-cgl-policy", async (req, res) => {
 
 CGLPolicy.post("/update-cgl-policy", async (req, res:any) => {
   convertToPassitive(req);
+  console.log(req.body)
 
   const { subAccountRef, clientIDRef, accountRef, policyNoRef } = req.body;
   try {
@@ -222,6 +223,7 @@ async function insertCGLPolicy(
   dateToRef = defaultFormat(new Date(dateToRef));
   dateIssuedRef = defaultFormat(new Date(dateIssuedRef));
 
+  console.log(department)
   //   create  Policy
   await createPolicy(
     {
