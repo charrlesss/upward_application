@@ -170,154 +170,84 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
 
-    if (req.body.department === "UMIS") {
+    if (req.body.from_d === "UMIS") {
       database = "upward_insurance_umis";
-    } else if (req.body.department === "UCSMI") {
+    } else if (req.body.from_d === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
     } else {
       database = "claims";
     }
 
-    const ssQRy = `
-     SELECT
-                format(qryJournal.mDebit,2) as Debit,
-                format(qryJournal.mCredit,2) as Credit
-          FROM (
-            SELECT
-    Journal.Branch_Code,
-    CASE
-        WHEN
-            Journal.Source_Type = 'BFD'
-                OR Journal.Source_Type = 'AB'
-                OR Journal.Source_Type = 'BF'
-                OR Journal.Source_Type = 'BFS'
-        THEN
-            DATE_ADD(Journal.Date_Entry,
-                INTERVAL 1 DAY)
-        ELSE Journal.Date_Entry
-    END AS Date_Query,
-    Journal.Date_Entry,
-    Journal.Source_Type,
-    Journal.Source_No,
-    Journal.Explanation,
-    Journal.Payto,
-    Journal.GL_Acct,
-    Chart_Account.Acct_Title AS mShort,
-    Chart_Account.Short,
-    Journal.ID_No,
-    Journal.Check_Collect,
-    Journal.Check_Date,
-    Journal.Check_No AS Checked,
-    Journal.Check_Bank AS Bank,
-    Journal.Check_Return,
-    Journal.Check_Deposit,
-    Journal.Check_Reason,
-    Journal.Debit AS mDebit,
-    Journal.Credit AS mCredit,
-    Journal.TC,
-    Journal.Remarks,
-    Books.Books_Desc,
-    Books.Hide_Code,
-    Books.Number,
-    Books.Book_Code,
-    Journal.Sub_Acct,
-    IFNULL(SubAccount.ShortName, '') AS mSub_Acct,
-    IFNULL(ID_Entry.Shortname, '') AS mID,
-    Journal.AutoNo AS Auto,
-    Journal.Check_No
-FROM
-    ${database}.chart_account AS Chart_Account RIGHT OUTER JOIN
-    (SELECT
-        id_entry.IDNo,
-            IFNULL(b.Acronym, 'HO') AS Sub_Acct,
-            IFNULL(b.ShortName, 'Head Office') AS ShortName,
-            id_entry.ShortName AS client_name
-    FROM
-        (SELECT
-        IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
-                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
-            aa.entry_client_id AS IDNo,
-            aa.sub_account
-    FROM
-        ${database}.entry_client aa UNION ALL SELECT
-        CONCAT(IF(aa.lastname IS NOT NULL
-                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
-            aa.entry_agent_id AS IDNo,
-            aa.sub_account
-    FROM
-        ${database}.entry_agent aa UNION ALL SELECT
-        CONCAT(IF(aa.lastname IS NOT NULL
-                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
-            aa.entry_employee_id AS IDNo,
-            aa.sub_account
-    FROM
-        ${database}.entry_employee aa UNION ALL SELECT
-        aa.fullname AS ShortName,
-            aa.entry_fixed_assets_id AS IDNo,
-            sub_account
-    FROM
-        ${database}.entry_fixed_assets aa UNION ALL SELECT
-        aa.description AS ShortName,
-            aa.entry_others_id AS IDNo,
-            aa.sub_account
-    FROM
-        ${database}.entry_others aa UNION ALL SELECT
-        IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
-                AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
-            aa.entry_supplier_id AS IDNo,
-            aa.sub_account
-    FROM
-        ${database}.entry_supplier aa) id_entry
-    LEFT JOIN ${database}.sub_account b ON id_entry.sub_account = b.Sub_Acct)
-    ID_Entry RIGHT OUTER JOIN
-        ${database}.journal AS Journal LEFT OUTER JOIN
-        ${database}.policy AS Policy ON Journal.ID_No = Policy.PolicyNo ON ID_Entry.IDNo = Journal.ID_No LEFT OUTER JOIN
-        ${database}.sub_account AS SubAccount ON Journal.Sub_Acct = SubAccount.Sub_Acct ON Chart_Account.Acct_Code = Journal.GL_Acct LEFT OUTER JOIN
-        ${database}.books AS Books ON Journal.Source_Type = Books.Code
-        ) qryJournal
-          WHERE qryJournal.Date_Entry 
-            AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
-            AND qryJournal.GL_Acct = ?
-          AND qryJournal.ID_No = ?
-          ORDER BY  qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;
-      `;
-    const subsi = (await prisma.$queryRawUnsafe(
-      ssQRy,
-     req.body.policyNo.substring(0, 2) === 'TP' ? '1.03.01' : '1.03.03',
-      req.body.policyNo
-    )) as Array<any>;
-    let Balance = 0;
-    let Debit = 0;
-    let Credit = 0;
-    if (subsi.length > 0) {
-      for (const itm of subsi) {
-        Debit += parseFloat(itm.Debit.toString().replace(/,/g, ""));
-        Credit += parseFloat(itm.Credit.toString().replace(/,/g, ""));
-        Balance +=
-          parseFloat(itm.Debit.toString().replace(/,/g, "")) -
-          parseFloat(itm.Credit.toString().replace(/,/g, ""));
-      }
+
+    let totalGross = [{ TotalDue: "0" }];
+    let totalPaidDeposit = [{ totalDeposit: "0" }];
+    let totalPaidReturned = [{ totalReturned: "0" }];
+    let totalDiscount = [{ discount: "0" }];
+
+    if (database !== "claims") {
+      totalGross = await prisma.$queryRawUnsafe(
+        `SELECT TotalDue FROM ${database}.policy where PolicyNo = ?`,
+        req.body.policyNo
+      );
+      totalPaidDeposit = await prisma.$queryRawUnsafe(
+        `SELECT  ifNull(SUM(Credit),0)  as totalDeposit FROM ${database}.journal where Source_Type = 'OR' and GL_Acct = '1.03.01' and ID_No = ?`,
+        req.body.policyNo
+      );
+      totalPaidReturned = await prisma.$queryRawUnsafe(
+        `SELECT ifNull(SUM(Debit),0) as totalReturned FROM ${database}.journal where Source_Type = 'RC'   and GL_Acct = '1.03.01' and ID_No = ?`,
+        req.body.policyNo
+      );
+      totalDiscount = await prisma.$queryRawUnsafe(
+        `SELECT ifNull(SUM(Debit),0)  as discount FROM ${database}.journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
+        req.body.policyNo
+      );
     }
 
-    console.log(Balance, Credit, Debit);
-    const totalGross = await prisma.$queryRawUnsafe(
-      `SELECT TotalDue FROM ${database}.policy where PolicyNo = ?`,
-      req.body.policyNo
-    );
-    const totalPaidDeposit = await prisma.$queryRawUnsafe(
-      `SELECT  ifNull(SUM(Credit),0)  as totalDeposit FROM ${database}.journal where Source_Type = 'OR' and GL_Acct = '1.03.01' and ID_No = ?`,
-      req.body.policyNo
-    );
-    const totalPaidReturned = await prisma.$queryRawUnsafe(
-      `SELECT ifNull(SUM(Debit),0) as totalReturned FROM ${database}.journal where Source_Type = 'RC'   and GL_Acct = '1.03.01' and ID_No = ?`,
-      req.body.policyNo
-    );
-    const totalDiscount = await prisma.$queryRawUnsafe(
-      `SELECT ifNull(SUM(Debit),0)  as discount FROM ${database}.journal where Source_Type = 'GL'  and GL_Acct = '7.10.15'   and ID_No = ?`,
-      req.body.policyNo
-    );
-
     if (policyType === "COM" || policyType === "TPL") {
+      console.log(`
+          SELECT 
+              a.IDNo,
+              a.PolicyType,
+              a.PolicyNo,
+                 ${
+                   database === "claims"
+                     ? `a.Department`
+                     : database === "upward_insurance_umis"
+                     ? "'UMIS'"
+                     : "'UCSMI'"
+                 } AS Department,
+              IF(b.company <> ''
+                      AND b.company IS NOT NULL,
+                  b.company,
+                  CONCAT(IF(b.lastname <> ''
+                                  AND b.lastname IS NOT NULL,
+                              CONCAT(b.lastname, ', '),
+                              ''),
+                          b.firstname,
+                          IF(b.suffix <> '' AND b.suffix IS NOT NULL,
+                              CONCAT(', ', b.suffix),
+                              ''))) AS Name,
+              c.ChassisNo,
+              c.MotorNo,
+              c.CoverNo,
+              c.ORNo,
+              c.Model,
+              c.Make,
+              c.BodyType,
+              c.PlateNo,
+              a.Account,
+              a.DateIssued,
+              c.DateTo,
+              c.DateFrom
+          FROM
+              ${database}.policy a
+                  LEFT JOIN
+              ${database}.entry_client b ON a.IDNo = b.entry_client_id
+                  LEFT JOIN
+              ${database}.vpolicy c ON a.PolicyNo = c.PolicyNo
+          WHERE
+              a.PolicyNo = ?
+          `)
       res.send({
         data: await prisma.$queryRawUnsafe(
           `
@@ -697,7 +627,9 @@ Claims.post("/search-claim", async (req, res): Promise<any> => {
         b.Name,
         b.ChassisNo,
         b.MotorNo,
-        b.remarks
+        b.remarks,
+        b.from_d
+
     FROM
         claims.claims a
         LEFT JOIN (${unionTable}) b ON a.policyNo = b.PolicyNo
@@ -777,9 +709,9 @@ Claims.post("/selected-search-claim", async (req, res): Promise<any> => {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
 
-    if (req.body.department === "UMIS") {
+    if (req.body.from === "UMIS") {
       database = "upward_insurance_umis";
-    } else if (req.body.department === "UCSMI") {
+    } else if (req.body.from === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
     } else {
       database = "claims";
@@ -2394,7 +2326,8 @@ const unionTable = `
                     AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
                 d.ChassisNo,
                 d.MotorNo,
-                ifnull(d.Remarks,'') as remarks
+                ifnull(d.Remarks,'') as remarks,
+                'CLAIMS' as from_d
         FROM
             claims.policy b
         LEFT JOIN claims.entry_client c ON b.IDNo = c.entry_client_id
@@ -2410,7 +2343,8 @@ const unionTable = `
                     AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
                 d.ChassisNo,
                 d.MotorNo,
-                ifnull(d.Remarks,'') as remarks
+                ifnull(d.Remarks,'') as remarks,
+                'UCSMI' as from_d
         FROM
             new_upward_insurance_ucsmi.policy b
         LEFT JOIN new_upward_insurance_ucsmi.entry_client c ON b.IDNo = c.entry_client_id
@@ -2426,7 +2360,8 @@ const unionTable = `
                     AND c.lastname IS NOT NULL, CONCAT(c.lastname, ', '), ''), c.firstname, IF(c.suffix <> '' AND c.suffix IS NOT NULL, CONCAT(', ', c.suffix), ''))) AS Name,
                 d.ChassisNo,
                 d.MotorNo,
-                ifnull(d.Remarks,'') as remarks
+                ifnull(d.Remarks,'') as remarks,
+                'UMIS' as from_d
         FROM
             upward_insurance_umis.policy b
         LEFT JOIN upward_insurance_umis.entry_client c ON b.IDNo = c.entry_client_id
