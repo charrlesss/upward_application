@@ -640,7 +640,7 @@ Claims.post("/search-claim", async (req, res): Promise<any> => {
         OR b.PolicyNo LIKE ?
         OR b.IDNo LIKE ?
         OR b.Name LIKE ?
-    ORDER BY claim_id
+    ORDER BY claim_id desc
     LIMIT 100
       `;
     const data = await prisma.$queryRawUnsafe(
