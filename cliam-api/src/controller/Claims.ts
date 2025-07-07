@@ -169,10 +169,10 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
   try {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
-
-    if (req.body.from_d === "UMIS") {
+    console.log(req.body)
+    if (req.body.from === "UMIS") {
       database = "upward_insurance_umis";
-    } else if (req.body.from_d === "UCSMI") {
+    } else if (req.body.from === "UCSMI") {
       database = "new_upward_insurance_ucsmi";
     } else {
       database = "claims";
@@ -204,50 +204,6 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
     }
 
     if (policyType === "COM" || policyType === "TPL") {
-      console.log(`
-          SELECT 
-              a.IDNo,
-              a.PolicyType,
-              a.PolicyNo,
-                 ${
-                   database === "claims"
-                     ? `a.Department`
-                     : database === "upward_insurance_umis"
-                     ? "'UMIS'"
-                     : "'UCSMI'"
-                 } AS Department,
-              IF(b.company <> ''
-                      AND b.company IS NOT NULL,
-                  b.company,
-                  CONCAT(IF(b.lastname <> ''
-                                  AND b.lastname IS NOT NULL,
-                              CONCAT(b.lastname, ', '),
-                              ''),
-                          b.firstname,
-                          IF(b.suffix <> '' AND b.suffix IS NOT NULL,
-                              CONCAT(', ', b.suffix),
-                              ''))) AS Name,
-              c.ChassisNo,
-              c.MotorNo,
-              c.CoverNo,
-              c.ORNo,
-              c.Model,
-              c.Make,
-              c.BodyType,
-              c.PlateNo,
-              a.Account,
-              a.DateIssued,
-              c.DateTo,
-              c.DateFrom
-          FROM
-              ${database}.policy a
-                  LEFT JOIN
-              ${database}.entry_client b ON a.IDNo = b.entry_client_id
-                  LEFT JOIN
-              ${database}.vpolicy c ON a.PolicyNo = c.PolicyNo
-          WHERE
-              a.PolicyNo = ?
-          `)
       res.send({
         data: await prisma.$queryRawUnsafe(
           `
@@ -641,7 +597,7 @@ Claims.post("/search-claim", async (req, res): Promise<any> => {
         OR b.IDNo LIKE ?
         OR b.Name LIKE ?
     ORDER BY claim_id desc
-    LIMIT 100
+    LIMIT 5000
       `;
     const data = await prisma.$queryRawUnsafe(
       qry,
@@ -680,7 +636,7 @@ Claims.post("/search-policy", async (req, res): Promise<any> => {
               OR a.IDNo LIKE ?
               OR a.Name LIKE ?
       ORDER BY NAME
-      LIMIT 100
+      LIMIT 5000
       `;
     const data = await prisma.$queryRawUnsafe(
       qry,

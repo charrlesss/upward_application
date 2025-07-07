@@ -385,7 +385,8 @@ async function searchImberment(search: string) {
         OR tpl_name LIKE ?  
         OR payee LIKE ?  
         OR type_claim LIKE ?
-    ORDER BY refNo;
+    ORDER BY refNo desc
+    limit 5000
   `,
     `%${search}%`,
     `%${search}%`,
