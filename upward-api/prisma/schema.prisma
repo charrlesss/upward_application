@@ -767,7 +767,7 @@ model pdc {
   Check_Date      String? @db.VarChar(255)
   Check_No        String? @db.VarChar(50)
   Check_Amnt      String? @db.VarChar(250)
-  Check_Remarks   String? @db.VarChar(50)
+  Check_Remarks   String? @db.Text
   SlipCode        String? @db.VarChar(50)
   DateDepo        String? @db.VarChar(255)
   ORNum           String? @db.VarChar(50)
@@ -775,7 +775,7 @@ model pdc {
   Date_Stored     String? @db.VarChar(255)
   Date_Endorsed   String? @db.VarChar(255)
   Date_Pulled_Out String? @db.VarChar(255)
-  PDC_Remarks     String? @db.VarChar(250)
+  PDC_Remarks     String? @db.Text
   mark            String? @db.VarChar(50)
 }
 
