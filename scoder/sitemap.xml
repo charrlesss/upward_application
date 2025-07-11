@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Static Pages -->
+  <url><loc>https://scode.shop/</loc></url>
+  <url><loc>https://scode.shop/about</loc></url>
+  <url><loc>https://scode.shop/privacy-policy</loc></url>
+  <url><loc>https://scode.shop/terms</loc></url>
+  <url><loc>https://scode.shop/affiliate</loc></url>
+  <url><loc>https://scode.shop/download</loc></url>
+
+  <!-- Blogs -->
+  <url><loc>https://scode.shop/blogs</loc></url>
+  <url><loc>https://scode.shop/blogs/youtube/faceless-youtube</loc></url>
+  <url><loc>https://scode.shop/blogs/youtube/youtube-shadowban</loc></url>
+  <url><loc>https://scode.shop/blogs/programing/ai-tools-for-developers</loc></url>
+  <url><loc>https://scode.shop/blogs/programing/datagridview</loc></url>
+  <url><loc>https://scode.shop/blogs/programing/top-programming-languages</loc></url>
+  <url><loc>https://scode.shop/blogs/health/lower-cholesterol</loc></url>
+  <url><loc>https://scode.shop/blogs/health/personalized-nutrition</loc></url>
+  <url><loc>https://scode.shop/blogs/health/mental-health</loc></url>
+  <url><loc>https://scode.shop/blogs/motorcycle/adv160-vs-nmax-turbo</loc></url>
+
+  <!-- Product Reviews -->
+  <url><loc>https://scode.shop/affiliate/collagen-mask-review</loc></url>
+  <url><loc>https://scode.shop/affiliate/medicube-zero-pore-pads-review</loc></url>
+
+</urlset>
