@@ -218,6 +218,7 @@ Deposit.post("/search-deposit", async (req, res) => {
 });
 Deposit.post("/search-cash-check", async (req, res) => {
   try {
+    console.log(req.body)
     const { IDEntryWithPolicy } = qry_id_policy_sub();
     const cashKeys: any = {
       Pap_1000: "1,000.00",
@@ -281,8 +282,8 @@ Deposit.post("/search-cash-check", async (req, res) => {
         `SELECT 
         Pap_1000,
         Pap_500,
-        Pap_100,
         Pap_200,
+        Pap_100,
         Pap_50,
         Pap_20,
         Pap_10,
@@ -494,8 +495,8 @@ async function addDeposit(req: any) {
       Slip_Code: req.body.depositSlip,
       Pap_1000: tableRowsInputValue[0].value2,
       Pap_500: tableRowsInputValue[1].value2,
-      Pap_200: tableRowsInputValue[3].value2,
-      Pap_100: tableRowsInputValue[2].value2,
+      Pap_200: tableRowsInputValue[2].value2,
+      Pap_100: tableRowsInputValue[3].value2,
       Pap_50: tableRowsInputValue[4].value2,
       Pap_20: tableRowsInputValue[5].value2,
       Pap_10: tableRowsInputValue[6].value2,
