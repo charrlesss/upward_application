@@ -655,7 +655,8 @@ CheckPostponement.post(
     try {
       console.log(req.body);
 
-      const newData = req.body.tableData;
+      const newData = req.body.tableData.sort((a:any, b:any) => Number(a.seq) - Number(b.seq));
+
 
       let PAGE_WIDTH = 612;
       let PAGE_HEIGHT = 792;

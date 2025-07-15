@@ -42,8 +42,8 @@ const UCSMIEmailToSend = [
   "upwardinsurance.grace@gmail.com",
 ];
 
-// const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
-// const UCSMIEmailToSend = ["charlespalencia0721@gmail.com"];
+// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
@@ -499,9 +499,10 @@ PulloutApporved.post(
 );
 PulloutApporved.post("/pullout/approved/print", async (req, res) => {
   try {
-    console.log(req.body.tableData);
-
     const newData = req.body.tableData;
+    const sortedChecks = newData.sort(
+      (a: any, b: any) => Number(a.seq) - Number(b.seq)
+    );
 
     let PAGE_WIDTH = 612;
     let PAGE_HEIGHT = 792;
@@ -577,7 +578,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
     doc.text(req.body.state.Name, 85, 100, {
       align: "left",
     });
-    
+
     let yAxis = 115 + 35;
 
     doc.font("Helvetica-Bold");
@@ -600,7 +601,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
 
     doc.font("Helvetica");
 
-    newData.forEach((rowItm: any, rowIndex: number) => {
+    sortedChecks.forEach((rowItm: any, rowIndex: number) => {
       const rowHeight = Math.max(
         ...headers.map((itm: any) => {
           return doc.heightOfString(rowItm[itm.key], {
@@ -630,8 +631,6 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
         width: 200,
       }
     );
-
-
 
     doc.text(
       `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
