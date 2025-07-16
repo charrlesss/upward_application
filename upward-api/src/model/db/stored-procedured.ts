@@ -1895,6 +1895,7 @@ select
  from (${strSQL}) a
 left join (${IDEntryWithPolicy}) id_entry on a.ID_No = id_entry.IDNo
 `;
+
   return { strSQL, strSubSQL };
 }
 export function ProductionBook(
