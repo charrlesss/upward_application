@@ -19,7 +19,7 @@ import {
 import { getUserById } from "../../../model/StoredProcedure";
 import generateUniqueUUID from "../../../lib/generateUniqueUUID";
 import sendEmail from "../../../lib/sendEmail";
-import { format } from "date-fns";
+import { format, formatDate } from "date-fns";
 import generateRandomNumber from "../../../lib/generateRandomNumber";
 import saveUserLogs from "../../../lib/save_user_logs";
 import { VerifyToken } from "../../Authentication";
@@ -350,23 +350,23 @@ PulloutApporved.post("/pullout/approved/load-details", async (req, res) => {
 });
 PulloutApporved.post("/pullout/approved/confirm", async (req, res) => {
   try {
-    const RCPNo = req.body.RCPNo;
-    const code = req.body.code;
-    const dt = (await checkApprovedCode(req, code)) as Array<any>;
-    const dt1 = (await checkApprovedCodeIsUsed(req, RCPNo)) as Array<any>;
-    if (dt.length <= 0) {
-      return res.send({
-        message: "Invalid Authorization Code",
-        success: false,
-      });
-    }
+    // const RCPNo = req.body.RCPNo;
+    // const code = req.body.code;
+    // const dt = (await checkApprovedCode(req, code)) as Array<any>;
+    // const dt1 = (await checkApprovedCodeIsUsed(req, RCPNo)) as Array<any>;
+    // if (dt.length <= 0) {
+    //   return res.send({
+    //     message: "Invalid Authorization Code",
+    //     success: false,
+    //   });
+    // }
 
-    if (dt1.length > 0) {
-      return res.send({
-        message: `Request No. ${RCPNo} had already been approved/disapproved!`,
-        success: false,
-      });
-    }
+    // if (dt1.length > 0) {
+    //   return res.send({
+    //     message: `Request No. ${RCPNo} had already been approved/disapproved!`,
+    //     success: false,
+    //   });
+    // }
 
     res.send({
       message: "You want to confirm this transaction?",
@@ -390,6 +390,7 @@ PulloutApporved.post("/pullout/approved/confirm-code", async (req, res) => {
     const Name = req.body.Name;
     const code = req.body.code;
     const selected = req.body.selected;
+    console.log(selected)
 
     const user = await getUserById((req.user as any).UserId);
     const Requested_By = user?.Username as string;
@@ -726,9 +727,9 @@ function getSelectedCheck(selected: string) {
 }
 function generateTextTable(item: any) {
   return `<tr>
- <td style="border: 1px solid #ddd; padding: 8px">${item.Check_Date}</td>
+ <td style="border: 1px solid #ddd; padding: 8px">${formatDate(new Date(item.Check_Date),'MM/dd/yyyy')}</td>
  <td style="border: 1px solid #ddd; padding: 8px">${item.Bank}</td>
- <td style="border: 1px solid #ddd; padding: 8px">${item.Check_No}</td>
+ <td style="border: 1px solid #ddd; padding: 8px">${item.CheckNo}</td>
  <td style="border: 1px solid #ddd; padding: 8px">₱${item.Check_Amnt}</td>
 </tr>`;
 }

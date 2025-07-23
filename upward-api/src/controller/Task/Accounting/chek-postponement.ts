@@ -11,8 +11,8 @@ import PDFDocument from "pdfkit";
 import { formatNumber } from "./collection";
 
 const CheckPostponement = express.Router();
-// const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
-// const UCSMIEmailToSend = ["charlespalencia0721@gmail.com"];
+// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 const UMISEmailToSend = [
   "upwardinsurance.grace@gmail.com",
@@ -948,7 +948,6 @@ CheckPostponement.post(
       const isCodeFound: Array<any> = await prisma.$queryRawUnsafe(
         `selecT * from postponement_auth_codes where Approved_Code = '${req.body.code}'`
       );
-      console.log(req.body);
       if (isCodeFound.length <= 0) {
         return res.send({
           message: `Invalid Authorization Code [${req.body.code}]!`,
