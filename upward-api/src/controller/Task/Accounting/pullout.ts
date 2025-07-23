@@ -27,6 +27,7 @@ import { defaultFormat } from "../../../lib/defaultDateFormat";
 import { prisma } from "../..";
 import PDFDocument from "pdfkit";
 import fs from "fs";
+import { formatNumber } from "./collection";
 const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
@@ -499,10 +500,33 @@ PulloutApporved.post(
 );
 PulloutApporved.post("/pullout/approved/print", async (req, res) => {
   try {
-    const newData = req.body.tableData;
-    const sortedChecks = newData.sort(
-      (a: any, b: any) => Number(a.seq) - Number(b.seq)
-    );
+    const data = (await prisma.$queryRawUnsafe(
+      `
+     Select 
+        CAST((ROW_NUMBER() OVER ()) AS CHAR) as row_count ,
+        a.RCPNo,
+        a.PNNo,
+        c.Name ,
+        a.Reason,
+        b.CheckNo as Check_No,
+        date_format(c.Check_Date, '%m/%d/%Y') as Check_Date,
+        c.Bank as BankName,
+        c.Check_Amnt 
+      From pullout_request a 
+      Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
+      Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
+      Where a.RCPNo =  ?
+      order by Check_Date asc
+    `,
+      req.body.state.rcpnNo
+    )) as Array<any>;
+
+    const newData = data.map((itm, idx: number) => {
+      itm.Check_Amnt = formatNumber(
+        parseFloat(itm.Check_Amnt.toString().replace(/,/g, ""))
+      );
+      return { ...itm, seq: idx + 1 };
+    });
 
     let PAGE_WIDTH = 612;
     let PAGE_HEIGHT = 792;
@@ -601,7 +625,7 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
 
     doc.font("Helvetica");
 
-    sortedChecks.forEach((rowItm: any, rowIndex: number) => {
+    newData.forEach((rowItm: any, rowIndex: number) => {
       const rowHeight = Math.max(
         ...headers.map((itm: any) => {
           return doc.heightOfString(rowItm[itm.key], {

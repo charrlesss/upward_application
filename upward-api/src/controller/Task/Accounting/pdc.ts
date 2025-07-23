@@ -392,20 +392,24 @@ PDC.post("/print", async (req, res) => {
       const writeStream = fs.createWriteStream(outputFilePath);
       doc.pipe(writeStream);
       doc.fontSize(9);
-      doc.text(req.body.state.department, 0, 40, {
-        align: "center",
-        baseline: "middle",
-      });
-      doc.text(req.body.state.name, 0, 52, {
-        align: "center",
-        baseline: "middle",
-      });
-      doc.text(req.body.state.pno, 0, 64, {
-        align: "center",
-        baseline: "middle",
-      });
+      let yAxis = 25;
 
-      doc.text(req.body.state.ref, 0, 94, {
+      doc.text(req.body.state.department, 0, yAxis, {
+        align: "center",
+        baseline: "middle",
+      });
+      yAxis += 12;
+      doc.text(req.body.state.name, 0, yAxis, {
+        align: "center",
+        baseline: "middle",
+      });
+      yAxis += 12;
+      doc.text(req.body.state.pno, 0, yAxis, {
+        align: "center",
+        baseline: "middle",
+      });
+      yAxis += 17;
+      doc.text(req.body.state.ref, 0, yAxis, {
         align: "center",
         baseline: "middle",
       });

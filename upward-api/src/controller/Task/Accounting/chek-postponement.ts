@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../../controller";
 import fs from "fs";
 import PDFDocument from "pdfkit";
+import { formatNumber } from "./collection";
 
 const CheckPostponement = express.Router();
 // const UMISEmailToSend = ["charlespalencia0721@gmail.com"];
@@ -653,10 +654,38 @@ CheckPostponement.post(
   "/check-postponement/approved/print",
   async (req, res) => {
     try {
-      console.log(req.body);
+      const data = (await prisma.$queryRawUnsafe(
+        `   
+        selecT 
+          PNNO, 
+          CheckNo, 
+          'HO' as Branch,
+          date_format(a.OldCheckDate,'%m/%d/%Y') as OldDepositDate,
+          date_format(a.NewCheckDate,'%m/%d/%Y') as NewDate,
+          CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
+          a.Reason, 
+          (selecT distinct(name) from pdc where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
+          (select bank from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
+          (select Check_Amnt from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
+          (seleCT PaidVia from postponement where RPCDNo = a.RPCD) as 'PaidVia', 
+          (seleCT Surplus from postponement where RPCDNo = a.RPCD) as 'Surplus', 
+          (seleCT Deducted_to from postponement where RPCDNo = a.RPCD) as 'Deducted_to',
+          (seleCT PaidInfo from postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
+      from (
+          seleCT *, 
+          (selecT pnno from postponement where RPCDNo = A.RPCD) as 'PNNO' 
+          from postponement_detail A) a 
+      where RPCD = ?   
+      order by OldDepositDate asc`,
+        req.body.state.rcpnNo
+      )) as Array<any>;
 
-      const newData = req.body.tableData.sort((a:any, b:any) => Number(a.seq) - Number(b.seq));
-
+      const newData = data.map((itm: any, idx: number) => {
+        itm.Amount = formatNumber(
+          parseFloat(itm.Amount.toString().replace(/,/g, ""))
+        );
+        return { ...itm, ln: idx + 1 };
+      });
 
       let PAGE_WIDTH = 612;
       let PAGE_HEIGHT = 792;

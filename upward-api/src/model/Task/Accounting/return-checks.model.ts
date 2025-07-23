@@ -90,31 +90,33 @@ FROM
 export async function getCheckList(search: string, req: Request) {
   return await prisma.$queryRawUnsafe(
     `
-        SELECT 
-    Temp_SlipCode AS Deposit_Slip,
-    date_format(deposit.Temp_SlipDate,'%m/%d/%Y' ) AS Depo_Date,
-    deposit.Check_No AS Check_No,
-    date_format(deposit.Check_Date ,'%m/%d/%Y') as Check_Date,
-    FORMAT(deposit.Credit, 2) AS Amount,
-    deposit.Bank,
-    Official_Receipt,
-     date_format(Date_OR,'%m/%d/%Y' )AS Date_OR,
-    deposit_slip.BankAccount
-FROM
-    (deposit
-    LEFT JOIN deposit_slip ON deposit.Temp_SlipCode = deposit_slip.SlipCode)
-        LEFT JOIN
-    (SELECT 
-        Official_Receipt, Date_OR
+    SELECT 
+        Temp_SlipCode AS Deposit_Slip,
+        date_format(deposit.Temp_SlipDate,'%m/%d/%Y' ) AS Depo_Date,
+        deposit.Check_No AS Check_No,
+        date_format(deposit.Check_Date ,'%m/%d/%Y') as Check_Date,
+        FORMAT(deposit.Credit, 2) AS Amount,
+        deposit.Bank,
+        Official_Receipt,
+        date_format(Date_OR,'%m/%d/%Y' )AS Date_OR,
+        deposit_slip.BankAccount,
+        max(deposit.Deposit_ID) as  Deposit_ID
     FROM
-        collection
-    GROUP BY Official_Receipt , Date_OR) OR_Number ON deposit.Ref_No = OR_Number.Official_Receipt
-GROUP BY deposit.Temp_SlipCode , deposit.Temp_SlipDate , deposit.Ref_No , OR_Number.Date_OR , deposit_slip.BankAccount , deposit.Credit , deposit.Check_Date , deposit.Check_No , deposit.Bank , Official_Receipt 
-HAVING (((OR_Number.Date_OR) IS NOT NULL)
-    AND ((deposit.Check_No) <> ''))
-    AND (Check_No LIKE ? OR Bank LIKE ?)
-ORDER BY deposit.Check_Date Desc
-LIMIT 100
+        (deposit
+        LEFT JOIN deposit_slip ON deposit.Temp_SlipCode = deposit_slip.SlipCode)
+
+            LEFT JOIN
+        (SELECT 
+            Official_Receipt, Date_OR
+        FROM
+            collection
+        GROUP BY Official_Receipt , Date_OR) OR_Number ON deposit.Ref_No = OR_Number.Official_Receipt
+    GROUP BY deposit.Temp_SlipCode , deposit.Temp_SlipDate , deposit.Ref_No , OR_Number.Date_OR , deposit_slip.BankAccount , deposit.Credit , deposit.Check_Date , deposit.Check_No , deposit.Bank , Official_Receipt 
+    HAVING (((OR_Number.Date_OR) IS NOT NULL)
+        AND ((deposit.Check_No) <> ''))
+        AND (Check_No LIKE ? OR Bank LIKE ?)
+    ORDER BY deposit.Check_Date Desc
+    LIMIT 100
   `,
     `%${search}%`,
     `%${search}%`
