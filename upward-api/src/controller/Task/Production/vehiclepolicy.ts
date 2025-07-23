@@ -252,6 +252,19 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
       );
       await _prisma.$executeRawUnsafe(
         ` UPDATE collection
+                SET
+                CRLoanID = ?,
+                CRCode = '1.03.01',
+                CRTitle = 'Premium Receivables',
+                Purpose = 'Premium Collection'
+            WHERE
+                CRLoanID = ? 
+                and CRCode = '1.03.03'`,
+        newPolicy,
+        oldPolicy
+      );
+      await _prisma.$executeRawUnsafe(
+        ` UPDATE collection
           SET ID_No = ?
           WHERE ID_No = ?;`,
         newPolicy,
@@ -298,8 +311,9 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         "1.03.01",
         oldPolicy,
         "1.03.03",
-        'P/R'
+        "P/R"
       );
+
       await _prisma.$executeRawUnsafe(
         ` UPDATE journal
             SET GL_Acct = ?
@@ -307,9 +321,23 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         "4.02.01",
         oldPolicy,
         "4.02.07",
-        'A/P'
+        "A/P"
       );
-      
+
+      await _prisma.$executeRawUnsafe(
+        `
+        UPDATE journal 
+          SET 
+              Explanation = 'Premium Collection',
+              GL_Acct = '1.03.01',
+              cGL_Acct = 'Premium Receivables'
+          WHERE
+              GL_Acct = '1.03.03'
+              AND ID_No = ?
+        `,
+        oldPolicy
+      );
+
       await _prisma.$executeRawUnsafe(
         ` UPDATE journal
             SET ID_No = ?
@@ -325,7 +353,6 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
         newPolicy,
         oldPolicy
       );
-     
     });
 
     res.send({
@@ -1111,7 +1138,7 @@ async function insertNewVPolicy(
     form_action,
     rateCostRef = 0,
     remarksRef,
-    careOfRef
+    careOfRef,
   }: any,
   req: Request
 ) {
@@ -1214,7 +1241,7 @@ async function insertNewVPolicy(
       ).toFixed(2),
       TPLTypeSection_I_II: typeRef,
       Remarks: remarksRef,
-      careOf:careOfRef
+      careOf: careOfRef,
     },
     req
   );

@@ -1006,7 +1006,7 @@ CheckPostponement.post(
           await sendApprovedEmail({
             RPCD: req.body.RPCDNoRef,
             PNNo: req.body.PNNoRef,
-            client: req.body.PNNoRef,
+            client: req.body.NameRef,
             text,
             Requested_Date,
             Requested_By,
@@ -1036,7 +1036,7 @@ CheckPostponement.post(
           await sendApprovedEmail({
             RPCD: req.body.RPCDNoRef,
             PNNo: req.body.PNNoRef,
-            client: req.body.PNNoRef,
+            client: req.body.NameRef,
             text,
             Requested_Date,
             Requested_By,
