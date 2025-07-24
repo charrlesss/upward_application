@@ -10,13 +10,13 @@ const uploadDir = path.join(__dirname, "./../../static/claim-files");
 import { compareSync } from "bcrypt";
 import PDFDocument from "pdfkit";
 import { format } from "date-fns";
+import sizeOf from "image-size";
 
 fs.ensureDirSync(uploadDir);
 Claims.post("/get-document", async (req, res) => {
   try {
-    console.log(req.body);
-    const claimDocument: Array<any> = await prisma.$queryRawUnsafe(
-      `select documents from claims_details where claim_id = ?`,
+    const claims: Array<any> = await prisma.$queryRawUnsafe(
+      `select documents , claim_reference_no from claims_details where claim_id = ?`,
       req.body.claimNo
     );
     const claimBasicDocument: Array<any> = await prisma.$queryRawUnsafe(
@@ -26,8 +26,12 @@ Claims.post("/get-document", async (req, res) => {
     const basicdocumentsArray = JSON.parse(
       claimBasicDocument[0].basicDocuments
     );
-    const claimsdocumentsArray = JSON.parse(claimDocument[0].documents);
-
+    const claimsdocumentsArray = claims.map((itm: any) => {
+      const newDocument = JSON.parse(itm.documents);
+      return newDocument.map((secItem: any) => {
+        return { ...secItem, reference: itm.claim_reference_no };
+      });
+    });
     let PAGE_WIDTH = 612;
     let PAGE_HEIGHT = 792;
 
@@ -36,44 +40,111 @@ Claims.post("/get-document", async (req, res) => {
       size: [PAGE_WIDTH, PAGE_HEIGHT],
       margin: 0,
       bufferPages: true,
+      autoFirstPage: false,
     });
-
     const writeStream = fs.createWriteStream(outputFilePath);
     doc.pipe(writeStream);
 
     basicdocumentsArray.forEach((itm: any) => {
       if (itm.files.length > 0) {
-        let startX = 20;
-        let startY = 20;
         for (let i = 0; i < itm.files.length; i++) {
+          doc.addPage({
+            margin: 0,
+            size: [PAGE_WIDTH, PAGE_HEIGHT],
+            bufferPages: true,
+            autoFirstPage: false,
+          });
           const file = itm.files[i];
           const label = itm.remarks[i];
-          const imageWidth = 200;
-          const imageHeigth = 200;
-          doc.image(
-            path.join(
-              __dirname,
-              `../../static/claim-files/${req.body.claimNo}/${file}`
-            ),
-            startX,
-            startY,
-            {
-              fit: [imageWidth, imageHeigth],
-            }
+          const imagePath = path.join(
+            __dirname,
+            `../../static/claim-files/${req.body.claimNo}/${file}`
           );
-          startY += imageHeigth;
-          startY += 10;
-          doc.text(label, startX, startY);
+          const fileBuffer = fs.readFileSync(imagePath);
+          const dimensions = sizeOf(fileBuffer);
+          const imgWidth = dimensions.width;
+          const imgHeight = dimensions.height;
 
-          startY += 20;
+          // 3. Page dimensions
+          const pageWidth = doc.page.width;
+          const pageHeight = doc.page.height;
+
+          // 4. Optional margins
+          const margin = 40;
+          const maxWidth = pageWidth - margin * 2;
+          const maxHeight = pageHeight - margin * 2;
+
+          // 5. Scale to fit within page
+          const widthRatio = maxWidth / imgWidth;
+          const heightRatio = maxHeight / imgHeight;
+          const scale = Math.min(widthRatio, heightRatio);
+
+          const displayWidth = imgWidth * scale;
+          const displayHeight = imgHeight * scale;
+
+          // 6. Center the image
+          const x = (pageWidth - displayWidth) / 2;
+          const y = (pageHeight - displayHeight) / 2;
+
+          doc.image(fileBuffer, x, y, {
+            width: displayWidth,
+            height: displayHeight,
+          });
         }
-        doc.addPage({
-          margin: 0,
-          size: [PAGE_WIDTH, PAGE_HEIGHT],
-          bufferPages: true,
-        });
       }
     });
+
+    for (let i = 0; i < claimsdocumentsArray.length; i++) {
+      claimsdocumentsArray[i].forEach((itm: any) => {
+        if (itm.files.length > 0) {
+          for (let i = 0; i < itm.files.length; i++) {
+            doc.addPage({
+              margin: 0,
+              size: [PAGE_WIDTH, PAGE_HEIGHT],
+              bufferPages: true,
+              autoFirstPage: false,
+            });
+            const file = itm.files[i];
+            const label = itm.remarks[i];
+
+            const imagePath = path.join(
+              __dirname,
+              `../../static/claim-files/${req.body.claimNo}/${itm.reference}/${itm.document_id}/${file}`
+            );
+            const fileBuffer = fs.readFileSync(imagePath);
+            const dimensions = sizeOf(fileBuffer);
+            const imgWidth = dimensions.width;
+            const imgHeight = dimensions.height;
+
+            // 3. Page dimensions
+            const pageWidth = doc.page.width;
+            const pageHeight = doc.page.height;
+
+            // 4. Optional margins
+            const margin = 40;
+            const maxWidth = pageWidth - margin * 2;
+            const maxHeight = pageHeight - margin * 2;
+
+            // 5. Scale to fit within page
+            const widthRatio = maxWidth / imgWidth;
+            const heightRatio = maxHeight / imgHeight;
+            const scale = Math.min(widthRatio, heightRatio);
+
+            const displayWidth = imgWidth * scale;
+            const displayHeight = imgHeight * scale;
+
+            // 6. Center the image
+            const x = (pageWidth - displayWidth) / 2;
+            const y = (pageHeight - displayHeight) / 2;
+
+            doc.image(fileBuffer, x, y, {
+              width: displayWidth,
+              height: displayHeight,
+            });
+          }
+        }
+      });
+    }
 
     doc.end();
     writeStream.on("finish", () => {
@@ -169,7 +240,7 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
   try {
     const policyType = req.body.policyType.toUpperCase();
     let database = "";
-    console.log(req.body)
+    console.log(req.body);
     if (req.body.from === "UMIS") {
       database = "upward_insurance_umis";
     } else if (req.body.from === "UCSMI") {
@@ -177,7 +248,6 @@ Claims.post("/selected-search-policy", async (req, res): Promise<any> => {
     } else {
       database = "claims";
     }
-
 
     let totalGross = [{ TotalDue: "0" }];
     let totalPaidDeposit = [{ totalDeposit: "0" }];
