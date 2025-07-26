@@ -663,6 +663,7 @@ CheckPostponement.post(
           date_format(a.OldCheckDate,'%m/%d/%Y') as OldDepositDate,
           date_format(a.NewCheckDate,'%m/%d/%Y') as NewDate,
           CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
+          date_format(a.OldCheckDate,'%Y-%m-%d') as SorOldCheckDate,
           a.Reason, 
           (selecT distinct(name) from pdc where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
           (select bank from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
@@ -676,7 +677,7 @@ CheckPostponement.post(
           (selecT pnno from postponement where RPCDNo = A.RPCD) as 'PNNO' 
           from postponement_detail A) a 
       where RPCD = ?   
-      order by OldDepositDate asc`,
+      order by SorOldCheckDate asc`,
         req.body.state.rcpnNo
       )) as Array<any>;
 

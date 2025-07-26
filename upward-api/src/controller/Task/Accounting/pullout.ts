@@ -32,59 +32,19 @@ const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
 
-const UMISEmailToSend = [
-  "upwardinsurance.grace@gmail.com",
-  "lva_ancar@yahoo.com",
-  "upwardinsurance.grace@gmail.com",
-];
-const UCSMIEmailToSend = [
-  "upward.csmi@yahoo.com",
-  "upward.csmi@gmail.com",
-  "upwardinsurance.grace@gmail.com",
-];
+// const UMISEmailToSend = [
+//   "upwardinsurance.grace@gmail.com",
+//   "lva_ancar@yahoo.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
+// const UCSMIEmailToSend = [
+//   "upward.csmi@yahoo.com",
+//   "upward.csmi@gmail.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
 
-// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
-// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
-
-PulloutRequest.post(
-  `/pullout/reqeust/get-selected-rcpn-no`,
-  async (req, res) => {
-    try {
-      const data = await prisma.$queryRawUnsafe(
-        `
-      SELECT 
-        *,
-          (SELECT DISTINCT
-                  (name)
-              FROM
-                  pdc
-              WHERE
-                  PNo = a.PNNo) AS 'Name'
-      FROM
-          pullout_request a
-      WHERE
-          Branch = 'HO' AND Status = 'PENDING'
-              AND rcpno = ?
-      ORDER BY RCPNo
-      `,
-        req.body.rcpno
-      );
-
-      res.send({
-        message: "Save Successfully",
-        success: true,
-        data,
-      });
-    } catch (error: any) {
-      console.log(error);
-      res.send({
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-        success: false,
-        data: [],
-      });
-    }
-  }
-);
+const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
@@ -125,7 +85,45 @@ PulloutRequest.post(
     }
   }
 );
+PulloutRequest.post(
+  `/pullout/reqeust/get-selected-rcpn-no`,
+  async (req, res) => {
+    try {
+      const data = await prisma.$queryRawUnsafe(
+        `
+      SELECT 
+        *,
+          (SELECT DISTINCT
+                  (name)
+              FROM
+                  pdc
+              WHERE
+                  PNo = a.PNNo) AS 'Name'
+      FROM
+          pullout_request a
+      WHERE
+          Branch = 'HO' AND Status = 'PENDING'
+              AND rcpno = ?
+      ORDER BY RCPNo
+      `,
+        req.body.rcpno
+      );
 
+      res.send({
+        message: "Save Successfully",
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      console.log(error);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
 PulloutRequest.post(`/pullout/reqeust/get-rcpn-no`, async (req, res) => {
   try {
     const data = await prisma.$queryRawUnsafe(
@@ -156,7 +154,6 @@ PulloutRequest.post(`/pullout/reqeust/get-rcpn-no`, async (req, res) => {
     });
   }
 });
-
 PulloutRequest.post(`/pullout/reqeust/get-pnno-client`, async (req, res) => {
   try {
     console.log(req.body);
@@ -189,7 +186,6 @@ PulloutRequest.post(`/pullout/reqeust/get-pnno-client`, async (req, res) => {
     });
   }
 });
-
 PulloutRequest.post(
   `/pullout/reqeust/save-pullout-request`,
   async (req, res) => {
@@ -219,10 +215,21 @@ PulloutRequest.post(
         flag: requestMode,
       } = req.body;
       const user = await getUserById((req.user as any).UserId);
-      let text = "";
       const Requested_By = user?.Username;
       const Requested_Date = new Date();
-      text = getSelectedCheck(selected);
+      
+      let text = "";
+      JSON.parse(selected).forEach((item: any) => {
+        text +=  `<tr>
+                    <td style="border: 1px solid #ddd; padding: 8px">${formatDate(
+                      new Date(item.Check_Date),
+                      "MM/dd/yyyy"
+                    )}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px">${item.Bank}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px">${item.Check_No}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px">₱${item.Check_Amnt}</td>
+                </tr>`
+      });
 
       if (requestMode === "edit") {
         await deletePulloutRequest(req, RCPNo);
@@ -390,7 +397,7 @@ PulloutApporved.post("/pullout/approved/confirm-code", async (req, res) => {
     const Name = req.body.Name;
     const code = req.body.code;
     const selected = req.body.selected;
-    console.log(selected)
+    console.log(selected);
 
     const user = await getUserById((req.user as any).UserId);
     const Requested_By = user?.Username as string;
@@ -453,7 +460,6 @@ PulloutApporved.post("/pullout/approved/confirm-code", async (req, res) => {
     });
   }
 });
-
 PulloutApporved.post(
   "/pullout/approved/load-rcpn-approved",
   async (req, res) => {
@@ -473,7 +479,6 @@ PulloutApporved.post(
     }
   }
 );
-
 PulloutApporved.post(
   "/pullout/approved/load-rcpn-approved-list",
   async (req, res) => {
@@ -503,21 +508,22 @@ PulloutApporved.post("/pullout/approved/print", async (req, res) => {
   try {
     const data = (await prisma.$queryRawUnsafe(
       `
-     Select 
-        CAST((ROW_NUMBER() OVER ()) AS CHAR) as row_count ,
-        a.RCPNo,
-        a.PNNo,
-        c.Name ,
-        a.Reason,
-        b.CheckNo as Check_No,
-        date_format(c.Check_Date, '%m/%d/%Y') as Check_Date,
-        c.Bank as BankName,
-        c.Check_Amnt 
-      From pullout_request a 
-      Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
-      Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
-      Where a.RCPNo =  ?
-      order by Check_Date asc
+        Select 
+          CAST((ROW_NUMBER() OVER ()) AS CHAR) as row_count ,
+          a.RCPNo,
+          a.PNNo,
+          c.Name ,
+          a.Reason,
+          b.CheckNo as Check_No,
+          date_format(c.Check_Date, '%m/%d/%Y')  as Check_Date,
+          c.Bank as BankName,
+          c.Check_Amnt,
+          date_format(c.Check_Date, '%Y-%m-%d') as sort_check_date
+        From pullout_request a 
+        Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
+        Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
+        Where a.RCPNo =  ?
+        order by sort_check_date asc
     `,
       req.body.state.rcpnNo
     )) as Array<any>;
@@ -725,14 +731,19 @@ function getSelectedCheck(selected: string) {
   });
   return tbodyText;
 }
+
 function generateTextTable(item: any) {
   return `<tr>
- <td style="border: 1px solid #ddd; padding: 8px">${formatDate(new Date(item.Check_Date),'MM/dd/yyyy')}</td>
+ <td style="border: 1px solid #ddd; padding: 8px">${formatDate(
+   new Date(item.Check_Date),
+   "MM/dd/yyyy"
+ )}</td>
  <td style="border: 1px solid #ddd; padding: 8px">${item.Bank}</td>
  <td style="border: 1px solid #ddd; padding: 8px">${item.CheckNo}</td>
  <td style="border: 1px solid #ddd; padding: 8px">₱${item.Check_Amnt}</td>
 </tr>`;
 }
+
 async function sendRequestEmail(props: any) {
   const {
     RCPNo,

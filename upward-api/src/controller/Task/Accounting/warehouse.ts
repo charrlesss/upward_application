@@ -16,7 +16,6 @@ import { prisma } from "../..";
 
 const Warehouse = express.Router();
 
-
 Warehouse.post(
   "/warehouse/search-pdc-checks-client-policy",
   async (req, res) => {
@@ -36,7 +35,7 @@ Warehouse.post(
       const searchBy = ["PNo", "IDNo", "Name", "Bank"][searchType];
 
       function LoadPDC(searchBy: string, search: string, StrWhere: string) {
-        return `
+        const qry = `
         SELECT 
           PDC_ID,
           CAST(ROW_NUMBER() OVER () AS CHAR) AS temp_id,
@@ -50,8 +49,11 @@ Warehouse.post(
           Bank, 
           PDC_Status 
         FROM pdc
-        WHERE  ${searchBy}  LIKE '%${search}%' AND ${StrWhere} ORDER BY Date,Check_Date`;
+        WHERE  PNo LIKE '%${search}%' AND ${StrWhere} ORDER BY Date,Check_Date`;
+        console.log(qry);
+        return qry;
       }
+
       res.send({
         message: "successfully",
         success: true,
@@ -265,17 +267,13 @@ Warehouse.post("/warehouse/search-pdc", async (req, res) => {
         Bank, 
         PDC_Status
       FROM pdc  
-      WHERE  (PNo = ? OR  IDNo = ?) AND ${strWhere} ORDER BY Check_Date`;
+      WHERE  PNo = ?  AND ${strWhere} ORDER BY Check_Date`;
 
+    console.log(qry);
     res.send({
       message: "successfully",
       success: true,
-      data: await prisma.$queryRawUnsafe(
-        qry,
-        req.body.search,
-        req.body.search,
-        status
-      ),
+      data: await prisma.$queryRawUnsafe(qry, req.body.search, status),
     });
   } catch (err: any) {
     console.log(err.message);
@@ -288,7 +286,6 @@ Warehouse.post("/warehouse/search-pdc", async (req, res) => {
 });
 Warehouse.post("/warehouse/save-checks", async (req, res) => {
   try {
-
     const pdcStatusIndex = parseInt(req.body.pdcStatus.toString());
     const remarks = req.body.remarksValue;
     const tableDataSelected = req.body.tableData;
