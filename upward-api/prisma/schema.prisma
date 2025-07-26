@@ -1187,6 +1187,29 @@ model id_from_2020 {
   id_id  Int    @id @default(autoincrement())
 }
 
+model gpa_endorsement {
+  endorsement_id Int      @id @default(autoincrement())
+  endorsement_no String   @db.Text
+  // policy details
+  policyNo       String   @db.Text
+  name           String   @db.Text
+  address        String   @db.Text
+  datefrom       DateTime @db.DateTime(6)
+  dateto         DateTime @db.DateTime(6)
+  suminsured     Decimal  @db.Decimal(19, 4)
+  //description
+  deleted        String  @db.Text
+  replacement    String  @db.Text
+  additional     String  @db.Text
+  // premium
+  totalpremium   Decimal @default(0.0000) @db.Decimal(19, 4)
+  vat            Decimal @default(0.0000) @db.Decimal(19, 4)
+  docstamp       Decimal @default(0.0000) @db.Decimal(19, 4)
+  lgovtaxpercent Decimal @default(0.0000) @db.Decimal(19, 4)
+  lgovtax        Decimal @default(0.0000) @db.Decimal(19, 4)
+  totaldue       Decimal @default(0.0000) @db.Decimal(19, 4)
+}
+
 model claims {
   claims_id     String   @id
   remarks       String?  @db.Text

@@ -9,6 +9,7 @@ import CGLPolicy from "./cglpolicy";
 import Policy from "./policy";
 import RenewalNotice from "./renewalnotice";
 import StatementOfAccount from "./statementOfAccount";
+import Endorsement from "./endorsement";
 
 const Production = express.Router();
 
@@ -22,5 +23,6 @@ Production.use("/production", PAPolicy);
 Production.use("/production", CGLPolicy);
 Production.use("/production", StatementOfAccount);
 Production.use("/production", Policy);
+Production.use("/production", Endorsement);
 
 export default Production;
