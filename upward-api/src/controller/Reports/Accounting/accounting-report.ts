@@ -111,17 +111,18 @@ accountingReporting.post("/report/search-pullout", async (req, res) => {
    SELECT 
     *
 FROM
-    (SELECT 
+    (
+      SELECT 
         B.RCPNo,
-        b.PNNo,
-        a.Name,
-        CAST(COUNT(b.CheckNo) AS CHAR) AS NoOfChecks,
-        b.Reason
+        B.PNNo,
+        A.Name,
+        CAST(COUNT(B.CheckNo) AS CHAR) AS NoOfChecks,
+        B.Reason
     FROM
         pdc A
     INNER JOIN (
         SELECT 
-            A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
+            A.RCPNo, A.PNNo, B.CheckNo, A.Status, A.Reason
         FROM
             pullout_request A
         INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo
@@ -129,10 +130,10 @@ FROM
         AND A.Check_No = B.CheckNo
     WHERE
         PDC_Status = 'Stored'
-        AND b.Status = 'APPROVED'
-    GROUP BY B.RCPNo, b.PNNo, a.Name, b.Reason
+        AND B.Status = 'APPROVED'
+    GROUP BY B.RCPNo, B.PNNo, A.Name, B.Reason
     ORDER BY B.RCPNo desc
-) a
+    ) a
 WHERE 
     a.RCPNo LIKE ?
     OR a.PNNo LIKE ?
