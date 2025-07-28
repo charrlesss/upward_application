@@ -105,6 +105,252 @@ accountingReporting.post("/report/sub-account-search", async (req, res) => {
     });
   }
 });
+accountingReporting.post("/report/search-pullout", async (req, res) => {
+  try {
+    const qry = `
+   SELECT 
+    *
+FROM
+    (SELECT 
+        B.RCPNo,
+        b.PNNo,
+        a.Name,
+        CAST(COUNT(b.CheckNo) AS CHAR) AS NoOfChecks,
+        b.Reason
+    FROM
+        pdc A
+    INNER JOIN (
+        SELECT 
+            A.RCPNo, A.PNNo, b.CheckNo, a.Status, a.Reason
+        FROM
+            pullout_request A
+        INNER JOIN pullout_request_details B ON A.RCPNo = B.RCPNo
+    ) B ON A.PNo = B.PNNo
+        AND A.Check_No = B.CheckNo
+    WHERE
+        PDC_Status = 'Stored'
+        AND b.Status = 'APPROVED'
+    GROUP BY B.RCPNo, b.PNNo, a.Name, b.Reason
+    ORDER BY B.RCPNo desc
+) a
+WHERE 
+    a.RCPNo LIKE ?
+    OR a.PNNo LIKE ?
+    OR a.Name LIKE ?
+    OR a.Reason LIKE ?
+    `;
+
+    const data  = await prisma.$queryRawUnsafe(
+        qry,
+
+        `%${req.body.search}%`,
+        `%${req.body.search}%`,
+        `%${req.body.search}%`,
+        `%${req.body.search}%`
+      ) as Array<any>
+      
+    res.send({
+      message: "Successfully Get Report",
+      success: true,
+      data: data
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: err.message,
+      success: false,
+      data: [],
+    });
+  }
+});
+accountingReporting.post("/report/search-postponement", async (req, res) => {
+  try {
+    const qry = `
+  select 
+      a.*,
+      b.Name
+    from (
+      SELECT 
+        a.RPCDNo,
+        a.PNNo,
+        CAST(COUNT(b.CheckNo) AS CHAR) AS NoOfChecks
+        
+      FROM
+        postponement a
+          LEFT JOIN
+        postponement_detail b ON a.RPCDNo = b.RPCD
+      WHERE
+        Status = 'APPROVED'
+      GROUP BY RPCDNo , PNNo
+      ORDER BY a.RPCDNo desc
+    ) a
+    LEFT JOIN (
+    SELECT 
+            a.IDType AS Type,
+                a.IDNo,
+                a.sub_account,
+                a.Shortname AS Name,
+                a.client_id,
+                a.ShortName AS sub_shortname,
+                b.ShortName,
+                b.Acronym,
+                IF(a.IDType = 'Policy'
+                    AND c.PolicyType = 'COM'
+                    OR c.PolicyType = 'TPL', CONCAT('C: ', d.ChassisNo, '  ', 'E: ', d.MotorNo), '') AS remarks,
+                IFNULL(d.ChassisNo, '') AS chassis,
+                a.address
+        FROM
+            (SELECT 
+            *
+        FROM
+            (SELECT 
+            'Client' AS IDType,
+                a.entry_client_id AS IDNo,
+                sub_account,
+                IF(a.option = 'company', a.company, IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ',if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),'')), CONCAT(a.lastname, ', ', a.firstname, ' ', if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),'')))) AS Shortname,
+                a.entry_client_id AS client_id,
+                a.address
+        FROM
+            entry_client a UNION ALL SELECT 
+            'Supplier' AS IDType,
+                a.entry_supplier_id AS IDNo,
+                sub_account,
+                IF(a.option = 'company', a.company, IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename))) AS Shortname,
+                a.entry_supplier_id AS client_id,
+                a.address
+        FROM
+            entry_supplier a UNION ALL SELECT 
+            'Employee' AS IDType,
+                a.entry_employee_id AS IDNo,
+                sub_account,
+                IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename)) AS Shortname,
+                a.entry_employee_id AS client_id,
+                a.address
+        FROM
+            entry_employee a UNION ALL SELECT 
+            'Fixed Assets' AS IDType,
+                a.entry_fixed_assets_id AS IDNo,
+                sub_account,
+                a.fullname AS Shortname,
+                a.entry_fixed_assets_id AS client_id,
+                a.description AS address
+        FROM
+            entry_fixed_assets a UNION ALL SELECT 
+            'Others' AS IDType,
+                a.entry_others_id AS IDNo,
+                sub_account,
+                a.description AS cID_No,
+                a.entry_others_id AS client_id,
+                a.remarks AS address
+        FROM
+            entry_others a UNION ALL SELECT 
+            'Agent' AS IDType,
+                a.entry_agent_id AS IDNo,
+                sub_account,
+                IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename)) AS Shortname,
+                a.entry_agent_id AS client_id,
+                a.address
+        FROM
+            entry_agent a) id_entry UNION ALL SELECT 
+            'Policy' AS IDType,
+                a.PolicyNo AS IDNo,
+                b.sub_account,
+                b.Shortname,
+                a.IDNo AS client_id,
+                b.address
+        FROM
+            policy a
+        LEFT JOIN (SELECT 
+            *
+        FROM
+            (SELECT 
+            'Client' AS IDType,
+                a.entry_client_id AS IDNo,
+                sub_account,
+                IF(a.option = 'company', a.company, IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),'')), CONCAT(a.lastname, ', ', a.firstname, ' ', if(a.suffix is not null and a.suffix <> '' , concat(a.suffix,'.'),'')))) AS Shortname,
+                a.entry_client_id AS client_id,
+                a.address
+        FROM
+            entry_client a UNION ALL SELECT 
+            'Supplier' AS IDType,
+                a.entry_supplier_id AS IDNo,
+                sub_account,
+                IF(a.option = 'company', a.company, IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename))) AS Shortname,
+                a.entry_supplier_id AS client_id,
+                a.address
+        FROM
+            entry_supplier a UNION ALL SELECT 
+            'Employee' AS IDType,
+                a.entry_employee_id AS IDNo,
+                sub_account,
+                IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename)) AS Shortname,
+                a.entry_employee_id AS client_id,
+                a.address
+        FROM
+            entry_employee a UNION ALL SELECT 
+            'Fixed Assets' AS IDType,
+                a.entry_fixed_assets_id AS IDNo,
+                sub_account,
+                a.fullname AS Shortname,
+                a.entry_fixed_assets_id AS client_id,
+                a.description AS address
+        FROM
+            entry_fixed_assets a UNION ALL SELECT 
+            'Others' AS IDType,
+                a.entry_others_id AS IDNo,
+                sub_account,
+                a.description AS cID_No,
+                a.entry_others_id AS client_id,
+                a.remarks AS address
+        FROM
+            entry_others a UNION ALL SELECT 
+            'Agent' AS IDType,
+                a.entry_agent_id AS IDNo,
+                sub_account,
+                IF(a.lastname IS NOT NULL
+                    AND TRIM(a.lastname) = '', CONCAT(a.firstname, ' ', a.middlename), CONCAT(a.lastname, ', ', a.firstname, ' ', a.middlename)) AS Shortname,
+                a.entry_agent_id AS client_id,
+                a.address
+        FROM
+            entry_agent a) id_entry) b ON a.IDNo = b.IDNo) a
+        LEFT JOIN sub_account b ON a.sub_account = b.Sub_Acct
+        LEFT JOIN policy c ON a.IDNo = c.PolicyNo
+        LEFT JOIN vpolicy d ON c.PolicyNo = d.PolicyNo
+    ) b ON a.PNNo = b.IDNo
+     where 
+      a.RPCDNo like ?
+      OR a.PNNo like ?
+      OR b.Name like ?
+    `;
+
+    const data  = await prisma.$queryRawUnsafe(
+        qry,
+        `%${req.body.search}%`,
+        `%${req.body.search}%`,
+        `%${req.body.search}%`,
+      ) as Array<any>
+      
+    res.send({
+      message: "Successfully Get Report",
+      success: true,
+      data: data
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: err.message,
+      success: false,
+      data: [],
+    });
+  }
+});
 // Schedule Account
 accountingReporting.post(
   "/report/generate-report-schedule-of-account",
@@ -326,6 +572,434 @@ accountingReporting.post(
     } catch (err: any) {
       res.send({
         message: err.message,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+// Pullout
+accountingReporting.post(
+  "/report/generate-report-pullout",
+  async (req, res) => {
+    try {
+      const data = (await prisma.$queryRawUnsafe(
+        `
+        Select 
+          CAST((ROW_NUMBER() OVER ()) AS CHAR) as row_count ,
+          a.RCPNo,
+          a.PNNo,
+          c.Name ,
+          a.Reason,
+          b.CheckNo as Check_No,
+          date_format(c.Check_Date, '%m/%d/%Y')  as Check_Date,
+          c.Bank as BankName,
+          c.Check_Amnt,
+          date_format(c.Check_Date, '%Y-%m-%d') as sort_check_date
+        From pullout_request a 
+        Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
+        Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
+        Where a.RCPNo =  ?
+        order by sort_check_date asc
+    `,
+        req.body.RCPNo
+      )) as Array<any>;
+
+      console.log(data)
+      const newData = data.map((itm, idx: number) => {
+        itm.Check_Amnt = formatNumber(
+          parseFloat(itm.Check_Amnt.toString().replace(/,/g, ""))
+        );
+        return { ...itm, seq: idx + 1 };
+      });
+
+      let PAGE_WIDTH = 612;
+      let PAGE_HEIGHT = 792;
+
+      const headers = [
+        {
+          label: "CHECK NO",
+          key: "Check_No",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "DATE",
+          key: "Check_Date",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "BANK",
+          key: "BankName",
+          style: { align: "left", width: 80 },
+        },
+        {
+          label: "AMOUNT",
+          key: "Check_Amnt",
+          style: { align: "right", width: 60 },
+        },
+        { label: "SEQ", key: "seq", style: { align: "right", width: 30 } },
+      ];
+
+      const outputFilePath = "manok.pdf";
+      const doc = new PDFDocument({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+
+      const writeStream = fs.createWriteStream(outputFilePath);
+      doc.pipe(writeStream);
+      doc.fontSize(12);
+      // doc.text(req.body.reportTitle, 0, 35, {
+      //   align: "center",
+      //   baseline: "middle",
+      // });
+      doc.text(`${req.body.title}`, 0, 52, {
+        align: "center",
+        baseline: "middle",
+      });
+
+      doc.fontSize(8);
+      // first line
+      doc.font("Helvetica-Bold");
+      doc.text("P.N. No. :", 20, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.PNNo, 85, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica-Bold");
+      doc.text("Reference No :", PAGE_WIDTH - 150, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.RCPNo, PAGE_WIDTH - 80, 85, {
+        align: "left",
+      });
+
+      // second line
+      doc.font("Helvetica-Bold");
+      doc.text("Client Name  :", 20, 100, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.Name, 85, 100, {
+        align: "left",
+      });
+
+      let yAxis = 115 + 35;
+
+      doc.font("Helvetica-Bold");
+
+      let hx = 120;
+      headers.forEach((colItm: any, colIndex: number) => {
+        doc.text(colItm.label, hx, yAxis, {
+          align: colItm.style.align === "right" ? "center" : colItm.style.align,
+          width: colItm.style.width,
+        });
+        hx += colItm.style.width;
+      });
+
+      doc
+        .moveTo(90, yAxis + 12)
+        .lineTo(PAGE_WIDTH - 130, yAxis + 12)
+        .stroke();
+
+      yAxis += 17;
+
+      doc.font("Helvetica");
+
+      newData.forEach((rowItm: any, rowIndex: number) => {
+        const rowHeight = Math.max(
+          ...headers.map((itm: any) => {
+            return doc.heightOfString(rowItm[itm.key], {
+              width: itm.style.width,
+              align: itm.style.align,
+            });
+          })
+        );
+        let x = 120;
+        headers.forEach((colItm: any, colIndex: number) => {
+          doc.text(rowItm[colItm.key], x, yAxis, {
+            align: colItm.style.align,
+            width: colItm.style.width,
+          });
+          x += colItm.style.width;
+        });
+
+        yAxis += rowHeight + 3;
+      });
+      let xs = 10;
+      doc.text(
+        `Received By : _______________________`,
+        20 + xs,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
+
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 30,
+        {
+          align: "left",
+        }
+      );
+
+      doc.text(`Page 1 of 1`, PAGE_WIDTH - 120, PAGE_HEIGHT - 30, {
+        align: "right",
+        width: 100,
+      });
+
+      doc.end();
+      writeStream.on("finish", (e: any) => {
+        console.log(`PDF created successfully at: ${outputFilePath}`);
+        const readStream = fs.createReadStream(outputFilePath);
+        readStream.pipe(res);
+
+        readStream.on("end", () => {
+          fs.unlink(outputFilePath, (err) => {
+            if (err) {
+              console.error("Error deleting file:", err);
+            } else {
+              console.log(`File ${outputFilePath} deleted successfully.`);
+            }
+          });
+        });
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+      });
+    }
+  }
+);
+// Postponement
+accountingReporting.post(
+  "/report/generate-report-postponement",
+  async (req, res) => {
+    try {
+     const data = (await prisma.$queryRawUnsafe(
+        `   
+         selecT 
+          PNNO, 
+          CheckNo, 
+          'HO' as Branch,
+          date_format(a.OldCheckDate,'%m/%d/%Y') as OldDepositDate,
+          date_format(a.NewCheckDate,'%m/%d/%Y') as NewDate,
+          CAST(DATEDIFF(a.NewCheckDate,  a.OldCheckDate) AS CHAR) AS Datediff,
+          a.Reason, 
+          (selecT distinct(name) from pdc where PNo = a.PnNo and Check_No = a.CheckNo) as 'Name', 
+          (select bank from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Bank', 
+          (select Check_Amnt from pdc where Check_No = a.CheckNo and PNo =a.PNNO ) as 'Amount', 
+          (seleCT PaidVia from postponement where RPCDNo = a.RPCD) as 'PaidVia', 
+          (seleCT Surplus from postponement where RPCDNo = a.RPCD) as 'Surplus', 
+          (seleCT Deducted_to from postponement where RPCDNo = a.RPCD) as 'Deducted_to',
+          (seleCT PaidInfo from postponement where RPCDNo = a.RPCD) as 'PaidInfo' 
+      from (
+          seleCT *, 
+          (selecT pnno from postponement where RPCDNo = A.RPCD) as 'PNNO' 
+          from postponement_detail A) a 
+      where RPCD = ?   
+      order by OldDepositDate asc`,
+        req.body.RPCDNo
+      )) as Array<any>;
+
+      const newData = data.map((itm: any, idx: number) => {
+        itm.Amount = formatNumber(
+          parseFloat(itm.Amount.toString().replace(/,/g, ""))
+        );
+        return { ...itm, ln: idx + 1 };
+      });
+
+      let PAGE_WIDTH = 612;
+      let PAGE_HEIGHT = 792;
+
+      const headers = [
+        {
+          label: "CHECK NO",
+          key: "CheckNo",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "OLD CHECK DATE",
+          key: "OldDepositDate",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "NEW CHECK DATE",
+          key: "NewDate",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "BANK",
+          key: "Bank",
+          style: { align: "left", width: 80 },
+        },
+        {
+          label: "AMOUNT",
+          key: "Amount",
+          style: { align: "right", width: 60 },
+        },
+        {
+          label: "PENALTY",
+          key: "Penalty",
+          style: { align: "right", width: 60 },
+        },
+        {
+          label: "NUMBER OF DAYS",
+          key: "Datediff",
+          style: { align: "left", width: 60 },
+        },
+        {
+          label: "REASON",
+          key: "Reason",
+          style: { align: "left", width: 80 },
+        },
+        { label: "SEQ", key: "ln", style: { align: "right", width: 30 } },
+      ];
+
+      const outputFilePath = "manok.pdf";
+      const doc = new PDFDocument({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+
+      const writeStream = fs.createWriteStream(outputFilePath);
+      doc.pipe(writeStream);
+      doc.fontSize(12);
+      // doc.text(req.body.reportTitle, 0, 35, {
+      //   align: "center",
+      //   baseline: "middle",
+      // });
+      doc.text(req.body.title, 0, 52, {
+        align: "center",
+        baseline: "middle",
+      });
+
+      doc.fontSize(8);
+      // first line
+      doc.font("Helvetica-Bold");
+      doc.text("P.N. No. :", 20, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.PNNo, 85, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica-Bold");
+      doc.text("Reference No :", PAGE_WIDTH - 150, 85, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.RPCDNo, PAGE_WIDTH - 80, 85, {
+        align: "left",
+      });
+
+      // second line
+      doc.font("Helvetica-Bold");
+      doc.text("Client Name  :", 20, 100, {
+        align: "left",
+      });
+      doc.font("Helvetica");
+      doc.text(req.body.Name, 85, 100, {
+        align: "left",
+      });
+
+      let yAxis = 115 + 35;
+
+      doc.font("Helvetica-Bold");
+
+      let hx = 20;
+      headers.forEach((colItm: any, colIndex: number) => {
+        doc.text(colItm.label, hx, yAxis, {
+          align: colItm.style.align === "right" ? "center" : colItm.style.align,
+          width: colItm.style.width,
+        });
+        hx += colItm.style.width;
+      });
+
+      doc
+        .moveTo(10, yAxis + 20)
+        .lineTo(PAGE_WIDTH - 20, yAxis + 20)
+        .stroke();
+
+      yAxis += 27;
+
+      doc.font("Helvetica");
+
+      newData.forEach((rowItm: any, rowIndex: number) => {
+        const rowHeight = Math.max(
+          ...headers.map((itm: any) => {
+            return doc.heightOfString(rowItm[itm.key], {
+              width: itm.style.width - 5,
+              align: itm.style.align,
+            });
+          })
+        );
+        let x = 20;
+        headers.forEach((colItm: any, colIndex: number) => {
+          doc.text(rowItm[colItm.key], x, yAxis, {
+            align: colItm.style.align,
+            width: colItm.style.width - 5,
+          });
+          x += colItm.style.width;
+        });
+
+        yAxis += rowHeight + 3;
+      });
+      let xs = 10;
+      doc.text(
+        `Received By : _______________________`,
+        20 + xs,
+        PAGE_HEIGHT - 70,
+        {
+          align: "left",
+          width: 200,
+        }
+      );
+
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 30,
+        {
+          align: "left",
+        }
+      );
+
+      doc.text(`Page 1 of 1`, PAGE_WIDTH - 120, PAGE_HEIGHT - 30, {
+        align: "right",
+        width: 100,
+      });
+
+      doc.end();
+      writeStream.on("finish", (e: any) => {
+        console.log(`PDF created successfully at: ${outputFilePath}`);
+        const readStream = fs.createReadStream(outputFilePath);
+        readStream.pipe(res);
+
+        readStream.on("end", () => {
+          fs.unlink(outputFilePath, (err) => {
+            if (err) {
+              console.error("Error deleting file:", err);
+            } else {
+              console.log(`File ${outputFilePath} deleted successfully.`);
+            }
+          });
+        });
+      });
+    } catch (error: any) {
+      console.log(`${error.message}`);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
         success: false,
         data: [],
       });
@@ -943,8 +1617,6 @@ async function SubsidiaryLedger(req: Request, res: Response) {
               HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
               ORDER BY qryJournal.GL_Acct;
             `;
-
-            
         } else {
           // Query excluding 'BF' and 'BFS' for specific GL code with ID filter
           Qry = `
@@ -2803,7 +3475,6 @@ async function GeneralLedger(req: Request, res: Response) {
   const pdfReportGenerator = new PDFReportGenerator(props);
   return pdfReportGenerator.generatePDF(res);
 }
-
 async function PostDatedChecksRegistry(req: Request, res: Response) {
   const title = req.body.title;
   const dateFrom = format(new Date(req.body.dateFrom), "yyyy-MM-dd");
@@ -4690,7 +5361,6 @@ async function ReturnedChecks(req: Request, res: Response) {
     });
   });
 }
-
 const pettyCashFundDisbursementsData = async (req: Request) => {
   const { dtPettyCashQuery, dtSummaryQuery } = PettyCashFundDisbursement(
     req.body.subAccount.toUpperCase(),
@@ -6517,11 +7187,9 @@ const getIndexes = (array: Array<any>, condition: any) => {
     return indexes;
   }, []);
 };
-
 function chkNull(value: any) {
   return value ?? "";
 }
-
 function clrStr(str: string) {
   return str?.trim();
 }

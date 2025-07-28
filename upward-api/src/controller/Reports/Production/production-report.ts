@@ -210,7 +210,7 @@ ProductionReports.post("/production-report", async (req, res) => {
         const pdfReportGenerator = new PDFReportGenerator(props);
         return pdfReportGenerator.generatePDF(res);
       } else if (req.body.cmbSubAcct === "COM") {
-        console.log(data);
+
         const newData = data.map((itm: any) => {
           itm.InsuredValue = formatNumber(
             parseFloat(itm.InsuredValue.toString().replace(/,/g, ""))
@@ -244,10 +244,10 @@ ProductionReports.post("/production-report", async (req, res) => {
           );
 
           return {
-            DateIssued: itm.DateIssued,
+            DateIssued: format(new Date(itm.DateIssued) , 'MM/dd/yyyy'),
             PolicyNo: itm.PolicyNo,
-            AssuredName: itm.AssuredName,
-            EffictiveDate: itm.EffictiveDate,
+            AssuredName: itm.AssuredName ,
+            EffictiveDate: format(new Date(itm.EffictiveDate) , 'MM/dd/yyyy'),
             InsuredValue: itm.InsuredValue,
             PLimit: itm.PLimit,
             Sec4A: itm.Sec4A,

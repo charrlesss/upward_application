@@ -745,10 +745,10 @@ CheckPostponement.post(
       const writeStream = fs.createWriteStream(outputFilePath);
       doc.pipe(writeStream);
       doc.fontSize(12);
-      doc.text(req.body.reportTitle, 0, 35, {
-        align: "center",
-        baseline: "middle",
-      });
+      // doc.text(req.body.reportTitle, 0, 35, {
+      //   align: "center",
+      //   baseline: "middle",
+      // });
       doc.text("Post Date Checks Postponement Approved", 0, 52, {
         align: "center",
         baseline: "middle",

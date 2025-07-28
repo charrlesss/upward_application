@@ -32,19 +32,19 @@ const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
 
-const UMISEmailToSend = [
-  "upwardinsurance.grace@gmail.com",
-  "lva_ancar@yahoo.com",
-  "upwardinsurance.grace@gmail.com",
-];
-const UCSMIEmailToSend = [
-  "upward.csmi@yahoo.com",
-  "upward.csmi@gmail.com",
-  "upwardinsurance.grace@gmail.com",
-];
+// const UMISEmailToSend = [
+//   "upwardinsurance.grace@gmail.com",
+//   "lva_ancar@yahoo.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
+// const UCSMIEmailToSend = [
+//   "upward.csmi@yahoo.com",
+//   "upward.csmi@gmail.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
 
-// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
-// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
+const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
@@ -743,7 +743,6 @@ function generateTextTable(item: any) {
  <td style="border: 1px solid #ddd; padding: 8px">₱${item.Check_Amnt}</td>
 </tr>`;
 }
-
 async function sendRequestEmail(props: any) {
   const {
     RCPNo,
@@ -1036,6 +1035,7 @@ async function sendApprovedEmail(props: any) {
   </table>`
   );
 }
+
 Pullout.use(PulloutRequest);
 Pullout.use(PulloutApporved);
 export default Pullout;

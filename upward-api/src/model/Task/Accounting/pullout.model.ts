@@ -27,6 +27,7 @@ export async function loadRCPNApprovedList(req: Request, RCPN: string) {
  `;
     return await prisma.$queryRawUnsafe(qry, RCPN);
   }
+  
   const qry = `
        Select B.RCPNo, b.PNNo, a.Name, count(b.CheckNo) NoOfChecks, b.Reason
         From pdc A 
