@@ -1196,18 +1196,19 @@ model gpa_endorsement {
   address        String   @db.Text
   datefrom       DateTime @db.DateTime(6)
   dateto         DateTime @db.DateTime(6)
+  dateissued     DateTime @db.DateTime(6)
   suminsured     Decimal  @db.Decimal(19, 4)
   //description
-  deleted        String  @db.Text
-  replacement    String  @db.Text
-  additional     String  @db.Text
+  deleted        String   @db.Text
+  replacement    String   @db.Text
+  additional     String   @db.Text
   // premium
-  totalpremium   Decimal @default(0.0000) @db.Decimal(19, 4)
-  vat            Decimal @default(0.0000) @db.Decimal(19, 4)
-  docstamp       Decimal @default(0.0000) @db.Decimal(19, 4)
-  lgovtaxpercent Decimal @default(0.0000) @db.Decimal(19, 4)
-  lgovtax        Decimal @default(0.0000) @db.Decimal(19, 4)
-  totaldue       Decimal @default(0.0000) @db.Decimal(19, 4)
+  totalpremium   Decimal  @default(0.0000) @db.Decimal(19, 4)
+  vat            Decimal  @default(0.0000) @db.Decimal(19, 4)
+  docstamp       Decimal  @default(0.0000) @db.Decimal(19, 4)
+  lgovtaxpercent Decimal  @default(0.0000) @db.Decimal(19, 4)
+  lgovtax        Decimal  @default(0.0000) @db.Decimal(19, 4)
+  totaldue       Decimal  @default(0.0000) @db.Decimal(19, 4)
 }
 
 model claims {
@@ -1312,4 +1313,20 @@ model claims_documents {
   ct5_1        String? @db.Text
   ct5_2        String? @db.Text
   ct5_3        String? @db.Text
+}
+
+model soa {
+  soa_id       Int      @id @default(autoincrement())
+  reference_no String   @db.Text
+  idno         String?  @db.Text
+  name         String?  @db.Text
+  address      String?  @db.Text
+  attachment   String?  @db.Text
+  create_at    DateTime @default(now()) @db.DateTime(6)
+}
+
+model soa_policy {
+  policy_soa_id Int     @id @default(autoincrement())
+  reference_no  String  @db.Text
+  policy_no     String? @db.Text
 }

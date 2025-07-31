@@ -12,6 +12,7 @@ select
   policyNo,
   name,
   address,
+  dateissued,
   datefrom,
   dateto,
   FORMAT(CAST(REPLACE(suminsured, ',', '') AS DECIMAL(20,2)), 2) as suminsured,
@@ -94,6 +95,7 @@ Endorsement.post("/endorsement/add-new-endorsement", async (req, res) => {
     delete req.body.mode;
     req.body.datefrom = new Date(req.body.datefrom);
     req.body.dateto = new Date(req.body.dateto);
+    req.body.dateissued = new Date(req.body.dateissued);
     await prisma.gpa_endorsement.create({ data: req.body });
     await prisma.journal.create({
       data: {

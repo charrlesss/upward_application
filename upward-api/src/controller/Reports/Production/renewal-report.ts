@@ -33,7 +33,7 @@ RenewalReport.post("/renewal-notice", async (req, res) => {
 
         return {
           PolicyNo: itm.PolicyNo,
-          Expiration: itm.Expiration,
+          Expiration: format(new Date(itm.Expiration), 'MM/dd/yyy'),
           AssuredName: itm.AssuredName,
           InsuredValue: itm.InsuredValue,
           Account: itm.Account,
@@ -127,7 +127,7 @@ RenewalReport.post("/renewal-notice", async (req, res) => {
 
         return {
           PolicyNo: itm.PolicyNo,
-          Expiration: itm.Expiration,
+          Expiration: format(new Date(itm.Expiration), 'MM/dd/yyy'),
           AssuredName: itm.AssuredName,
           InsuredValue: itm.InsuredValue,
           Account: itm.Account,
@@ -216,7 +216,7 @@ RenewalReport.post("/renewal-notice", async (req, res) => {
 
         return {
           PolicyNo: itm.PolicyNo,
-          Expiration: itm.Expiration,
+          Expiration: format(new Date(itm.Expiration), 'MM/dd/yyy'),
           AssuredName: itm.AssuredName,
           Account: itm.Account,
           Location: itm.Location,
@@ -306,7 +306,7 @@ RenewalReport.post("/renewal-notice", async (req, res) => {
 
         return {
           PolicyNo: itm.PolicyNo,
-          Expiration: itm.Expiration,
+          Expiration: format(new Date(itm.Expiration), 'MM/dd/yyy'),
           AssuredName: itm.AssuredName,
           InsuredValue: itm.InsuredValue,
           PlateNo: itm.PlateNo,
@@ -411,7 +411,6 @@ RenewalReport.post("/renewal-notice", async (req, res) => {
     });
   }
 });
-
 RenewalReport.post("/export-excel-renewal-notice", async (req, res) => {
   exportToExcel({
     req,
@@ -429,7 +428,6 @@ RenewalReport.post("/export-excel-renewal-notice", async (req, res) => {
   });
 });
 export default RenewalReport;
-
 
 function formatNumber(num: number) {
   return (num || 0).toLocaleString("en-US", {

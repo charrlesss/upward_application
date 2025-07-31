@@ -352,6 +352,7 @@ accountingReporting.post("/report/search-postponement", async (req, res) => {
     });
   }
 });
+
 // Schedule Account
 accountingReporting.post(
   "/report/generate-report-schedule-of-account",
@@ -517,7 +518,6 @@ accountingReporting.post(
     }
   }
 );
-
 // Petty Cash Fund Disbursement
 accountingReporting.post(
   "/report/generate-report-petty-cash-fund-disbursement",
@@ -533,7 +533,6 @@ accountingReporting.post(
     }
   }
 );
-
 // Cash Disbursement Book - CDB
 accountingReporting.post(
   "/report/generate-report-cash-disbursement-book-CDB",
