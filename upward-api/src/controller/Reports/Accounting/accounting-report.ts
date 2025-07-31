@@ -3687,11 +3687,11 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
     (item: any) => item.PDC_ID === "mt"
   );
 
-  let PAGE_WIDTH = 712;
+  let PAGE_WIDTH = 712 + 100;
   let PAGE_HEIGHT = 892;
   const props: any = {
     data: data,
-    columnWidths: [90, 80, 150, 80, 60, 80, 80, 60],
+    columnWidths: [90, 80, 150, 80, 60, 80, 80, 60,100],
     headers: [
       { headerName: "DATE RECEIVED", textAlign: "left" },
       { headerName: "ACCT NO.", textAlign: "left" },
@@ -3701,6 +3701,7 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
       { headerName: "CHECK #", textAlign: "left" },
       { headerName: "AMOUNT", textAlign: "right" },
       { headerName: "OR #", textAlign: "left" },
+      { headerName: "Remarks", textAlign: "left" },
     ],
     keys: [
       "Date",
@@ -3711,6 +3712,7 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
       "Check_No",
       "Check_Amnt",
       "ORNum",
+      "Remarks",
     ],
     title: title,
     adjustTitleFontSize: 6,
@@ -4030,6 +4032,7 @@ async function PostDatedChecksRegistryExcel(req: Request, res: Response) {
       { key: "Check_No", width: 16 },
       { key: "Check_Amnt", width: 17 },
       { key: "ORNum", width: 17 },
+      { key: "Remarks", width: 25 },
     ],
     data: data,
     beforeDraw: (props: any, worksheet: any) => {
@@ -4061,6 +4064,7 @@ async function PostDatedChecksRegistryExcel(req: Request, res: Response) {
         "CHECK #",
         "AMOUNT",
         "OR #",
+        "Remarks",
       ]);
       headerRow.font = { bold: true };
       props.addBorder(6, props.alphabet.slice(0, props.columns.length), {

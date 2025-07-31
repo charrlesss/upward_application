@@ -193,15 +193,74 @@ StatementOfAccount.post("/soa/search-by-client", async (req, res) => {
     });
   }
 });
+StatementOfAccount.post("/soa/generate-reference", async (req, res) => {
+  const qry = `
+    SELECT
+    IF(
+      ref.reference_no IS NULL,
+      CONCAT(DATE_FORMAT(CURDATE(), '%m%y'), '-000001'),
+      CONCAT(
+        DATE_FORMAT(CURDATE(), '%m%y'), '-',
+        LPAD(CAST(SUBSTRING_INDEX(ref.reference_no, '-', -1) AS UNSIGNED) + 1, 6, '0')
+      )
+    ) AS reference_no
+  FROM (
+    SELECT reference_no
+    FROM soa
+    ORDER BY reference_no DESC
+    LIMIT 1
+  ) AS ref
+  RIGHT JOIN (SELECT 1) AS dummy ON TRUE;
+  `;
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      reference_no: await prisma.$queryRawUnsafe(qry),
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      reference_no: [],
+    });
+  }
+});
+StatementOfAccount.post("/soa/save", async (req, res) => {
+  console.log(req.body);
+  await prisma.soa.create({
+    data: {
+      reference_no: req.body.reference_no,
+      idno: req.body.idno,
+      name: req.body.name,
+      address: req.body.address,
+      attachment: req.body.attachment,
+    },
+  });
 
+  for (const itm of req.body.tableData) {
+    await prisma.soa_policy.create({
+      data: {
+        reference_no: req.body.reference_no,
+        policy_no: itm.PolicyNo,
+      },
+    });
+  }
 
-
-
-
-
-
-
-
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+    });
+  }
+});
 
 StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
   const qry = (policytablename: string) => `
@@ -993,7 +1052,6 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
   return pdfReportGenerator.generatePDF(res, false);
 });
 StatementOfAccount.post("/soa/generate-soa-careof", async (req, res) => {
-  
   const qry = (policytablename: string) => `
   SELECT * FROM ${policytablename} a 
   left join policy b on a.PolicyNo = b.PolicyNo

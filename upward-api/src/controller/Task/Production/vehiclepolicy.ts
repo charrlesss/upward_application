@@ -43,6 +43,120 @@ const prisma = new PrismaClient();
 
 const VehiclePolicy = express.Router();
 
+VehiclePolicy.post("/search-tp-to-reg-viewer", async (req, res) => {
+  try {
+    const data = await prisma.$queryRawUnsafe(
+      `
+      SELECT 
+    a.PolicyNo,
+    b.TemporaryPolicy,
+    a.Account,
+    DATE_FORMAT(a.DateFrom, '%m/%d/%Y') AS DateFrom,
+    DATE_FORMAT(a.DateTo, '%m/%d/%Y') AS DateTo,
+    a.ChassisNo,
+    a.MotorNo,
+    a.PlateNo,
+    a.Color,
+    a.BodyType,
+    a.Make,
+    a.Model,
+    c.IDNo,
+    c.Shortname AS Name
+FROM
+    (SELECT 
+        vpolicy.*, policy.IDNo
+    FROM
+        vpolicy
+    LEFT JOIN policy ON vpolicy.PolicyNo = policy.PolicyNo) a
+        JOIN
+    (SELECT 
+        TRIM(REPLACE(SUBSTRING_INDEX(dataString, ' - ', 1), 'temp', '')) AS TemporaryPolicy,
+            TRIM(REPLACE(SUBSTRING_INDEX(dataString, ' - ', - 1), 'Reg', '')) AS RegularPolicy
+    FROM
+        system_logs
+    WHERE
+        dataString LIKE '%temp%') AS b ON a.PolicyNo = b.RegularPolicy
+        LEFT JOIN
+    (SELECT 
+        'Client' AS IDType,
+            aa.entry_client_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_client_id AS client_id,
+            aa.address
+    FROM
+        entry_client aa UNION ALL SELECT 
+        'Agent' AS IDType,
+            aa.entry_agent_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_agent_id AS client_id,
+            aa.address
+    FROM
+        entry_agent aa UNION ALL SELECT 
+        'Employee' AS IDType,
+            aa.entry_employee_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_employee_id AS client_id,
+            aa.address
+    FROM
+        entry_employee aa UNION ALL SELECT 
+        'Supplier' AS IDType,
+            aa.entry_supplier_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_supplier_id AS client_id,
+            aa.address
+    FROM
+        entry_supplier aa UNION ALL SELECT 
+        'Fixed Assets' AS IDType,
+            aa.entry_fixed_assets_id AS IDNo,
+            aa.sub_account,
+            aa.fullname AS Shortname,
+            aa.entry_fixed_assets_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_fixed_assets aa UNION ALL SELECT 
+        'Others' AS IDType,
+            aa.entry_others_id AS IDNo,
+            aa.sub_account,
+            aa.description AS Shortname,
+            aa.entry_others_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_others aa) c ON a.IDNo = c.IDNo
+WHERE
+    a.PolicyNo LIKE ?
+        OR a.ChassisNo LIKE ?
+        OR c.IDNo LIKE ?
+        OR c.Shortname LIKE ?
+      `,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`
+    );
+
+    res.send({
+      message: "Successfully get transaction history",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
 VehiclePolicy.post("/get-transaction-history", async (req, res) => {
   try {
     const history = await prisma.$transaction([
