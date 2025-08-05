@@ -11,7 +11,7 @@ const StatementOfAccount = express.Router();
 StatementOfAccount.post("/soa/search-by-policy", async (req, res) => {
   const data = await prisma.$queryRawUnsafe(
     `
-        SELECT 
+SELECT 
     a.PolicyType,
     a.PolicyNo,
     DATE_FORMAT(a.DateIssued, '%m/%d/%Y') AS DateIssued,
@@ -94,7 +94,7 @@ FROM
         journal.Date_Entry
             AND journal.Source_Type NOT IN ('BF' , 'BFD', 'BFS')
             AND journal.GL_Acct = '1.03.01'
-    GROUP BY journal.ID_No) d ON a.IDNo = d.ID_No
+    GROUP BY journal.ID_No) d ON a.IDNo = d.ID_No or a.PolicyNo  = d.ID_No
     where 
     d.Debit - d.Credit > 0 and (
         a.PolicyNo like ? 
