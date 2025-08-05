@@ -110,7 +110,7 @@ FROM
           WHERE qryJournal.Date_Entry 
             AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
             AND qryJournal.GL_Acct = '1.03.01'
-          AND qryJournal.ID_No = ?
+            AND qryJournal.ID_No = ?
           ORDER BY  qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;
       `;
     const subsi = (await prisma.$queryRawUnsafe(

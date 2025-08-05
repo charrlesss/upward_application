@@ -28,23 +28,24 @@ import { prisma } from "../..";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import { formatNumber } from "./collection";
+import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
 const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
 
-// const UMISEmailToSend = [
-//   "upwardinsurance.grace@gmail.com",
-//   "lva_ancar@yahoo.com",
-//   "upwardinsurance.grace@gmail.com",
-// ];
-// const UCSMIEmailToSend = [
-//   "upward.csmi@yahoo.com",
-//   "upward.csmi@gmail.com",
-//   "upwardinsurance.grace@gmail.com",
-// ];
+const UMISEmailToSend = [
+  "upwardinsurance.grace@gmail.com",
+  "lva_ancar@yahoo.com",
+  "upwardinsurance.grace@gmail.com",
+];
+const UCSMIEmailToSend = [
+  "upward.csmi@yahoo.com",
+  "upward.csmi@gmail.com",
+  "upwardinsurance.grace@gmail.com",
+];
 
-const UMISEmailToSend = ["charlespalencia21@gmail.com"];
-const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
+// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
@@ -186,6 +187,7 @@ PulloutRequest.post(`/pullout/reqeust/get-pnno-client`, async (req, res) => {
     });
   }
 });
+
 PulloutRequest.post(
   `/pullout/reqeust/save-pullout-request`,
   async (req, res) => {
@@ -202,11 +204,6 @@ PulloutRequest.post(
         });
       }
 
-
-      const subtitle = `
-    <h3>Check storage pullout</h3>
-    <h3>Pullout Request</h3>
-    `;
       const {
         rcpn: RCPNo,
         ppno: PNNo,
@@ -215,21 +212,39 @@ PulloutRequest.post(
         data: selected,
         flag: requestMode,
       } = req.body;
+
+      if (req.body.flag !== "add") {
+        if (!(await saveUserLogsCode(req, "edit", RCPNo, "Pullout"))) {
+          return res.send({ message: "Invalid User Code", success: false });
+        }
+      }
+
+      const subtitle = `
+    <h3>Check storage pullout</h3>
+    <h3>Pullout Request</h3>
+    `;
+
       const user = await getUserById((req.user as any).UserId);
       const Requested_By = user?.Username;
       const Requested_Date = new Date();
-      
+      const tableData = JSON.parse(selected);
       let text = "";
-      JSON.parse(selected).forEach((item: any) => {
-        text +=  `<tr>
+      tableData.forEach((item: any) => {
+        text += `<tr>
                     <td style="border: 1px solid #ddd; padding: 8px">${formatDate(
                       new Date(item.Check_Date),
                       "MM/dd/yyyy"
                     )}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px">${item.Bank}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px">${item.Check_No}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px">₱${item.Check_Amnt}</td>
-                </tr>`
+                    <td style="border: 1px solid #ddd; padding: 8px">${
+                      item.Bank
+                    }</td>
+                    <td style="border: 1px solid #ddd; padding: 8px">${
+                      item.Check_No
+                    }</td>
+                    <td style="border: 1px solid #ddd; padding: 8px">₱${
+                      item.Check_Amnt
+                    }</td>
+                </tr>`;
       });
 
       if (requestMode === "edit") {
@@ -238,73 +253,79 @@ PulloutRequest.post(
       }
       await deletePulloutRequestAutoCodes(req, RCPNo);
 
-      await createPulloutRequest(
-        {
-          RCPNo: RCPNo,
-          PNNo: PNNo,
-          Reason: reason,
-          Status: "PENDING",
-          Requested_By: user?.Username,
-          Branch: "HO",
-          Requested_Date: defaultFormat(new Date()),
-        },
-        req
-      );
-      const status =
-        requestMode === "edit"
-          ? ["APPROVED", "CANCEL", "DISAPPROVED"]
-          : ["APPROVED", "PENDING", "CANCEL", "DISAPPROVED"];
-      await createPulloutRequestDetailsFunc(selected, RCPNo, req, status);
-      await updateAnyId("pullout", req);
-
       const approvalCode = generateRandomNumber(6);
+      if (req.body.flag === "edit" && tableData.length <= 0) {
+        
+      }else{
+        await createPulloutRequest(
+          {
+            RCPNo: RCPNo,
+            PNNo: PNNo,
+            Reason: reason,
+            Status: "PENDING",
+            Requested_By: user?.Username,
+            Branch: "HO",
+            Requested_Date: defaultFormat(new Date()),
+          },
+          req
+        );
 
-      if (department === "UMIS") {
-        for (const toEmail of UMISEmailToSend) {
-          await sendRequestEmail({
-            RCPNo: RCPNo,
-            PNNo: PNNo,
-            reason,
-            client: Name,
-            text,
-            Requested_By,
-            Requested_Date,
-            approvalCode,
-            subtitle,
-            toEmail,
-          });
+        const status =
+          requestMode === "edit"
+            ? ["APPROVED", "CANCEL", "DISAPPROVED"]
+            : ["APPROVED", "PENDING", "CANCEL", "DISAPPROVED"];
+        await createPulloutRequestDetailsFunc(selected, RCPNo, req, status);
+        await updateAnyId("pullout", req);
+
+        if (department === "UMIS") {
+          for (const toEmail of UMISEmailToSend) {
+            await sendRequestEmail({
+              RCPNo: RCPNo,
+              PNNo: PNNo,
+              reason,
+              client: Name,
+              text,
+              Requested_By,
+              Requested_Date,
+              approvalCode,
+              subtitle,
+              toEmail,
+            });
+          }
+        } else {
+          for (const toEmail of UCSMIEmailToSend) {
+            await sendRequestEmail({
+              RCPNo: RCPNo,
+              PNNo: PNNo,
+              reason,
+              client: Name,
+              text,
+              Requested_By,
+              Requested_Date,
+              approvalCode,
+              subtitle,
+              toEmail,
+            });
+          }
         }
-      } else {
-        for (const toEmail of UCSMIEmailToSend) {
-          await sendRequestEmail({
-            RCPNo: RCPNo,
-            PNNo: PNNo,
-            reason,
-            client: Name,
-            text,
-            Requested_By,
-            Requested_Date,
-            approvalCode,
-            subtitle,
-            toEmail,
-          });
-        }
+
+        const pullout_auth_codes_id = await generateUniqueUUID(
+          "pullout_auth_codes",
+          "pullout_auth_codes_id"
+        );
+        await insertApprovalCode(
+          {
+            pullout_auth_codes_id,
+            RCPN: RCPNo,
+            For_User: `[${UMISEmailToSend.join(",")}]`,
+            Approved_Code: approvalCode.toString(),
+            Disapproved_Code: "",
+          },
+          req
+        );
       }
-
-      const pullout_auth_codes_id = await generateUniqueUUID(
-        "pullout_auth_codes",
-        "pullout_auth_codes_id"
-      );
-      await insertApprovalCode(
-        {
-          pullout_auth_codes_id,
-          RCPN: RCPNo,
-          For_User: `[${UMISEmailToSend.join(",")}]`,
-          Approved_Code: approvalCode.toString(),
-          Disapproved_Code: "",
-        },
-        req
-      );
+        
+      
 
       await saveUserLogs(req, RCPNo, "add", "Pullout");
 

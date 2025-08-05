@@ -15,7 +15,7 @@ import {
 import { PrismaList } from "../../../model/connection";
 import { __executeQuery } from "../../../model/Task/Production/policy";
 import { qry_id_policy_sub, qryJournal } from "../../../model/db/views";
-import { format, lastDayOfMonth, subDays } from "date-fns";
+import { addDays, format, lastDayOfMonth, subDays } from "date-fns";
 import PDFReportGenerator from "../../../lib/pdf-generator";
 import { formatNumber, getSum } from "../Production/production-report";
 import { defaultFormat } from "../../../lib/defaultDateFormat";
@@ -1832,7 +1832,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
           WHERE qryJournal.Date_Entry BETWEEN '${format(
             DateFrom,
             "yyyy-MM-dd"
-          )}' AND '${format(DateTo, "yyyy-MM-dd")}'
+          )}' AND '${format(addDays(DateTo, 1), "yyyy-MM-dd")}'
             AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
             AND qryJournal.GL_Acct = '${GL_Code.trim()}'
           ${sFilter}
@@ -1850,7 +1850,7 @@ async function SubsidiaryLedger(req: Request, res: Response) {
           WHERE qryJournal.Date_Entry BETWEEN '${format(
             DateFrom,
             "yyyy-MM-dd"
-          )}' AND '${format(DateTo, "yyyy-MM-dd")}'
+          )}' AND '${format(addDays(DateTo, 1), "yyyy-MM-dd")}'
             AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
           ${sFilter}
           ORDER BY   qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;

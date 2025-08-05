@@ -86,7 +86,7 @@ class PDFReportGenerator {
   public BASE_FONT_SIZE: number = 10;
   public TITLE_FONT_SIZE: number = 16;
   public MIN_ROW_HEIGHT: number = 20;
-  public boldedRows: Array<number> = [];
+  public boldedRows: Array<{ rowIndex: number; callback: any }> = [];
   public spanMap = new Map();
   public borderedColumns: Array<any>;
   public beforeDraw = (
@@ -179,8 +179,8 @@ class PDFReportGenerator {
   setAlignment(rowIndex: number, columnIndex: number, align: string) {
     this.alignmentMap.set(rowIndex, { columnIndex, align });
   }
-  boldRow(rowIndex: number) {
-    this.boldedRows.push(rowIndex);
+  boldRow(rowIndex: number, callback?: any) {
+    this.boldedRows.push({ rowIndex, callback });
   }
   SpanRow(
     rowIndex: number,
@@ -361,16 +361,11 @@ class PDFReportGenerator {
   }
 
   drawRow(doc: PDFKit.PDFDocument, row: any, rowIndex: number, startY: number) {
-    const isBold = this.boldedRows.includes(rowIndex);
+    const isBold = this.boldedRows.filter((itm) => itm.rowIndex === rowIndex);
     if (this.addRowHeight) {
       startY = startY + this.addRowHeight(rowIndex);
     }
     // Apply bold font if necessary
-    if (isBold) {
-      doc.font("Helvetica-Bold");
-    } else {
-      doc.font("Helvetica");
-    }
 
     if (this.setRowFontSize > 0) {
       doc.fontSize(8);
@@ -413,6 +408,7 @@ class PDFReportGenerator {
         | "justify"
         | "right"
         | undefined;
+
       if (spanInfo && colIndex === columnIndex && SpanKey !== "") {
         textHeader = SpanTextAlign;
         cellValue = row[SpanKey];
@@ -426,6 +422,20 @@ class PDFReportGenerator {
         cellValue = row[key];
       }
       let startY_ = startY + 5;
+
+      if (isBold.length > 0) {
+        if (isBold[0].callback) {
+          isBold[0].callback(doc,cellValue, startY_, startX, colWidth, textHeader);
+          startX += colWidth;
+          return;
+        }
+
+
+        doc.font("Helvetica-Bold");
+      } else {
+        doc.font("Helvetica");
+      }
+
       if (alignRow && colIndex === alignRow.columnIndex) {
         doc.text(cellValue?.toString() || "", startX + 5, startY_, {
           width: colWidth - 10,

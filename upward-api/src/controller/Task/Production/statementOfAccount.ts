@@ -1,9 +1,7 @@
 import express from "express";
 import { prisma } from "../..";
 import path from "path";
-import { differenceInYears, format, formatDate } from "date-fns";
-import PDFDocument, { toString } from "pdfkit";
-import fs from "fs";
+import { format } from "date-fns";
 import { selectClient } from "../../../model/Task/Accounting/pdc.model";
 import { formatNumber } from "../Accounting/collection";
 import PDFReportGenerator from "../../../lib/pdf-generator";
@@ -13,81 +11,99 @@ const StatementOfAccount = express.Router();
 StatementOfAccount.post("/soa/search-by-policy", async (req, res) => {
   const data = await prisma.$queryRawUnsafe(
     `
-    SELECT 
-          a.PolicyType,
-          a.PolicyNo,
-          date_format(a.DateIssued,'%m/%d/%Y') as DateIssued,
-          b.IDNo,
-          b.Shortname
-      FROM policy a
-      left join (
-      SELECT 
-        "Client" as IDType,
-        aa.entry_client_id AS IDNo,
-        aa.sub_account,
-        if(aa.option = "individual", CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as Shortname,
-        aa.entry_client_id as client_id,
-        aa.address 
-      FROM
-        entry_client aa
-      union all
-      SELECT 
-        "Agent" as IDType,
-        aa.entry_agent_id AS IDNo,
-        aa.sub_account,
-        CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS Shortname,
-        aa.entry_agent_id as client_id,
-        aa.address
-      FROM 
-        entry_agent aa
-      union all
-      SELECT 
-        "Employee" as IDType,
-        aa.entry_employee_id AS IDNo,
-        aa.sub_account,
-        CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname , ', '),''), aa.firstname) AS Shortname,
-        aa.entry_employee_id as client_id,
-        aa.address  
-      FROM
-        entry_employee aa
-      union all
-      SELECT 
-        "Supplier" as IDType,
-        aa.entry_supplier_id AS IDNo,
-        aa.sub_account,
-        if(aa.option = "individual", CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '),''),aa.firstname), aa.company) as Shortname,
-        aa.entry_supplier_id as client_id,
-        aa.address
-      FROM
-        entry_supplier aa
-      union all
-      SELECT 
-        "Fixed Assets" as IDType,
-        aa.entry_fixed_assets_id AS IDNo,
-        aa.sub_account,
-        aa.fullname AS Shortname,
-        aa.entry_fixed_assets_id as client_id,
-        aa.description as address
-      FROM
-        entry_fixed_assets aa
-      union all
-      SELECT 
-        "Others" as IDType,
-        aa.entry_others_id AS IDNo,
-        aa.sub_account,
-        aa.description AS Shortname,
-        aa.entry_others_id as client_id,
-        aa.description as address
-      FROM
-        entry_others aa
-      )  b on b.IDNo = a.IDNo
-      where
+        SELECT 
+    a.PolicyType,
+    a.PolicyNo,
+    DATE_FORMAT(a.DateIssued, '%m/%d/%Y') AS DateIssued,
+    c.IDNo,
+    c.Shortname,
+    b.used,
+    format(d.Debit, 2) AS totalDue,
+    format(d.Credit, 2) AS payment,
+    format((d.Debit - d.Credit), 2) balance
+FROM
+    policy a
+        LEFT JOIN
+    (SELECT 
+        IF(policy_no IS NULL, 'No', 'Yes') AS used, policy_no
+    FROM
+        soa_policy
+    GROUP BY policy_no) b ON a.PolicyNo = b.policy_no
+        LEFT JOIN
+    (SELECT 
+        'Client' AS IDType,
+            aa.entry_client_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_client_id AS client_id,
+            aa.address
+    FROM
+        entry_client aa UNION ALL SELECT 
+        'Agent' AS IDType,
+            aa.entry_agent_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_agent_id AS client_id,
+            aa.address
+    FROM
+        entry_agent aa UNION ALL SELECT 
+        'Employee' AS IDType,
+            aa.entry_employee_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_employee_id AS client_id,
+            aa.address
+    FROM
+        entry_employee aa UNION ALL SELECT 
+        'Supplier' AS IDType,
+            aa.entry_supplier_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_supplier_id AS client_id,
+            aa.address
+    FROM
+        entry_supplier aa UNION ALL SELECT 
+        'Fixed Assets' AS IDType,
+            aa.entry_fixed_assets_id AS IDNo,
+            aa.sub_account,
+            aa.fullname AS Shortname,
+            aa.entry_fixed_assets_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_fixed_assets aa UNION ALL SELECT 
+        'Others' AS IDType,
+            aa.entry_others_id AS IDNo,
+            aa.sub_account,
+            aa.description AS Shortname,
+            aa.entry_others_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_others aa) c ON a.IDNo = c.IDNo
+        LEFT JOIN
+    (SELECT 
+        SUM(journal.Debit) AS Debit,
+            SUM(journal.Credit) AS Credit,
+            journal.ID_No
+    FROM
+        journal
+    WHERE
+        journal.Date_Entry
+            AND journal.Source_Type NOT IN ('BF' , 'BFD', 'BFS')
+            AND journal.GL_Acct = '1.03.01'
+    GROUP BY journal.ID_No) d ON a.IDNo = d.ID_No
+    where 
+    d.Debit - d.Credit > 0 and (
         a.PolicyNo like ? 
-        OR  b.IDNo like ? 
-        OR  b.Shortname like ?
+        OR  c.IDNo like ?   
+        OR c.Shortname like ?  
+    )
      order by a.DateIssued desc
-    limit 500
-      ;
+     limit 500
+
   `,
     `%${req.body.search}%`,
     `%${req.body.search}%`,
@@ -261,391 +277,671 @@ StatementOfAccount.post("/soa/save", async (req, res) => {
     });
   }
 });
+StatementOfAccount.post("/soa/search-soa", async (req, res) => {
+  const data = await prisma.$queryRawUnsafe(
+    `SELECT reference_no,name FROM soa where 
+    reference_no like ? OR name like ?`,
+    `%${req.body.search}%`,
+    `%${req.body.search}%`
+  );
 
-StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
-  const qry = (policytablename: string) => `
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      data,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+StatementOfAccount.post("/soa/search-soa-selected", async (req, res) => {
+  const state = await prisma.$queryRawUnsafe(
+    `SELECT * FROM soa where reference_no = ?;`,
+    req.body.reference_no
+  );
+  const data = await prisma.$queryRawUnsafe(
+    ` SELECT 
+          b.PolicyType,
+          b.PolicyNo,
+          date_format(b.DateIssued,'%m/%d/%Y') as DateIssued,
+          c.IDNo,
+          c.Shortname
+      FROM soa_policy a
+      left join policy b on a.policy_no = b.PolicyNo
+      left join (
+      SELECT 
+        "Client" as IDType,
+        aa.entry_client_id AS IDNo,
+        aa.sub_account,
+        if(aa.option = "individual", CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as Shortname,
+        aa.entry_client_id as client_id,
+        aa.address 
+      FROM
+        entry_client aa
+      union all
+      SELECT 
+        "Agent" as IDType,
+        aa.entry_agent_id AS IDNo,
+        aa.sub_account,
+        CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS Shortname,
+        aa.entry_agent_id as client_id,
+        aa.address
+      FROM 
+        entry_agent aa
+      union all
+      SELECT 
+        "Employee" as IDType,
+        aa.entry_employee_id AS IDNo,
+        aa.sub_account,
+        CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname , ', '),''), aa.firstname) AS Shortname,
+        aa.entry_employee_id as client_id,
+        aa.address  
+      FROM
+        entry_employee aa
+      union all
+      SELECT 
+        "Supplier" as IDType,
+        aa.entry_supplier_id AS IDNo,
+        aa.sub_account,
+        if(aa.option = "individual", CONCAT(IF(aa.lastname is not null AND aa.lastname <> '', CONCAT(aa.lastname, ', '),''),aa.firstname), aa.company) as Shortname,
+        aa.entry_supplier_id as client_id,
+        aa.address
+      FROM
+        entry_supplier aa
+      union all
+      SELECT 
+        "Fixed Assets" as IDType,
+        aa.entry_fixed_assets_id AS IDNo,
+        aa.sub_account,
+        aa.fullname AS Shortname,
+        aa.entry_fixed_assets_id as client_id,
+        aa.description as address
+      FROM
+        entry_fixed_assets aa
+      union all
+      SELECT 
+        "Others" as IDType,
+        aa.entry_others_id AS IDNo,
+        aa.sub_account,
+        aa.description AS Shortname,
+        aa.entry_others_id as client_id,
+        aa.description as address
+      FROM
+        entry_others aa
+      )  c on c.IDNo = b.IDNo
+where a.reference_no = ?;`,
+    req.body.reference_no
+  );
+
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      data,
+      state,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+      state: [],
+    });
+  }
+});
+StatementOfAccount.post("/soa/search-soa-by-policy", async (req, res) => {
+  const data = await prisma.$queryRawUnsafe(
+    `SELECT reference_no, policy_no FROM soa_policy where policy_no like ?;`,
+    `%${req.body.search}%`
+  );
+  console.log(data);
+
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      data,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+StatementOfAccount.post("/soa/search-endorsement", async (req, res) => {
+  const data = await prisma.$queryRawUnsafe(
+    `SELECT * FROM gpa_endorsement where policyNo like ?;`,
+    `%${req.body.search}%`
+  );
+
+  const r = `
+  
+   SELECT 
+    a.*,
+    format(b.Debit,2) as totalDue,
+    format(b.Credit , 2) as Payment,
+    format((b.Debit - b.Credit) , 2) as Balance
+FROM
+    policy a
+left join (
+SELECT 
+    SUM(journal.Debit) AS Debit,
+    SUM(journal.Credit) AS Credit,
+    journal.ID_No
+FROM
+    journal
+WHERE
+    journal.Source_Type NOT IN ('BF' , 'BFD', 'BFS')
+        AND journal.GL_Acct = '1.03.01'
+        group by journal.ID_No
+) b on a.PolicyNo = b.ID_No
+where (b.Debit - b.Credit) > 0
+  `;
+
+  try {
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      data,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+StatementOfAccount.post("/soa/print", async (req, res) => {
+  const qry = (policytablename: string, policies: string) => `
   SELECT * FROM ${policytablename} a 
   left join policy b on a.PolicyNo = b.PolicyNo
   left join (${selectClient}) c on b.IDNo = c.IDNo
-  where a.PolicyNo = '${req.body.policy}' and careOf = '${req.body.careOf}';`;
+  where a.PolicyNo in ('${policies}') ;`;
   const data: Array<any> = [];
 
-  const careOf: Array<any> = await prisma.$queryRawUnsafe(
-    `
-    SELECT 
-      careOf, address
-    FROM
-        careof
-    WHERE
-        careOf = ? AND inactive = 0;`,
-    req.body.careOf
-  );
+  // const careOf: Array<any> = await prisma.$queryRawUnsafe(
+  //   `
+  //   SELECT
+  //     careOf, address
+  //   FROM
+  //       careof
+  //   WHERE
+  //       careOf = ? AND inactive = 0;`,
+  //   req.body.careOf
+  // );
 
-  if (req.body.policyType === "COM") {
-    const COMDATA = (await prisma.$queryRawUnsafe(
-      qry("vpolicy")
-    )) as Array<any>;
-    if (COMDATA.length > 0) {
-      data.push({
-        PolicyNo: "COMPREHENSIVE",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of COMDATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-            To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
-            PolicyNo: "",
-            Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: itm.PlateNo,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: itm.ChassisNo,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
-      }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
-    }
-  } else if (req.body.policyType === "FIRE") {
-    const FIREDATA = (await prisma.$queryRawUnsafe(
-      qry("fpolicy")
-    )) as Array<any>;
-    if (FIREDATA.length > 0) {
-      data.push({
-        PolicyNo: "FIRE",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of FIREDATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-            To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
-            PolicyNo: "",
-            Insured: itm.Location,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
-      }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
-    }
-  } else if (req.body.policyType === "MAR") {
-    const MARINEDATA = (await prisma.$queryRawUnsafe(
-      qry("mpolicy")
-    )) as Array<any>;
-    if (MARINEDATA.length > 0) {
-      data.push({
-        PolicyNo: "MARINE",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of MARINEDATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-            To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
-      }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
-    }
-  } else if (req.body.policyType === "PA") {
-    const PADATA = (await prisma.$queryRawUnsafe(
-      qry("papolicy")
-    )) as Array<any>;
+  for (const itm of req.body.data) {
+    if (itm.Type === "COM") {
+      const COMDATA = (await prisma.$queryRawUnsafe(
+        qry("vpolicy", itm.data.join("','"))
+      )) as Array<any>;
 
-    if (PADATA.length > 0) {
-      data.push({
-        PolicyNo: "GPA",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of PADATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
-            To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
+      if (COMDATA.length > 0) {
+        data.push({
+          PolicyNo: "COMPREHENSIVE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of COMDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.PlateNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.ChassisNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "FIRE") {
+      const FIREDATA = (await prisma.$queryRawUnsafe(
+        qry("fpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (FIREDATA.length > 0) {
+        data.push({
+          PolicyNo: "FIRE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of FIREDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.Location,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "MAR") {
+      const MARINEDATA = (await prisma.$queryRawUnsafe(
+        qry("mpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (MARINEDATA.length > 0) {
+        data.push({
+          PolicyNo: "MARINE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of MARINEDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "PA") {
+      const PADATA = (await prisma.$queryRawUnsafe(
+        qry("papolicy", itm.data.join("','"))
+      )) as Array<any>;
+
+      if (PADATA.length > 0) {
+        data.push({
+          PolicyNo: "GPA",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of PADATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "ED") {
+      const EDDATA = (await prisma.$queryRawUnsafe(
+        `SELECT * FROM gpa_endorsement where endorsement_no in  ('${itm.data.join(
+          "','"
+        )}')`
+      )) as Array<any>;
+
+      if (EDDATA.length > 0) {
+        if (!data.some((itm: any) => itm.PolicyNo === "GPA")) {
+          data.push({
+            PolicyNo: "GPA",
+            Insured: "",
+            Premium: "",
+            From: "",
+            To: "",
+            GrossPremium: "",
+            header: true,
+          });
+        }
+
+        for (const itm of EDDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.endorsement_no,
+              Insured: formatNumber(
+                parseFloat(itm.suminsured.toString().replace(/,/g, ""))
+              ),
+              Premium: formatNumber(
+                parseFloat(itm.totalpremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.datefrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.dateto), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.totaldue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+          ];
+          if (typeof itm.deleted === "string" && itm.deleted !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `DELETED:  ${itm.deleted}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+          if (typeof itm.replacement === "string" && itm.replacement !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `REPLACEMENT:  ${itm.replacement}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+          if (typeof itm.additional === "string" && itm.additional !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `ADDITIONAL:  ${itm.additional}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+
+          newData[1].PolicyNo = "ENDORSEMENT";
+
+          newData.push({
             PolicyNo: "",
             Insured: "",
             Premium: "",
             From: "",
             To: "",
             GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
+            gap: true,
+          });
+
+          data.push(...newData);
+        }
       }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
-    }
-  } else if (req.body.policyType === "CGL") {
-    const CGLDATA = (await prisma.$queryRawUnsafe(
-      qry("cglpolicy")
-    )) as Array<any>;
-    if (CGLDATA.length > 0) {
-      data.push({
-        PolicyNo: "CGL",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of CGLDATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
-            To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
-            PolicyNo: "",
-            Insured: itm.PolicyNo,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
+    } else if (itm.Type === "CGL") {
+      const CGLDATA = (await prisma.$queryRawUnsafe(
+        qry("cglpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (CGLDATA.length > 0) {
+        data.push({
+          PolicyNo: "CGL",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of CGLDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.PolicyNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
       }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
-    }
-  } else {
-    const BONDSDATA = (await prisma.$queryRawUnsafe(
-      qry("bpolicy")
-    )) as Array<any>;
-    if (BONDSDATA.length > 0) {
-      data.push({
-        PolicyNo: "BONDS",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        header: true,
-      });
-      for (const itm of BONDSDATA) {
-        const newData: Array<any> = [
-          {
-            PolicyNo: itm.PolicyNo,
-            Insured: itm.Shortname,
-            Premium: formatNumber(
-              parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-            ),
-            From: format(new Date(itm.BidDate), "MM/dd/yyyy"),
-            To: bondsYear(itm),
-            GrossPremium: formatNumber(
-              parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-            ),
-            solo: false,
-          },
-          {
-            PolicyNo: bondsPolicy(itm),
-            Insured: itm.Obligee,
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            solo: true,
-          },
-          {
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gapPerRow: true,
-          },
-        ];
-        data.push(...newData);
+    } else {
+      const BONDSDATA = (await prisma.$queryRawUnsafe(
+        qry("bpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (BONDSDATA.length > 0) {
+        data.push({
+          PolicyNo: "BONDS",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of BONDSDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.BidDate), "MM/dd/yyyy"),
+              To: bondsYear(itm),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: bondsPolicy(itm),
+              Insured: itm.Obligee,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
       }
-      data.push({
-        PolicyNo: "",
-        Insured: "",
-        Premium: "",
-        From: "",
-        To: "",
-        GrossPremium: "",
-        gap: true,
-      });
     }
   }
+
   // const MSPRDATA = (await prisma.$queryRawUnsafe(
   //   qry("msprpolicy")
   // )) as Array<any>;
+
   const getTotal = data.reduce((t, itm) => {
     return (
       t +
@@ -665,6 +961,7 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
     GrossPremium: formatNumber(getTotal),
     total: true,
   });
+
   function bondsYear(itm: any) {
     const PolicyType = itm.PolicyType.trim();
     if (PolicyType === "G02") {
@@ -707,6 +1004,7 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
       return "";
     }
   }
+
   const headerIndexes = getIndexes(
     data,
     (item: any) =>
@@ -716,7 +1014,10 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
     data,
     (item: any) => item?.gapPerRow === true
   );
-
+  const getSolo = getIndexes(
+    data,
+    (item: any) => item?.solo === true && item?.endorsement
+  );
   let PAGE_WIDTH = 660;
   let PAGE_HEIGHT = 841;
 
@@ -775,7 +1076,7 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
       // doc.fontSize(60);
       // doc.font("Helvetica-Bold");
       // doc.text("UPWARD", 155, yAxis);
-      yAxis += 50;
+      yAxis += 70;
 
       // if (process.env.DEPARTMENT === "UMIS") {
       //   doc.fontSize(9);
@@ -809,8 +1110,8 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
       doc.fontSize(8);
 
       const arrayHeaderData = [
-        { label: "ACCT. NAME", value: careOf[0].careOf },
-        { label: "ADDRESS", value: careOf[0].address },
+        { label: "ACCT. NAME", value: req.body.name },
+        { label: "ADDRESS", value: req.body.address },
         { label: "ACCT. BAL.", value: formatNumber(getTotal) },
       ];
 
@@ -850,6 +1151,73 @@ StatementOfAccount.post("/soa/generate-soa-policy", async (req, res) => {
       headerIndexes.forEach((itm: any) => {
         pdfReportGenerator.boldRow(itm);
       });
+      getSolo.forEach((itm: any) => {
+        pdfReportGenerator.SpanRow(itm, 1, 5);
+        pdfReportGenerator.boldRow(
+          itm,
+          (
+            doc: any,
+            cellValue: any,
+            startY_: any,
+            startX: any,
+            colWidth: any,
+            textHeader: any
+          ) => {
+            if (cellValue.includes("DELETED:")) {
+              doc.font("Helvetica-Bold");
+              const [label, value] = cellValue?.toString().split("DELETED:");
+              doc.text("DELETED:", startX + 5, startY_, {
+                width: 75,
+                align: textHeader,
+              });
+              doc.font("Helvetica");
+              doc.text(value.trim(), startX + 75, startY_, {
+                width: colWidth - 10 + 75,
+                align: textHeader,
+              });
+            } else if (cellValue.includes("REPLACEMENT:")) {
+              doc.font("Helvetica-Bold");
+              const [label, value] = cellValue
+                ?.toString()
+                .split("REPLACEMENT:");
+
+              doc.text("REPLACEMENT:", startX + 5, startY_, {
+                width: 75,
+                align: textHeader,
+              });
+              doc.font("Helvetica");
+              doc.text(value.trim(), startX + 75, startY_, {
+                width: colWidth - 10 + 75,
+                align: textHeader,
+              });
+            } else if (cellValue.includes("ADDITIONAL:")) {
+              doc.font("Helvetica-Bold");
+              const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+
+              doc.text("ADDITIONAL:", startX + 5, startY_, {
+                width: 75,
+                align: textHeader,
+              });
+              doc.font("Helvetica");
+              doc.text(value.trim(), startX + 75, startY_, {
+                width: colWidth - 10 + 75,
+                align: textHeader,
+              });
+            } else {
+              doc.font("Helvetica");
+              doc.text(cellValue?.toString() || "", startX + 5, startY_, {
+                width: colWidth - 10,
+                align: textHeader,
+              });
+            }
+          }
+        );
+      });
+
+      // ||
+      //         cellValue.includes("REPLACEMENT:") ||
+      //         cellValue.includes("ADDITIONAL:")
+
       return yAxis;
     },
     drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => {
@@ -1843,4 +2211,137 @@ const getIndexes = (array: Array<any>, condition: any) => {
     return indexes;
   }, []);
 };
+
+const printQuery = (policies: string) => `
+SELECT 
+    *
+FROM
+    policy AS Policy
+        LEFT JOIN
+    bpolicy AS BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo
+        LEFT JOIN
+    vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo
+        LEFT JOIN
+    mpolicy AS MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo
+        LEFT JOIN
+    papolicy AS PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo
+        LEFT JOIN
+    cglpolicy AS CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo
+        LEFT JOIN
+    msprpolicy AS MSPRPolicy ON Policy.PolicyNo = MSPRPolicy.PolicyNo
+        LEFT JOIN
+    fpolicy AS FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo
+     LEFT JOIN (
+    select * from (SELECT 
+    if(aa.option = "individual", CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as ShortName,
+    aa.entry_client_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    aa.company,
+    aa.address,
+    aa.option AS options,
+    aa.sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.client_contact_details_id AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    entry_client aa 
+UNION ALL SELECT 
+    CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS ShortName,
+    aa.entry_agent_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    NULL AS company,
+    aa.address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.agent_contact_details_id AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    entry_agent aa 
+UNION ALL SELECT 
+    CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS ShortName,
+    aa.entry_employee_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    NULL AS company,
+    aa.address,
+    NULL AS options,
+    aa.sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    entry_employee aa 
+UNION ALL SELECT 
+    aa.fullname AS ShortName,
+    aa.entry_fixed_assets_id AS IDNo,
+    NULL AS firstname,
+    NULL AS middlename,
+    NULL AS company,
+    NULL AS address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    aa.description,
+    aa.remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    entry_fixed_assets aa 
+UNION ALL SELECT 
+    aa.description AS ShortName,
+    aa.entry_others_id AS IDNo,
+    NULL AS firstname,
+    NULL AS middlename,
+    NULL AS company,
+    NULL AS address,
+    NULL AS options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    NULL AS contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+	NULL AS VAT_Type,
+    NULL AS tin_no
+FROM
+    entry_others aa
+ UNION ALL SELECT 
+    if(aa.option = "individual", CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '',  CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as ShortName,
+    aa.entry_supplier_id AS IDNo,
+    aa.firstname,
+    aa.middlename,
+    aa.company,
+    aa.address,
+    aa.option as options,
+    NULL AS sub_account,
+    aa.createdAt,
+    aa.update AS updatedAt,
+    aa.supplier_contact_details_id as  contact_details_id,
+    NULL AS description,
+    NULL AS remarks,
+    aa.VAT_Type,
+    aa.tin_no
+FROM
+    entry_supplier aa) id_entry
+    ) client ON Policy.IDNo = client.IDNo
+    left join gpa_endorsement on gpa_endorsement.policyNo =  PAPolicy.PolicyNo
+    where Policy.PolicyNo in ${policies}
+`;
 export default StatementOfAccount;

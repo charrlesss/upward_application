@@ -233,7 +233,6 @@ export async function getPdcPolicyIdAndCLientId(search: string, req: Request) {
     `%${search}%`
   );
 }
-
 export async function getPdcPolicyIdAndCLientId500(search: string, req: Request) {
   const qry = `
   SELECT 
@@ -259,7 +258,6 @@ export async function getPdcPolicyIdAndCLientId500(search: string, req: Request)
     `%${search}%`
   );
 }
-
 export async function getCashPayTo(search: string) {
   const _withPolicy = `
 SELECT 
