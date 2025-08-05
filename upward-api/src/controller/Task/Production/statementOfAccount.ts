@@ -96,7 +96,7 @@ FROM
             AND journal.GL_Acct = '1.03.01'
     GROUP BY journal.ID_No) d ON a.IDNo = d.ID_No or a.PolicyNo  = d.ID_No
     where 
-    d.Debit - d.Credit > 0 and (
+     (
         a.PolicyNo like ? 
         OR  c.IDNo like ?   
         OR c.Shortname like ?  
