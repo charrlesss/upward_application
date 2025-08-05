@@ -821,7 +821,7 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
       )) as Array<any>;
       if (CGLDATA.length > 0) {
         data.push({
-          PolicyNo: "CGL",
+          PolicyNo: "CGL & CARI",
           Insured: "",
           Premium: "",
           From: "",
@@ -1043,7 +1043,7 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
     addHeaderBorderTop: true,
     PAGE_WIDTH,
     PAGE_HEIGHT,
-    MARGIN: { top: 160, right: 20, bottom: 30, left: 20 },
+    MARGIN: { top: 190, right: 20, bottom: 30, left: 20 },
     addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => {
       doc.fontSize(7);
 
@@ -1287,7 +1287,7 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
 
       yAxis += 60;
       doc.fontSize(9);
-      doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
+      doc.text(`Ref. No. : ${req.body.reference_no}`, 30, yAxis, {
         width: PAGE_WIDTH - 60,
         align: "right",
       });
