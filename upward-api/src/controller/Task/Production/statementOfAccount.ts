@@ -9,6 +9,7 @@ import PDFReportGenerator from "../../../lib/pdf-generator";
 const StatementOfAccount = express.Router();
 
 StatementOfAccount.post("/soa/search-by-policy", async (req, res) => {
+  console.log(req.body)
   const data = await prisma.$queryRawUnsafe(
     `
 SELECT 
@@ -94,7 +95,7 @@ FROM
         journal.Date_Entry
             AND journal.Source_Type NOT IN ('BF' , 'BFD', 'BFS')
             AND journal.GL_Acct = '1.03.01'
-    GROUP BY journal.ID_No) d ON a.IDNo = d.ID_No or a.PolicyNo  = d.ID_No
+    GROUP BY journal.ID_No) d ON  a.PolicyNo  = d.ID_No
     where 
      (
         a.PolicyNo like ? 
