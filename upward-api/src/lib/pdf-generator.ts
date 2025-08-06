@@ -621,6 +621,7 @@ class PDFReportGenerator {
           startY = this.MARGIN.top;
         }
       }
+      
       this.drawRow(doc, row, rowIndex, startY);
       startY += rowHeight;
     });

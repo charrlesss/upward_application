@@ -5,11 +5,13 @@ import { format } from "date-fns";
 import { selectClient } from "../../../model/Task/Accounting/pdc.model";
 import { formatNumber } from "../Accounting/collection";
 import PDFReportGenerator from "../../../lib/pdf-generator";
+import PDFDocument from "pdfkit";
+import fs from "fs";
 
 const StatementOfAccount = express.Router();
 
 StatementOfAccount.post("/soa/search-by-policy", async (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   const data = await prisma.$queryRawUnsafe(
     `
 SELECT 
@@ -471,17 +473,6 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
   left join (${selectClient}) c on b.IDNo = c.IDNo
   where a.PolicyNo in ('${policies}') ;`;
   const data: Array<any> = [];
-
-  // const careOf: Array<any> = await prisma.$queryRawUnsafe(
-  //   `
-  //   SELECT
-  //     careOf, address
-  //   FROM
-  //       careof
-  //   WHERE
-  //       careOf = ? AND inactive = 0;`,
-  //   req.body.careOf
-  // );
 
   for (const itm of req.body.data) {
     if (itm.Type === "COM") {
@@ -953,6 +944,7 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
       )
     );
   }, 0);
+
   data.push({
     PolicyNo: "",
     Insured: "",
@@ -1006,419 +998,1048 @@ StatementOfAccount.post("/soa/print", async (req, res) => {
     }
   }
 
+  const underlineIndexes = getIndexes(
+    data,
+    (item: any) => item?.header === true
+  );
   const headerIndexes = getIndexes(
     data,
     (item: any) =>
       item?.header === true || item?.solo === false || item?.total === true
   );
-  const gapPerRowIndexes = getIndexes(
-    data,
-    (item: any) => item?.gapPerRow === true
-  );
-  const getSolo = getIndexes(
-    data,
-    (item: any) => item?.solo === true && item?.endorsement
-  );
+  const getSolo = getIndexes(data, (item: any) => item?.solo === true);
   let PAGE_WIDTH = 660;
   let PAGE_HEIGHT = 841;
+  let MIN_ROW_HEIGHT = 10;
 
-  const props: any = {
-    addHeader: false,
-    addHeaderPerpage: false,
-    data: data,
-    columnWidths: [150, 200, 70, 60, 60, 80],
-    headers: [
-      { headerName: "POLICY NO", textAlign: "left" },
-      { headerName: "INSURED", textAlign: "left" },
-      { headerName: "PREMIUM", textAlign: "right" },
-      { headerName: "FROM", textAlign: "left" },
-      { headerName: "TO", textAlign: "left" },
-      { headerName: "GROSS PREMIUM", textAlign: "right" },
-    ],
-    keys: ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"],
-    title: "",
-    adjustTitleFontSize: 6,
-    setRowFontSize: 6,
-    BASE_FONT_SIZE: 6,
-    adjustRowHeight: 8,
-    addHeaderBorderTop: true,
-    PAGE_WIDTH,
-    PAGE_HEIGHT,
-    MARGIN: { top: 190, right: 20, bottom: 30, left: 20 },
-    addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => {
-      doc.fontSize(7);
+  const outputFilePath = "manok.pdf";
+  const doc = new PDFDocument({
+    size: [PAGE_WIDTH, PAGE_HEIGHT],
+    margin: 0,
+    bufferPages: true,
+  });
 
-      doc
-        .moveTo(20, startY + 10)
-        .lineTo(PAGE_WIDTH - 20, startY + 10)
-        .stroke();
+  const writeStream = fs.createWriteStream(outputFilePath);
+  doc.pipe(writeStream);
 
-      doc.text("COVERAGE", 450, startY + 14, {
-        width: 70,
-        align: "center",
+  const MARGIN = {
+    top: 50,
+    bottom: 70,
+    left: 30,
+    right: 30,
+  };
+
+  let startY = MARGIN.top;
+  let currentPage = 1;
+
+  const spanMap = new Map();
+  const boldedRows: Array<number> = [];
+  const underlineColumn = new Map();
+
+  const keys = ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"];
+  const headers = [
+    { headerName: "POLICY NO", textAlign: "left" },
+    { headerName: "INSURED", textAlign: "left" },
+    { headerName: "PREMIUM", textAlign: "right" },
+    { headerName: "FROM", textAlign: "left" },
+    { headerName: "TO", textAlign: "left" },
+    { headerName: "GROSS PREMIUM", textAlign: "right" },
+  ];
+  const columnWidths = [135, 190, 70, 60, 60, 85];
+
+  startY = drawTitleAndHeader(doc, startY, currentPage);
+  drawFooter(doc, startY);
+
+  drawPerPage();
+
+  data.forEach((row: any, rowIndex: any) => {
+    const rowHeight = calculateRowHeight(doc, row, rowIndex);
+    if (startY + rowHeight > PAGE_HEIGHT - MARGIN.bottom) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
       });
-      doc.fontSize(7);
-    },
-    beforeDraw: (
-      pdfReportGenerator: PDFReportGenerator,
-      doc: PDFKit.PDFDocument
-    ) => {
-      let yAxis = 20;
-      // doc.image(
-      //   path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
-      //   30,
-      //   yAxis,
-      //   {
-      //     fit: [120, 120],
-      //   }
-      // );
+      currentPage += 1;
 
-      yAxis += 10;
-      // doc.fontSize(60);
-      // doc.font("Helvetica-Bold");
-      // doc.text("UPWARD", 155, yAxis);
-      yAxis += 70;
+      startY = drawTitleAndHeader(doc, startY, currentPage);
+      drawFooter(doc, startY);
+    }
+    drawRow(doc, row, rowIndex, startY);
+    startY += rowHeight;
+  });
+  subReport();
+  drawPageNumber();
 
-      // if (process.env.DEPARTMENT === "UMIS") {
-      //   doc.fontSize(9);
-      //   doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
-      // }
-      // if (process.env.DEPARTMENT === "UCSMI") {
-      //   doc.fontSize(9);
-      //   doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
-      // }
+  function drawPerPage() {
+    getSolo.forEach((itm: any) => {
+      SpanRow(itm, 1, 5);
+    });
+    headerIndexes.forEach((itm: any) => {
+      boldRow(itm);
+    });
+    underlineIndexes.forEach((itm: any) => {
+      underLineColumn(itm, ["PolicyNo", "GrossPremium"]);
+    });
+  }
+  function underLineColumn(rowIndex: number, colIdx: Array<string>) {
+    underlineColumn.set(rowIndex, { colIdx });
+  }
+  function boldRow(rowIndex: number) {
+    boldedRows.push(rowIndex);
+  }
+  function SpanRow(
+    rowIndex: number,
+    columnIndex: number,
+    spanLength: number,
+    key: string = "",
+    textAlign: string = "left"
+  ) {
+    spanMap.set(rowIndex, { columnIndex, spanLength, key, textAlign });
+  }
+  function drawRow(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number,
+    startY: number
+  ) {
+    const isBold = boldedRows.some((itm) => itm === rowIndex);
 
-      yAxis += 40;
+    if (isBold) {
       doc.font("Helvetica-Bold");
-      doc.fontSize(8);
-      doc.text("STATEMENT OF ACCOUNT", 30, yAxis, {
-        width: PAGE_WIDTH - 30,
-        align: "center",
-      });
+    } else {
+      doc.font("Helvetica");
+    }
 
-      yAxis += 10;
-      doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, yAxis, {
-        width: PAGE_WIDTH - 30,
-        align: "center",
-      });
+    let startX = MARGIN.left;
 
-      yAxis += 10;
-      // doc.fontSize(9);
-      // doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
-      //   width: PAGE_WIDTH - 60,
-      //   align: "right",
-      // });
-      doc.fontSize(8);
+    const underLineInfo = underlineColumn.get(rowIndex);
+    const { colIdx } = underLineInfo || {};
 
-      const arrayHeaderData = [
-        { label: "ACCT. NAME", value: req.body.name },
-        { label: "ADDRESS", value: req.body.address },
-        { label: "ACCT. BAL.", value: formatNumber(getTotal) },
-      ];
+    // Check if the current row has a span
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
 
-      for (const itm of arrayHeaderData) {
-        yAxis += 12;
-        doc.text(itm.label, 30, yAxis, {
-          width: 70,
-          align: "left",
-        });
-        doc.text(`:`, 100, yAxis, {
-          width: 10,
-          align: "left",
-        });
-        if (itm.label === "ACCT. BAL.") {
-          doc.text(itm.value, 130, yAxis, {
-            width: 60,
-            align: "right",
-          });
-          doc
-            .moveTo(130, yAxis - 3)
-            .lineTo(195, yAxis - 3)
-            .stroke();
+    let getRowHeight = 0;
 
-          yAxis += 10;
-
-          doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
-          yAxis += 2;
-          doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
-        } else {
-          doc.text(itm.value, 130, yAxis, {
-            width: PAGE_WIDTH - 30,
-            align: "left",
-          });
-        }
+    keys.forEach((key, colIndex) => {
+      // Skip columns that fall within a span range (except the starting column)
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
       }
 
-      headerIndexes.forEach((itm: any) => {
-        pdfReportGenerator.boldRow(itm);
-      });
-      getSolo.forEach((itm: any) => {
-        pdfReportGenerator.SpanRow(itm, 1, 5);
-        pdfReportGenerator.boldRow(
-          itm,
-          (
-            doc: any,
-            cellValue: any,
-            startY_: any,
-            startX: any,
-            colWidth: any,
-            textHeader: any
-          ) => {
-            if (cellValue.includes("DELETED:")) {
-              doc.font("Helvetica-Bold");
-              const [label, value] = cellValue?.toString().split("DELETED:");
-              doc.text("DELETED:", startX + 5, startY_, {
-                width: 75,
-                align: textHeader,
-              });
-              doc.font("Helvetica");
-              doc.text(value.trim(), startX + 75, startY_, {
-                width: colWidth - 10 + 75,
-                align: textHeader,
-              });
-            } else if (cellValue.includes("REPLACEMENT:")) {
-              doc.font("Helvetica-Bold");
-              const [label, value] = cellValue
-                ?.toString()
-                .split("REPLACEMENT:");
+      // Calculate the column width (spanned width if applicable)
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
 
-              doc.text("REPLACEMENT:", startX + 5, startY_, {
-                width: 75,
-                align: textHeader,
-              });
-              doc.font("Helvetica");
-              doc.text(value.trim(), startX + 75, startY_, {
-                width: colWidth - 10 + 75,
-                align: textHeader,
-              });
-            } else if (cellValue.includes("ADDITIONAL:")) {
-              doc.font("Helvetica-Bold");
-              const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+      let cellValue = "";
+      let textHeader = "" as
+        | "left"
+        | "center"
+        | "justify"
+        | "right"
+        | undefined;
 
-              doc.text("ADDITIONAL:", startX + 5, startY_, {
-                width: 75,
-                align: textHeader,
-              });
-              doc.font("Helvetica");
-              doc.text(value.trim(), startX + 75, startY_, {
-                width: colWidth - 10 + 75,
-                align: textHeader,
-              });
-            } else {
-              doc.font("Helvetica");
-              doc.text(cellValue?.toString() || "", startX + 5, startY_, {
-                width: colWidth - 10,
-                align: textHeader,
-              });
-            }
-          }
-        );
-      });
+      if (spanInfo && colIndex === columnIndex && SpanKey !== "") {
+        textHeader = SpanTextAlign;
+        cellValue = row[SpanKey];
+      } else {
+        textHeader = headers[colIndex].textAlign as
+          | "left"
+          | "center"
+          | "justify"
+          | "right"
+          | undefined;
+        cellValue = row[key];
+      }
 
-      // ||
-      //         cellValue.includes("REPLACEMENT:") ||
-      //         cellValue.includes("ADDITIONAL:")
-
-      return yAxis;
-    },
-    drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => {
-      if (row.header) {
-        startY = startY + 13;
-        if (row.PolicyNo === "COMPREHENSIVE") {
-          doc.moveTo(25, startY).lineTo(95, startY).stroke();
-          doc.moveTo(25, startY).lineTo(95, startY).stroke();
-        } else if (row.PolicyNo === "FIRE") {
-          doc.moveTo(25, startY).lineTo(43, startY).stroke();
-          doc.moveTo(25, startY).lineTo(43, startY).stroke();
-        } else if (row.PolicyNo === "MARINE") {
-          doc.moveTo(25, startY).lineTo(56, startY).stroke();
-          doc.moveTo(25, startY).lineTo(56, startY).stroke();
-        } else if (row.PolicyNo === "BONDS") {
-          doc.moveTo(25, startY).lineTo(53, startY).stroke();
-          doc.moveTo(25, startY).lineTo(53, startY).stroke();
-        } else if (row.PolicyNo === "GPA") {
-          doc.moveTo(25, startY).lineTo(41, startY).stroke();
-          doc.moveTo(25, startY).lineTo(41, startY).stroke();
-        } else if (row.PolicyNo === "CGL") {
-          doc.moveTo(25, startY).lineTo(41, startY).stroke();
-          doc.moveTo(25, startY).lineTo(41, startY).stroke();
-        }
+      if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "COMPREHENSIVE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(105, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "GPA"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "FIRE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "MARINE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(66, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "CGL & CARI"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(81, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "BONDS"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(65, startY + 8)
+          .stroke();
       } else if (row.total) {
-        doc
-          .moveTo(PAGE_WIDTH - 80, startY + 2)
-          .lineTo(PAGE_WIDTH - 20, startY + 2)
+         doc
+          .moveTo(640, startY - 6)
+          .lineTo(570, startY - 6)
           .stroke();
-        startY += 15;
+
         doc
-          .moveTo(PAGE_WIDTH - 80, startY)
-          .lineTo(PAGE_WIDTH - 20, startY)
+          .moveTo(640, startY + 10.5)
+          .lineTo(570, startY + 10.5)
           .stroke();
-        startY += 2;
+
         doc
-          .moveTo(PAGE_WIDTH - 80, startY)
-          .lineTo(PAGE_WIDTH - 20, startY)
+          .moveTo(640, startY + 13)
+          .lineTo(570, startY + 13)
           .stroke();
       }
-    },
-    beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {
-      let yAxis = 20;
-      doc.image(
-        path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
-        30,
-        yAxis,
-        {
-          fit: [120, 120],
-        }
-      );
 
-      yAxis += 10;
-      doc.fontSize(60);
-      doc.font("Helvetica-Bold");
-      doc.text("UPWARD", 155, yAxis);
-      yAxis += 50;
+      if (cellValue.includes("DELETED:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("DELETED:");
+        doc.text("DELETED:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("REPLACEMENT:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("REPLACEMENT:");
 
-      if (process.env.DEPARTMENT === "UMIS") {
-        doc.fontSize(9);
-        doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
+        doc.text("REPLACEMENT:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("ADDITIONAL:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+        doc.text("ADDITIONAL:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else {
+        doc.text(cellValue?.toString() || "", startX + 5, startY, {
+          width: colWidth - 10,
+          align: textHeader,
+        });
       }
-      if (process.env.DEPARTMENT === "UCSMI") {
-        doc.fontSize(9);
-        doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
-      }
+      // let startY_ = startY + 5;
 
-      yAxis += 60;
+      startX += colWidth;
+    });
+  }
+  function drawTitleAndHeader(
+    doc: PDFKit.PDFDocument,
+    startY: number,
+    currentPage: number
+  ) {
+    startY = 50;
+    doc.image(
+      path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+      30,
+      startY,
+      {
+        fit: [120, 120],
+      }
+    );
+
+    startY += 10;
+    doc.fontSize(60);
+    doc.font("Helvetica-Bold");
+    doc.text("UPWARD", 155, startY);
+    startY += 50;
+
+    if (process.env.DEPARTMENT === "UMIS") {
       doc.fontSize(9);
-      doc.text(`Ref. No. : ${req.body.reference_no}`, 30, yAxis, {
-        width: PAGE_WIDTH - 60,
+      doc.text("MANAGEMENT INSURANCE SERVICES", 245, startY);
+    }
+    if (process.env.DEPARTMENT === "UCSMI") {
+      doc.fontSize(9);
+      doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, startY);
+    }
+
+    startY += 30;
+    doc.text(`STATEMENT OF ACCOUNT`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 12;
+    doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 20;
+    doc.fontSize(9);
+    doc.text(`Ref. No. : ${req.body.reference_no}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "right",
+    });
+    startY += 30;
+
+    if (currentPage === 1) {
+      doc.fontSize(8);
+      const name = req.body.name || "";
+      const address = req.body.address || "";
+      const balance = formatNumber(getTotal);
+
+      const nameHeight = doc.heightOfString(name, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+      const addressHeight = doc.heightOfString(address, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Name
+      doc.text("ACCT. NAME", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(name, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Address
+      startY += nameHeight <= 0 ? 13 : nameHeight;
+      doc.text("ADDRESS", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(address, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Balance
+      startY += addressHeight <= 0 ? 13 : addressHeight;
+      doc.text("ACCT. BAL", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(balance, 110, startY, {
+        width: 70,
         align: "right",
       });
-      doc.text(
-        "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
-        30,
-        PAGE_HEIGHT - 30,
-        {
-          width: PAGE_WIDTH - 30,
-          align: "center",
-        }
-      );
-      doc.text(
-        "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
-        30,
-        PAGE_HEIGHT - 18,
-        {
-          width: PAGE_WIDTH - 30,
-          align: "center",
-        }
-      );
-    },
-    addRowHeight: (rowIndex: number) => {
-      if (gapPerRowIndexes.includes(rowIndex)) {
-        return 8;
-      }
-      return 0;
-    },
-    drawPageNumber: (
-      doc: PDFKit.PDFDocument,
-      currentPage: number,
-      totalPages: number,
-      pdfReportGenerator: any
-    ) => {},
-    drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => {
       startY += 10;
-      doc.fontSize(10);
-      doc.font("Helvetica-Bold");
-      doc.text(req.body.attachment, 30, startY, {
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+      startY += 2;
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+    }
+
+    startY += 13;
+    doc.fontSize(8);
+    let startX = MARGIN.left;
+
+    // doc.text("AMOUNT", 171, startY );
+    doc.text("COVERAGE", 447, startY);
+
+    headers.forEach((header, colIndex) => {
+      const colWidth = columnWidths[colIndex];
+      doc.text(header.headerName, startX + 5, startY + 12, {
+        width: colWidth - 10,
+        align:
+          header.textAlign === "right"
+            ? "center"
+            : (header.textAlign as
+                | "left"
+                | "center"
+                | "justify"
+                | "right"
+                | undefined),
+      });
+
+      startX += colWidth;
+    });
+
+    doc.fontSize(8);
+    doc.font("Helvetica");
+    doc
+      .moveTo(30, startY - 5)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY - 5)
+      .stroke();
+    doc
+      .moveTo(30, startY + 25)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 25)
+      .stroke();
+    startY += 30;
+
+    return startY;
+  }
+  function drawFooter(doc: PDFKit.PDFDocument, startY: number) {
+    doc.text(
+      "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
+      30,
+      PAGE_HEIGHT - 40,
+      {
         width: PAGE_WIDTH - 30,
         align: "center",
+      }
+    );
+    doc.text(
+      "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
+      30,
+      PAGE_HEIGHT - 30,
+      {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      }
+    );
+  }
+  function calculateRowHeight(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number
+  ) {
+    doc.fontSize(8);
+
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
+
+    let maxHeight = MIN_ROW_HEIGHT;
+    keys.forEach((key, colIndex) => {
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
+      }
+
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
+
+      // const colWidth = columnWidths[colIndex] || 50;
+      const cellValue = row[key];
+      const cellHeight = doc.heightOfString(cellValue?.toString() || "", {
+        width: colWidth - 10,
       });
+      maxHeight = Math.max(maxHeight, cellHeight + 3);
+    });
+    return maxHeight;
+  }
+  function drawPageNumber() {
+    const range = doc.bufferedPageRange();
+    let i;
+    let end;
 
-      startY += 30;
-
-      doc.fontSize(7);
+    for (
+      i = range.start, end = range.start + range.count, range.start <= end;
+      i < end;
+      i++
+    ) {
       doc.font("Helvetica");
-      doc.text("Prepared by:", 100, startY, {
-        width: 100,
-        align: "center",
-      });
-      doc.text("Checked by:", 250, startY, {
-        width: 100,
-        align: "center",
-      });
-      doc.text("Noted by:", 400, startY, {
-        width: 100,
-        align: "center",
-      });
+      doc.switchToPage(i);
+      doc.text(
+        `Page ${i + 1} of ${range.count}`,
+        PAGE_WIDTH - 60,
+        PAGE_HEIGHT - 20
+      );
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 20
+      );
+    }
+  }
+  function subReport() {
+    startY += 12;
 
-      startY += 30;
-      doc.fontSize(7);
-      doc.font("Helvetica-Bold");
-      doc.text("ADacula", 100, startY, {
-        width: 100,
-        align: "center",
+    const SUBREPORT_HEIGHT = 160;
+    const remainingSpace = PAGE_HEIGHT - startY - MARGIN.bottom;
+
+    if (remainingSpace < SUBREPORT_HEIGHT) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
       });
-      doc.text("MGBLlanera", 250, startY, {
-        width: 100,
-        align: "center",
+      startY = MARGIN.top;
+      drawFooter(doc, startY);
+    }
+    doc.fontSize(10);
+    doc.font("Helvetica-Bold");
+    doc.text(req.body.attachment, 30, startY, {
+      width: PAGE_WIDTH - 30,
+      align: "center",
+    });
+
+    startY += 30;
+
+    doc.fontSize(7);
+    doc.font("Helvetica");
+    doc.text("Prepared by:", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Checked by:", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Noted by:", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+
+    startY += 30;
+    doc.fontSize(7);
+    doc.font("Helvetica-Bold");
+    doc.text("ADacula", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("MGBLlanera", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("LVAquino", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+    startY += 20;
+    doc.text(
+      "Received by:       ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.text(
+      "Date:                    ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.fontSize(7);
+    doc.text(
+      `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+  }
+
+  doc.end();
+  writeStream.on("finish", (e: any) => {
+    console.log(`PDF created successfully at: ${outputFilePath}`);
+    const readStream = fs.createReadStream(outputFilePath);
+    readStream.pipe(res);
+
+    readStream.on("end", () => {
+      fs.unlink(outputFilePath, (err) => {
+        if (err) {
+          console.error("Error deleting file:", err);
+        } else {
+          console.log(`File ${outputFilePath} deleted successfully.`);
+        }
       });
-      doc.text("LVAquino", 400, startY, {
-        width: 100,
-        align: "center",
-      });
-      startY += 20;
-      doc.text(
-        "Received by:       ________________________________",
-        30,
-        startY,
-        {
-          width: 300,
-          align: "left",
-        }
-      );
-      startY += 15;
-      doc.text(
-        "Date:                    ________________________________",
-        30,
-        startY,
-        {
-          width: 300,
-          align: "left",
-        }
-      );
-      startY += 15;
-      doc.fontSize(7);
-      doc.text(
-        `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
-        30,
-        startY,
-        {
-          width: 500,
-          align: "left",
-        }
-      );
-      startY += 9;
-      doc.text(
-        `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
-        30,
-        startY,
-        {
-          width: 500,
-          align: "left",
-        }
-      );
-      startY += 9;
-      doc.text(
-        `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
-        30,
-        startY,
-        {
-          width: 500,
-          align: "left",
-        }
-      );
-    },
-  };
-  const pdfReportGenerator = new PDFReportGenerator(props);
-  return pdfReportGenerator.generatePDF(res, false);
+    });
+  });
+
+  // const props: any = {
+  //   addHeader: false,
+  //   addHeaderPerpage: false,
+  //   data: data,
+  //   columnWidths: [150, 200, 70, 60, 60, 80],
+  // headers: [
+  //   { headerName: "POLICY NO", textAlign: "left" },
+  //   { headerName: "INSURED", textAlign: "left" },
+  //   { headerName: "PREMIUM", textAlign: "right" },
+  //   { headerName: "FROM", textAlign: "left" },
+  //   { headerName: "TO", textAlign: "left" },
+  //   { headerName: "GROSS PREMIUM", textAlign: "right" },
+  // ],
+  //   keys: ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"],
+  //   title: "",
+  //   adjustTitleFontSize: 6,
+  //   setRowFontSize: 6,
+  //   BASE_FONT_SIZE: 6,
+  //   adjustRowHeight: 8,
+  //   addHeaderBorderTop: true,
+  //   PAGE_WIDTH,
+  //   PAGE_HEIGHT,
+  //   MARGIN: { top: 160, right: 20, bottom: 30, left: 20 },
+  //   addDrawingOnHeader: (doc: PDFKit.PDFDocument, startY: number) => {
+  //     doc.fontSize(7);
+
+  //     doc
+  //       .moveTo(20, startY + 10)
+  //       .lineTo(PAGE_WIDTH - 20, startY + 10)
+  //       .stroke();
+
+  //     doc.text("COVERAGE", 450, startY + 14, {
+  //       width: 70,
+  //       align: "center",
+  //     });
+  //     doc.fontSize(7);
+  //   },
+  //   beforeDraw: (
+  //     pdfReportGenerator: PDFReportGenerator,
+  //     doc: PDFKit.PDFDocument
+  //   ) => {
+  //     let yAxis = 20;
+  //     // doc.image(
+  //     //   path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+  //     //   30,
+  //     //   yAxis,
+  //     //   {
+  //     //     fit: [120, 120],
+  //     //   }
+  //     // );
+
+  //     yAxis += 10;
+  //     // doc.fontSize(60);
+  //     // doc.font("Helvetica-Bold");
+  //     // doc.text("UPWARD", 155, yAxis);
+  //     yAxis += 70;
+
+  //     // if (process.env.DEPARTMENT === "UMIS") {
+  //     //   doc.fontSize(9);
+  //     //   doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
+  //     // }
+  //     // if (process.env.DEPARTMENT === "UCSMI") {
+  //     //   doc.fontSize(9);
+  //     //   doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
+  //     // }
+
+  //     yAxis += 40;
+  //     doc.font("Helvetica-Bold");
+  //     doc.fontSize(8);
+  //     doc.text("STATEMENT OF ACCOUNT", 30, yAxis, {
+  //       width: PAGE_WIDTH - 30,
+  //       align: "center",
+  //     });
+
+  //     yAxis += 10;
+  //     doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, yAxis, {
+  //       width: PAGE_WIDTH - 30,
+  //       align: "center",
+  //     });
+
+  //     yAxis += 10;
+  //     // doc.fontSize(9);
+  //     // doc.text(`Ref. No. : ${req.body.refNo}`, 30, yAxis, {
+  //     //   width: PAGE_WIDTH - 60,
+  //     //   align: "right",
+  //     // });
+  //     doc.fontSize(8);
+
+  //     const arrayHeaderData = [
+  //       { label: "ACCT. NAME", value: req.body.name },
+  //       { label: "ADDRESS", value: req.body.address },
+  //       { label: "ACCT. BAL.", value: formatNumber(getTotal) },
+  //     ];
+
+  //     for (const itm of arrayHeaderData) {
+  //       yAxis += 12;
+  //       doc.text(itm.label, 30, yAxis, {
+  //         width: 70,
+  //         align: "left",
+  //       });
+  //       doc.text(`:`, 100, yAxis, {
+  //         width: 10,
+  //         align: "left",
+  //       });
+  //       if (itm.label === "ACCT. BAL.") {
+  //         doc.text(itm.value, 130, yAxis, {
+  //           width: 60,
+  //           align: "right",
+  //         });
+  //         doc
+  //           .moveTo(130, yAxis - 3)
+  //           .lineTo(195, yAxis - 3)
+  //           .stroke();
+
+  //         yAxis += 10;
+
+  //         doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
+  //         yAxis += 2;
+  //         doc.moveTo(130, yAxis).lineTo(195, yAxis).stroke();
+  //       } else {
+  //         doc.text(itm.value, 130, yAxis, {
+  //           width: PAGE_WIDTH - 30,
+  //           align: "left",
+  //         });
+  //       }
+  //     }
+
+  //     headerIndexes.forEach((itm: any) => {
+  //       pdfReportGenerator.boldRow(itm);
+  //     });
+  //     getSolo.forEach((itm: any) => {
+  //       pdfReportGenerator.SpanRow(itm, 1, 5);
+  //       pdfReportGenerator.boldRow(
+  //         itm,
+  //         (
+  //           doc: any,
+  //           cellValue: any,
+  //           startY_: any,
+  //           startX: any,
+  //           colWidth: any,
+  //           textHeader: any
+  //         ) => {
+  //           if (cellValue.includes("DELETED:")) {
+  //             doc.font("Helvetica-Bold");
+  //             const [label, value] = cellValue?.toString().split("DELETED:");
+  //             doc.text("DELETED:", startX + 5, startY_, {
+  //               width: 75,
+  //               align: textHeader,
+  //             });
+  //             doc.font("Helvetica");
+  //             doc.text(value.trim(), startX + 75, startY_, {
+  //               width: colWidth - 10 + 75,
+  //               align: textHeader,
+  //             });
+  //           } else if (cellValue.includes("REPLACEMENT:")) {
+  //             doc.font("Helvetica-Bold");
+  //             const [label, value] = cellValue
+  //               ?.toString()
+  //               .split("REPLACEMENT:");
+
+  //             doc.text("REPLACEMENT:", startX + 5, startY_, {
+  //               width: 75,
+  //               align: textHeader,
+  //             });
+  //             doc.font("Helvetica");
+  //             doc.text(value.trim(), startX + 75, startY_, {
+  //               width: colWidth - 10 + 75,
+  //               align: textHeader,
+  //             });
+  //           } else if (cellValue.includes("ADDITIONAL:")) {
+  //             doc.font("Helvetica-Bold");
+  //             const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+
+  //             doc.text("ADDITIONAL:", startX + 5, startY_, {
+  //               width: 75,
+  //               align: textHeader,
+  //             });
+  //             doc.font("Helvetica");
+  //             doc.text(value.trim(), startX + 75, startY_, {
+  //               width: colWidth - 10 + 75,
+  //               align: textHeader,
+  //             });
+  //           } else {
+  //             doc.font("Helvetica");
+  //             doc.text(cellValue?.toString() || "", startX + 5, startY_, {
+  //               width: colWidth - 10,
+  //               align: textHeader,
+  //             });
+  //           }
+  //         }
+  //       );
+  //     });
+
+  //     // ||
+  //     //         cellValue.includes("REPLACEMENT:") ||
+  //     //         cellValue.includes("ADDITIONAL:")
+
+  //     return yAxis;
+  //   },
+  //   drawOnColumn: (row: any, doc: PDFKit.PDFDocument, startY: number) => {
+  //     if (row.header) {
+  //       startY = startY + 13;
+  //       if (row.PolicyNo === "COMPREHENSIVE") {
+  //         doc.moveTo(25, startY).lineTo(95, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(95, startY).stroke();
+  //       } else if (row.PolicyNo === "FIRE") {
+  //         doc.moveTo(25, startY).lineTo(43, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(43, startY).stroke();
+  //       } else if (row.PolicyNo === "MARINE") {
+  //         doc.moveTo(25, startY).lineTo(56, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(56, startY).stroke();
+  //       } else if (row.PolicyNo === "BONDS") {
+  //         doc.moveTo(25, startY).lineTo(53, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(53, startY).stroke();
+  //       } else if (row.PolicyNo === "GPA") {
+  //         doc.moveTo(25, startY).lineTo(41, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(41, startY).stroke();
+  //       } else if (row.PolicyNo === "CGL") {
+  //         doc.moveTo(25, startY).lineTo(41, startY).stroke();
+  //         doc.moveTo(25, startY).lineTo(41, startY).stroke();
+  //       }
+  //     } else if (row.total) {
+  //       doc
+  //         .moveTo(PAGE_WIDTH - 80, startY + 2)
+  //         .lineTo(PAGE_WIDTH - 20, startY + 2)
+  //         .stroke();
+  //       startY += 15;
+  //       doc
+  //         .moveTo(PAGE_WIDTH - 80, startY)
+  //         .lineTo(PAGE_WIDTH - 20, startY)
+  //         .stroke();
+  //       startY += 2;
+  //       doc
+  //         .moveTo(PAGE_WIDTH - 80, startY)
+  //         .lineTo(PAGE_WIDTH - 20, startY)
+  //         .stroke();
+  //     }
+  //   },
+  //   beforePerPageDraw: (pdfReportGenerator: any, doc: PDFKit.PDFDocument) => {
+  //     let yAxis = 20;
+  //     doc.image(
+  //       path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+  //       30,
+  //       yAxis,
+  //       {
+  //         fit: [120, 120],
+  //       }
+  //     );
+
+  //     yAxis += 10;
+  //     doc.fontSize(60);
+  //     doc.font("Helvetica-Bold");
+  //     doc.text("UPWARD", 155, yAxis);
+  //     yAxis += 50;
+
+  //     if (process.env.DEPARTMENT === "UMIS") {
+  //       doc.fontSize(9);
+  //       doc.text("MANAGEMENT INSURANCE SERVICES", 245, yAxis);
+  //     }
+  //     if (process.env.DEPARTMENT === "UCSMI") {
+  //       doc.fontSize(9);
+  //       doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, yAxis);
+  //     }
+
+  //     yAxis += 60;
+  //     doc.fontSize(9);
+  //     doc.text(`Ref. No. : ${req.body.reference_no}`, 30, yAxis, {
+  //       width: PAGE_WIDTH - 60,
+  //       align: "right",
+  //     });
+  //     doc.text(
+  //       "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
+  //       30,
+  //       PAGE_HEIGHT - 30,
+  //       {
+  //         width: PAGE_WIDTH - 30,
+  //         align: "center",
+  //       }
+  //     );
+  //     doc.text(
+  //       "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
+  //       30,
+  //       PAGE_HEIGHT - 18,
+  //       {
+  //         width: PAGE_WIDTH - 30,
+  //         align: "center",
+  //       }
+  //     );
+  //   },
+  //   addRowHeight: (rowIndex: number) => {
+  //     if (gapPerRowIndexes.includes(rowIndex)) {
+  //       return 8;
+  //     }
+  //     return 0;
+  //   },
+  //   drawPageNumber: (
+  //     doc: PDFKit.PDFDocument,
+  //     currentPage: number,
+  //     totalPages: number,
+  //     pdfReportGenerator: any
+  //   ) => {},
+  //   drawSubReport: (doc: PDFKit.PDFDocument, startY: number) => {
+  //     startY += 10;
+  doc.fontSize(10);
+  doc.font("Helvetica-Bold");
+  doc.text(req.body.attachment, 30, startY, {
+    width: PAGE_WIDTH - 30,
+    align: "center",
+  });
+
+  startY += 30;
+
+  doc.fontSize(7);
+  doc.font("Helvetica");
+  doc.text("Prepared by:", 100, startY, {
+    width: 100,
+    align: "center",
+  });
+  doc.text("Checked by:", 250, startY, {
+    width: 100,
+    align: "center",
+  });
+  doc.text("Noted by:", 400, startY, {
+    width: 100,
+    align: "center",
+  });
+
+  //     startY += 30;
+  //     doc.fontSize(7);
+  //     doc.font("Helvetica-Bold");
+  //     doc.text("ADacula", 100, startY, {
+  //       width: 100,
+  //       align: "center",
+  //     });
+  //     doc.text("MGBLlanera", 250, startY, {
+  //       width: 100,
+  //       align: "center",
+  //     });
+  //     doc.text("LVAquino", 400, startY, {
+  //       width: 100,
+  //       align: "center",
+  //     });
+  //     startY += 20;
+  //     doc.text(
+  //       "Received by:       ________________________________",
+  //       30,
+  //       startY,
+  //       {
+  //         width: 300,
+  //         align: "left",
+  //       }
+  //     );
+  //     startY += 15;
+  //     doc.text(
+  //       "Date:                    ________________________________",
+  //       30,
+  //       startY,
+  //       {
+  //         width: 300,
+  //         align: "left",
+  //       }
+  //     );
+  //     startY += 15;
+  //     doc.fontSize(7);
+  //     doc.text(
+  //       `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
+  //       30,
+  //       startY,
+  //       {
+  //         width: 500,
+  //         align: "left",
+  //       }
+  //     );
+  //     startY += 9;
+  //     doc.text(
+  //       `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
+  //       30,
+  //       startY,
+  //       {
+  //         width: 500,
+  //         align: "left",
+  //       }
+  //     );
+  //     startY += 9;
+  //     doc.text(
+  //       `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
+  //       30,
+  //       startY,
+  //       {
+  //         width: 500,
+  //         align: "left",
+  //       }
+  //     );
+  //   },
+  // };
+  // const pdfReportGenerator = new PDFReportGenerator(props);
+  // return pdfReportGenerator.generatePDF(res, false);
 });
 StatementOfAccount.post("/soa/generate-soa-careof", async (req, res) => {
   const qry = (policytablename: string) => `
