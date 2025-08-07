@@ -92,52 +92,34 @@ export async function generateTempID(req: Request) {
 // ===========================
 
 export async function getTPL_IDS(search: string, req: Request) {
-  const ctplQry = `
-        SELECT 
-            Prefix
-        FROM
-            ctplregistration
-            where Prefix <> '' AND Prefix is not null
-        GROUP BY Prefix;
-        `;
-  const ctplPreffix = (await prisma.$queryRawUnsafe(ctplQry)) as any;
-  let qry = "";
-  ctplPreffix.forEach((pref: any) => {
-    qry += `
-            select * from (
-                 Select   
-                Source_No,
-                cast(Credit as decimal(20,2)) as 'Cost' 
-                from journal 
-            where 
-                Explanation ='CTPL Registration' 
-                and Source_No 
-                like'%${pref.Prefix}%' and 
-                Credit > 0 
-                and Remarks is null 
-            order by CAST(SUBSTRING(source_no, 3, CHAR_LENGTH(source_no)) AS SIGNED) asc
-            limit 1 
-            ) a
-             union all
-    `;
-  });
-  qry += `
-           SELECT 
-                MIN(Source_No) as Source_No,
-                MIN(Debit) as Cost
-            FROM
-                journal
-            WHERE
-                cGL_Acct = 'CTPL Inventory'
-                    AND Explanation = 'CTPL Registration'
-                    AND Source_No_Ref_ID <> ''
-                    AND (Remarks = '' OR Remarks IS NULL)
-                    AND Source_No like ?
-                    group by Source_No_Ref_ID
-                    order by Source_No;
-        
-        `;
-  return await prisma.$queryRawUnsafe(qry, `%${search}%`);
+  return await prisma.$queryRawUnsafe(
+    `
+    select 
+      concat(a.Prefix, CAST(SUBSTRING(PolicyNo, CHAR_LENGTH(Prefix) + 1) AS UNSIGNED) + 1) AS Source_No,
+      a.Cost
+    from (
+    SELECT 
+        a.*,
+        p.PolicyNo
+    FROM
+        ctplregistration a
+    LEFT JOIN LATERAL (
+        SELECT *
+        FROM policy p
+        WHERE 
+            p.PolicyType = 'TPL'
+            AND p.PolicyNo BETWEEN CONCAT(a.Prefix, a.NumSeriesFrom) AND CONCAT(a.Prefix, a.NumSeriesTo)
+        ORDER BY p.PolicyNo DESC
+        LIMIT 1
+    ) p ON TRUE
+    ) a
+    where 
+      a.PolicyNo <> CONCAT(a.Prefix, a.NumSeriesTo)
+      and concat(a.Prefix, CAST(SUBSTRING(PolicyNo, CHAR_LENGTH(Prefix) + 1) AS UNSIGNED) + 1) like ?
+    order by Source_No
+    `,
+    `%${search}%`
+  );
 }
 
 export async function getRateFromTPLUpdate(Source_No: string, req: Request) {

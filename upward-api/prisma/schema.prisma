@@ -79,6 +79,7 @@ model ctplregistration {
   createdAt     DateTime @default(now())
   update        DateTime @default(now())
   ctplType      String?  @db.VarChar(250)
+  Vehicle       String?  @db.VarChar(250)
 }
 
 model ctplprefix {

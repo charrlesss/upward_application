@@ -23,6 +23,7 @@ import saveUserLogs from "../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../lib/saveUserlogsCode";
 import { VerifyToken } from "../Authentication";
 import { format } from "date-fns";
+import { prisma } from "..";
 
 const CTPL = express.Router();
 function getZeroFirstInput(data: string) {
@@ -64,7 +65,7 @@ CTPL.post("/add-ctpl", async (req: Request, res: Response) => {
     //     success: false,
     //   });
     // }
-    
+
     let addZeroFromSeries = getZeroFirstInput(NumSeriesFrom);
     let addZeroToSeries = getZeroFirstInput(NumSeriesTo);
 
@@ -74,14 +75,17 @@ CTPL.post("/add-ctpl", async (req: Request, res: Response) => {
         success: false,
       });
     }
-    if (((await findCtplfExist(req.body, req)) as any).length > 0) {
+
+    if (
+      await checkSeries(`${Prefix}${NumSeriesFrom}`, `${Prefix}${NumSeriesTo}`)
+    ) {
       return res.send({
-        message: "This data is already exist",
+        message: "This Series is already exist",
         success: false,
       });
     }
 
-    for (let i = parseInt(NumSeriesFrom); i <=  parseInt(NumSeriesTo); i++) {
+    for (let i = parseInt(NumSeriesFrom); i <= parseInt(NumSeriesTo); i++) {
       const _sourceNo = `${Prefix}${addZeroFromSeries}${i}`;
       // DEBIT'
       const newDate = format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS");
@@ -161,15 +165,28 @@ CTPL.post("/delete-ctpl", async (req: Request, res: Response) => {
       return res.send({ message: "Invalid User Code", success: false });
     }
 
-    const ctpl = await findCtplById(tpldID, req);
-    if (ctpl == null) {
-      return res.send({
-        message: "Cannot Find Ctpl ID!",
-        success: false,
-      });
-    }
-    await deleteJournal(tpldID, req);
-    await deleteCTPL(tpldID, req);
+    await prisma.$queryRawUnsafe(
+      `
+      delete 
+      from journal 
+      where 
+        (GL_Acct = '1.03.04' || GL_Acct = '1.04.01') 
+        and (TC = 'ADR' || TC = 'CTI') 
+        and  Source_Type = 'GL' 
+        and Explanation = 'CTPL Registration'
+        and Source_No 
+        between ? 
+        and ? 
+      order by Source_No`,
+      `${req.body.Prefix}${req.body.NumSeriesFrom}`,
+      `${req.body.Prefix}${req.body.NumSeriesTo}`
+    );
+
+    await prisma.$queryRawUnsafe(
+      `delete FROM ctplregistration where ctplId = ?`,
+      req.body.ctplId
+    );
+
     res.send({
       message: "Delete CTPL Successfully!",
       success: true,
@@ -196,33 +213,143 @@ CTPL.post("/update-ctpl", async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await getUserById((req.user as any).UserId);
-    const { ctplId, ...rest } = req.body;
-    delete rest.createdAt;
-    delete rest.CreatedBy;
-
-    const journal = await findManyJournal(ctplId, req);
-    journal.forEach(async (data) => {
-      const sourceCount = (
-        (data.Source_No as string).match(/\d+/) as Array<any>
-      )[0];
-      await updateJournal(
-        `${rest.Prefix}${sourceCount}`,
-        rest.Cost,
-        data.AutoNo,
-        req
-      );
-    });
-    await updateCTPL(
-      { ...rest, CreatedBy: (user as any).Username },
-      ctplId,
-      req
+    if (
+      !(await saveUserLogsCode(
+        req,
+        "edit",
+        `${req.body.NumSeriesFrom} - ${req.body.NumSeriesTo}`,
+        "CTPL"
+      ))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+    const dataToRemove: Array<any> = await prisma.$queryRawUnsafe(
+      `
+      select 
+        * 
+      from journal 
+      where 
+        (GL_Acct = '1.03.04' || GL_Acct = '1.04.01') 
+        and (TC = 'ADR' || TC = 'CTI') 
+        and  Source_Type = 'GL' 
+        and Explanation = 'CTPL Registration'
+        and Source_No 
+        between ?
+        and ?
+      order by Source_No`,
+      `${req.body.Prefix}${req.body.NumSeriesFrom}`,
+      `${req.body.Prefix}${req.body.NumSeriesTo}`
     );
 
-    res.send({
-      message: "Update Ctpl Successfully!",
-      success: true,
-    });
+    await prisma.$queryRawUnsafe(
+      `
+      delete 
+      from journal 
+      where 
+        (GL_Acct = '1.03.04' || GL_Acct = '1.04.01') 
+        and (TC = 'ADR' || TC = 'CTI') 
+        and  Source_Type = 'GL' 
+        and Explanation = 'CTPL Registration'
+        and Source_No 
+        between ? 
+        and ? 
+      order by Source_No`,
+      `${req.body.Prefix}${req.body.NumSeriesFrom}`,
+      `${req.body.Prefix}${req.body.NumSeriesTo}`
+    );
+
+    if (
+      await checkSeries(
+        `${req.body.NewPrefix}${req.body.NewSeriesFrom}`,
+        `${req.body.NewPrefix}${req.body.NewSeriesTo}`
+      )
+    ) {
+      await prisma.journal.createMany({ data: dataToRemove });
+      return res.send({
+        message: "This Series is already exist",
+        success: false,
+      });
+    } else {
+      await prisma.$queryRawUnsafe(
+        `delete FROM ctplregistration where ctplId = ?`,
+        req.body.ctplId
+      );
+
+      let addZeroFromSeries = getZeroFirstInput(req.body.NewSeriesFrom);
+      let addZeroToSeries = getZeroFirstInput(req.body.NewSeriesTo);
+
+      for (
+        let i = parseInt(req.body.NewSeriesFrom);
+        i <= parseInt(req.body.NewSeriesTo);
+        i++
+      ) {
+        const _sourceNo = `${req.body.NewPrefix}${addZeroFromSeries}${i}`;
+        // DEBIT'
+        const newDate = format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS");
+        await createJournal(
+          {
+            Source_No: _sourceNo,
+            Branch_Code: "HO",
+            Date_Entry: newDate,
+            Source_Type: "GL",
+            Explanation: "CTPL Registration",
+            GL_Acct: "1.04.01",
+            cGL_Acct: "CTPL Inventory",
+            Debit: parseFloat(req.body.Cost),
+            Credit: 0,
+            TC: "CTI",
+            Source_No_Ref_ID: req.body.ctplId,
+          },
+          req
+        );
+        // Credit
+        await createJournal(
+          {
+            Source_No: _sourceNo,
+            Branch_Code: "HO",
+            Date_Entry: newDate,
+            Source_Type: "GL",
+            Explanation: "CTPL Registration",
+            GL_Acct: "1.03.04",
+            cGL_Acct: "Advance Remittance",
+            Debit: 0,
+            Credit: parseFloat(req.body.Cost),
+            TC: "ADR",
+            Source_No_Ref_ID: req.body.ctplId,
+          },
+          req
+        );
+      }
+
+      const user = await getUserById((req.user as any).UserId);
+      await addCTPL(
+        {
+          Prefix: req.body.NewPrefix,
+          NumSeriesFrom: req.body.NewSeriesFrom,
+          NumSeriesTo: req.body.NewSeriesTo,
+          Cost: req.body.Cost,
+          ctplType: req.body.ctplType,
+          ctplId: req.body.ctplId,
+          Vehicle: req.body.Vehicle,
+          CreatedBy: (user as any)?.Username,
+        },
+        req
+      );
+
+      await saveUserLogs(
+        req,
+        `${req.body.ctplId} -
+        New Series (${req.body.NewPrefix}, ${req.body.NewSeriesFrom}, ${req.body.NewSeriesTo}) - 
+        Old Series (${req.body.Prefix}, ${req.body.NumSeriesFrom}, ${req.body.NumSeriesTo})`,
+        "edit",
+        "CTPL"
+      );
+
+      res.send({
+        message: "Update Ctpl Successfully!",
+        success: true,
+      });
+    }
   } catch (err: any) {
     console.log(err.message);
     res.send({
@@ -231,24 +358,45 @@ CTPL.post("/update-ctpl", async (req: Request, res: Response) => {
     });
   }
 });
+
+async function checkSeries(NumSeriesFrom: string, NumSeriesTo: string) {
+  const checkSeries: Array<any> = await prisma.$queryRawUnsafe(
+    `
+      SELECT EXISTS (
+          SELECT 1 
+          FROM journal 
+          WHERE 
+           (GL_Acct = '1.03.04'
+                || GL_Acct = '1.04.01')
+          AND (TC = 'ADR' || TC = 'CTI')
+          AND Source_Type = 'GL'
+          AND Explanation = 'CTPL Registration'
+          AND
+          Source_No BETWEEN ? AND ?
+      ) AS exists_flag;`,
+    NumSeriesFrom,
+    NumSeriesTo
+  );
+
+  console.log(checkSeries);
+  return Boolean(parseInt(checkSeries[0].exists_flag.toString()));
+}
 
 CTPL.post("/search-ctpl", async (req: Request, res: Response) => {
   try {
     res.send({
       message: "Search Policy Account Successfuly",
       success: true,
-      data:await searchCTPL(req.body.search)
+      data: await searchCTPL(req.body.search),
     });
   } catch (err: any) {
     console.log(err.message);
     res.send({
       success: false,
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      data:[]
+      data: [],
     });
   }
 });
-
-
 
 export default CTPL;

@@ -9,6 +9,7 @@ interface CTPLType {
   Cost: string;
   CreatedBy: string;
   ctplId: any;
+  ctplType: string;
 }
 
 export async function searchCTPL(search: string) {
@@ -21,6 +22,7 @@ export async function searchCTPL(search: string) {
           a.CreatedBy,
           CAST( a.Cost AS DECIMAL(10, 2)) as Cost,
           a.NumSeriesTo,
+          a.Vehicle,
           (DATE_FORMAT(a.createdAt, '%Y-%m-%d')) as createdAt
       FROM
             ctplregistration a
@@ -49,7 +51,7 @@ export async function getPrefix(req: Request) {
 export async function getType(req: Request) {
   return await prisma.ctpltype.findMany({ select: { typeName: true } });
 }
-export async function addCTPL(data: CTPLType, req: Request) {
+export async function addCTPL(data: any, req: Request) {
   return await prisma.ctplregistration.create({ data });
 }
 export async function updateCTPL(data: CTPLType, ctplId: string, req: Request) {
