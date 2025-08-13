@@ -1951,7 +1951,7 @@ async function PDFPA(res: Response, req: Request) {
         align: "left",
       });
       doc.font("Helvetica");
-      doc.text("which will expire on the date ", 410, 240, {
+      doc.text("which will expire on the date ", 420, 240, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
