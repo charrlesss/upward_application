@@ -34,6 +34,8 @@ ProductionReports.post("/production-report", async (req, res) => {
       req.body.cmbpolicy,
       req.body.cmbSort
     );
+
+    console.log(reportString)
     const data: Array<any> = await prisma.$queryRawUnsafe(reportString);
 
     if (formatValue === 0) {

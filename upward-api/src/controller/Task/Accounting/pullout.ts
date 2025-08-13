@@ -64,8 +64,11 @@ PulloutRequest.post(
       FROM
           pullout_request a
       WHERE
-          Branch = 'HO' AND Status = 'PENDING'
-              AND rcpno = ?
+          Branch = 'HO' 
+          AND Status = 'PENDING'
+          AND cancel = 0
+          AND rcpno = ?
+
       ORDER BY RCPNo
       `,
         req.body.rcpno
@@ -134,8 +137,10 @@ PulloutRequest.post(`/pullout/reqeust/get-rcpn-no`, async (req, res) => {
         FROM
             pullout_request
         WHERE
-            Branch = 'HO' AND Status = 'PENDING' and 
-            RCPNo like ?
+            Branch = 'HO' 
+            AND Status = 'PENDING' 
+            and cancel = 0
+            and RCPNo like ?
         ORDER BY RCPNo
       `,
       `%${req.body.search}%`
@@ -187,7 +192,6 @@ PulloutRequest.post(`/pullout/reqeust/get-pnno-client`, async (req, res) => {
     });
   }
 });
-
 PulloutRequest.post(
   `/pullout/reqeust/save-pullout-request`,
   async (req, res) => {
@@ -203,7 +207,6 @@ PulloutRequest.post(
           success: false,
         });
       }
-
       const {
         rcpn: RCPNo,
         ppno: PNNo,
@@ -217,20 +220,16 @@ PulloutRequest.post(
         if (!(await saveUserLogsCode(req, "edit", RCPNo, "Pullout"))) {
           return res.send({ message: "Invalid User Code", success: false });
         }
-      }else{
+      } else {
         await saveUserLogs(req, RCPNo, "add", "Pullout");
       }
-
-      const subtitle = `
-    <h3>Check storage pullout</h3>
-    <h3>Pullout Request</h3>
-    `;
 
       const user = await getUserById((req.user as any).UserId);
       const Requested_By = user?.Username;
       const Requested_Date = new Date();
       const tableData = JSON.parse(selected);
       let text = "";
+
       tableData.forEach((item: any) => {
         text += `<tr>
                     <td style="border: 1px solid #ddd; padding: 8px">${formatDate(
@@ -249,19 +248,84 @@ PulloutRequest.post(
                 </tr>`;
       });
 
-      if (requestMode === "edit") {
-        await deletePulloutRequest(req, RCPNo);
-        await deletePulloutRequestDetails(req, RCPNo);
-      }
-      await deletePulloutRequestAutoCodes(req, RCPNo);
+      if (req.body.flag === "cancel") {
+        const subtitle = `
+        <h3>Cancel Pullout Request</h3>
+        `;
 
-      const approvalCode = generateRandomNumber(6);
-      if (req.body.flag === "edit" && tableData.length <= 0) {
+        if (department === "UMIS") {
+          for (const toEmail of UMISEmailToSend) {
+            await sendRequestEmail({
+              RCPNo: RCPNo,
+              PNNo: PNNo,
+              reason,
+              client: Name,
+              text,
+              Requested_By,
+              Requested_Date,
+              approvalCode: "",
+              subtitle,
+              toEmail,
+              theme: "#bf7a04",
+            });
+          }
+        } else {
+          for (const toEmail of UCSMIEmailToSend) {
+            await sendRequestEmail({
+              RCPNo: RCPNo,
+              PNNo: PNNo,
+              reason,
+              client: Name,
+              text,
+              Requested_By,
+              Requested_Date,
+              approvalCode: "",
+              subtitle,
+              toEmail,
+              theme: "#bf7a04",
+            });
+          }
+        }
 
+        await prisma.$queryRawUnsafe(
+          `
+          update pullout_request
+          set cancel = 1
+          WHERE
+              RCPNo = ? AND cancel = 0;
+        `,
+          RCPNo
+        );
 
+        await prisma.$queryRawUnsafe(
+          `
+          update pullout_request_details
+          set cancel = 1
+          WHERE
+              RCPNo = ? AND cancel = 0;
+        `,
+          RCPNo
+        );
 
-        
-      }else{
+        return res.send({
+          message: "Cancel Successfully",
+          success: true,
+        });
+      } else {
+        const subtitle = `
+        <h3>Check storage pullout</h3>
+        <h3>Pullout Request</h3>
+        `;
+
+        if (requestMode === "edit") {
+          await deletePulloutRequest(req, RCPNo);
+          await deletePulloutRequestDetails(req, RCPNo);
+        }
+
+        await deletePulloutRequestAutoCodes(req, RCPNo);
+
+        const approvalCode = generateRandomNumber(6);
+
         await createPulloutRequest(
           {
             RCPNo: RCPNo,
@@ -328,14 +392,15 @@ PulloutRequest.post(
           },
           req
         );
-      }
-        
-  
 
-      res.send({
-        message: "Save Successfully",
-        success: true,
-      });
+        return res.send({
+          message:
+            req.body.flag === "add"
+              ? "Save Successfully"
+              : "Update Successfully",
+          success: true,
+        });
+      }
     } catch (error: any) {
       console.log(error);
       res.send({
@@ -756,7 +821,6 @@ function getSelectedCheck(selected: string) {
   });
   return tbodyText;
 }
-
 function generateTextTable(item: any) {
   return `<tr>
  <td style="border: 1px solid #ddd; padding: 8px">${formatDate(
@@ -780,6 +844,7 @@ async function sendRequestEmail(props: any) {
     approvalCode,
     subtitle,
     toEmail,
+    theme = "#2596be",
   } = props;
   const strong1 = `
     font-family: Arial, Helvetica, sans-serif;
@@ -794,7 +859,7 @@ async function sendRequestEmail(props: any) {
     padding-top: 12px;
     padding-bottom: 12px;
     text-align: left;
-    background-color: #64748b;
+    background-color:${theme};
     color: white;`;
   await sendEmail(
     { user: "upwardumis2020@gmail.com", pass: "vapw ridu eorg ukxd" },
@@ -804,7 +869,7 @@ async function sendRequestEmail(props: any) {
     `
   <div
     style="
-      background-color: #64748b;
+      background-color:${theme};
       color: white;
       padding: 7px;
       font-family: Verdana, Geneva, Tahoma, sans-serif;

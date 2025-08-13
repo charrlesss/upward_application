@@ -20,8 +20,11 @@ export default async function sendEmail(
   const mailOptions = {
     from,
     to,
-    subject,
+    subject: `${subject} - ${Date.now()}`,
     html: messageHTML,
+    headers: {
+      "Message-ID": `<${Date.now()}-${Math.random()}@upwardinsurance.net>`,
+    },
   };
 
   // Sending the email
@@ -32,5 +35,4 @@ export default async function sendEmail(
       console.log("Email sent: " + info.response);
     }
   });
-
 }
