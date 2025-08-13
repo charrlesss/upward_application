@@ -1946,7 +1946,7 @@ async function PDFPA(res: Response, req: Request) {
         align: "left",
       });
       doc.font("Helvetica-Bold");
-      doc.text("Comprehensive Insurance Coverage", 250, 240, {
+      doc.text("Personal Accident Insurance Coverage", 250, 240, {
         width: PAGE_WIDTH_WITH_MARGIN,
         align: "left",
       });
