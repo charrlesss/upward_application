@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { prisma } from "../..";
 import path from "path";
 import { format } from "date-fns";
@@ -7,6 +7,9 @@ import { formatNumber } from "../Accounting/collection";
 import PDFReportGenerator from "../../../lib/pdf-generator";
 import PDFDocument from "pdfkit";
 import fs from "fs";
+import { clients_view } from "../../../model/db/views";
+import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
+import saveUserLogs from "../../../lib/save_user_logs";
 
 const StatementOfAccount = express.Router();
 
@@ -99,7 +102,7 @@ FROM
             AND journal.GL_Acct = '1.03.01'
     GROUP BY journal.ID_No) d ON  a.PolicyNo  = d.ID_No
     where 
-     (
+     a.PolicyType <> "TPL" and (
         a.PolicyNo like ? 
         OR  c.IDNo like ?   
         OR c.Shortname like ?  
@@ -247,29 +250,89 @@ StatementOfAccount.post("/soa/generate-reference", async (req, res) => {
   }
 });
 StatementOfAccount.post("/soa/save", async (req, res) => {
-  console.log(req.body);
-  await prisma.soa.create({
-    data: {
-      reference_no: req.body.reference_no,
-      idno: req.body.idno,
-      name: req.body.name,
-      address: req.body.address,
-      attachment: req.body.attachment,
-    },
-  });
+  try {
+    const isUpdate = req.body.mode === "update";
+    if (isUpdate) {
+      if (
+        !(await saveUserLogsCode(req, "update", req.body.reference_no, "Soa"))
+      ) {
+        return res.send({ message: "Invalid User Code", success: false });
+      }
+      await prisma.$queryRawUnsafe(
+        `delete from soa where reference_no = ?`,
+        req.body.reference_no
+      );
+      await prisma.$queryRawUnsafe(
+        `delete from soa_policy where reference_no = ?`,
+        req.body.reference_no
+      );
+    } else {
+      const count = await prisma.soa.count({
+        where: { reference_no: req.body.reference_no },
+      });
 
-  for (const itm of req.body.tableData) {
-    await prisma.soa_policy.create({
+      const exists = count > 0;
+      if (exists) {
+        res.send({
+          message: `This ref - (${req.body.reference_no}) is already exist!`,
+          success: false,
+        });
+      }
+      await saveUserLogs(req, req.body.reference_no, "add", "Soa");
+    }
+
+    await prisma.soa.create({
       data: {
         reference_no: req.body.reference_no,
-        policy_no: itm.PolicyNo,
+        idno: req.body.idno,
+        name: req.body.name,
+        address: req.body.address,
+        attachment: req.body.attachment,
       },
     });
-  }
 
-  try {
+    for (const itm of req.body.tableData) {
+      await prisma.soa_policy.create({
+        data: {
+          reference_no: req.body.reference_no,
+          policy_no: itm.PolicyNo,
+        },
+      });
+    }
+
     res.send({
-      message: "Successfully Policy Details",
+      message: isUpdate
+        ? `Successfully Update Soa Ref - (${req.body.reference_no})`
+        : `Successfully Save Soa Ref - (${req.body.reference_no})`,
+      success: true,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+    });
+  }
+});
+StatementOfAccount.post("/soa/delete", async (req, res) => {
+  try {
+    if (
+      !(await saveUserLogsCode(req, "delete", req.body.reference_no, "Soa"))
+    ) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    await prisma.$queryRawUnsafe(
+      `delete from soa where reference_no = ?`,
+      req.body.reference_no
+    );
+    await prisma.$queryRawUnsafe(
+      `delete from soa_policy where reference_no = ?`,
+      req.body.reference_no
+    );
+
+    res.send({
+      message: `Successfully Delete Soa Ref - (${req.body.reference_no})`,
       success: true,
     });
   } catch (err: any) {
@@ -466,1277 +529,84 @@ where (b.Debit - b.Credit) > 0
     });
   }
 });
+StatementOfAccount.post("/soa/search-tpl", async (req, res) => {
+  try {
+    const selectClient = clients_view();
+    const qry = `
+      SELECT 
+          vpolicy.Mortgagee AS Mortgagee,
+          Policy.IDNo AS IDNo,
+          client.Shortname as Shortname,
+          Policy.Account AS Account,
+          Policy.PolicyType,
+          Policy.PolicyNo,
+          DATE_FORMAT(Policy.DateIssued, "%m/%d/%Y") AS DateIssued,
+          Policy.TotalPremium,
+          Policy.Vat,
+          Policy.DocStamp,
+          Policy.FireTax, 
+          Policy.LGovTax,
+          Policy.Notarial,
+          Policy.Misc,
+          Policy.TotalDue,
+          Policy.TotalPaid,
+          Policy.Discount,
+          vpolicy.Sec4A,
+          vpolicy.Sec4B,
+          vpolicy.Sec4C,
+          DATE_FORMAT(vpolicy.DateFrom, "%m/%d/%Y") AS EffictiveDate,
+          IFNULL(ODamage, 0) + IFNULL(TPLLimit, 0) AS PLimit,
+          IFNULL(EstimatedValue, 0) + IFNULL(TPLLimit, 0) AS InsuredValue,
+          CoverNo,
+          Policy.Remarks as Remarks,
+          EstimatedValue,
+          Make,
+          BodyType,
+          PlateNo,
+          ChassisNo,
+          MotorNo,
+          Mortgagee,
+          vpolicy.Remarks as VRemarks,
+          vpolicy.careOf
+      FROM policy as Policy 
+      LEFT JOIN vpolicy  ON Policy.PolicyNo = vpolicy.PolicyNo 
+      LEFT JOIN (
+      ${selectClient}
+      ) client ON Policy.IDNo = client.IDNo 
+          where Policy.PolicyType = 'TPL'
+          and date(vpolicy.DateFrom) <= ?
+          and date(vpolicy.DateFrom) >=  ?
+          and careOf = ?
+          ORDER BY date(Policy.DateIssued) asc
+    `;
+
+    const data = await prisma.$queryRawUnsafe(
+      qry,
+      req.body.dateTo,
+      req.body.dateFrom,
+      req.body.careOf
+    );
+
+    res.send({
+      message: "Successfully Policy Details",
+      success: true,
+      data,
+    });
+  } catch (err: any) {
+    console.log(err.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
 StatementOfAccount.post("/soa/print", async (req, res) => {
-  const qry = (policytablename: string, policies: string) => `
-  SELECT * FROM ${policytablename} a 
-  left join policy b on a.PolicyNo = b.PolicyNo
-  left join (${selectClient}) c on b.IDNo = c.IDNo
-  where a.PolicyNo in ('${policies}') ;`;
-  const data: Array<any> = [];
-
-  for (const itm of req.body.data) {
-    if (itm.Type === "COM") {
-      const COMDATA = (await prisma.$queryRawUnsafe(
-        qry("vpolicy", itm.data.join("','"))
-      )) as Array<any>;
-
-      if (COMDATA.length > 0) {
-        data.push({
-          PolicyNo: "COMPREHENSIVE",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of COMDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: "",
-              Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: itm.PlateNo,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: itm.ChassisNo,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    } else if (itm.Type === "FIRE") {
-      const FIREDATA = (await prisma.$queryRawUnsafe(
-        qry("fpolicy", itm.data.join("','"))
-      )) as Array<any>;
-      if (FIREDATA.length > 0) {
-        data.push({
-          PolicyNo: "FIRE",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of FIREDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: "",
-              Insured: itm.Location,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    } else if (itm.Type === "MAR") {
-      const MARINEDATA = (await prisma.$queryRawUnsafe(
-        qry("mpolicy", itm.data.join("','"))
-      )) as Array<any>;
-      if (MARINEDATA.length > 0) {
-        data.push({
-          PolicyNo: "MARINE",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of MARINEDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    } else if (itm.Type === "PA") {
-      const PADATA = (await prisma.$queryRawUnsafe(
-        qry("papolicy", itm.data.join("','"))
-      )) as Array<any>;
-
-      if (PADATA.length > 0) {
-        data.push({
-          PolicyNo: "GPA",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of PADATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    } else if (itm.Type === "ED") {
-      const EDDATA = (await prisma.$queryRawUnsafe(
-        `SELECT * FROM gpa_endorsement where endorsement_no in  ('${itm.data.join(
-          "','"
-        )}')`
-      )) as Array<any>;
-
-      if (EDDATA.length > 0) {
-        if (!data.some((itm: any) => itm.PolicyNo === "GPA")) {
-          data.push({
-            PolicyNo: "GPA",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            header: true,
-          });
-        }
-
-        for (const itm of EDDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.endorsement_no,
-              Insured: formatNumber(
-                parseFloat(itm.suminsured.toString().replace(/,/g, ""))
-              ),
-              Premium: formatNumber(
-                parseFloat(itm.totalpremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.datefrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.dateto), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.totaldue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-          ];
-          if (typeof itm.deleted === "string" && itm.deleted !== "") {
-            newData.push({
-              PolicyNo: "",
-              Insured: `DELETED:  ${itm.deleted}`,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-              endorsement: true,
-            });
-          }
-          if (typeof itm.replacement === "string" && itm.replacement !== "") {
-            newData.push({
-              PolicyNo: "",
-              Insured: `REPLACEMENT:  ${itm.replacement}`,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-              endorsement: true,
-            });
-          }
-          if (typeof itm.additional === "string" && itm.additional !== "") {
-            newData.push({
-              PolicyNo: "",
-              Insured: `ADDITIONAL:  ${itm.additional}`,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-              endorsement: true,
-            });
-          }
-
-          newData[1].PolicyNo = "ENDORSEMENT";
-
-          newData.push({
-            PolicyNo: "",
-            Insured: "",
-            Premium: "",
-            From: "",
-            To: "",
-            GrossPremium: "",
-            gap: true,
-          });
-
-          data.push(...newData);
-        }
-      }
-    } else if (itm.Type === "CGL") {
-      const CGLDATA = (await prisma.$queryRawUnsafe(
-        qry("cglpolicy", itm.data.join("','"))
-      )) as Array<any>;
-      if (CGLDATA.length > 0) {
-        data.push({
-          PolicyNo: "CGL & CARI",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of CGLDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
-              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: "",
-              Insured: itm.PolicyNo,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    } else {
-      const BONDSDATA = (await prisma.$queryRawUnsafe(
-        qry("bpolicy", itm.data.join("','"))
-      )) as Array<any>;
-      if (BONDSDATA.length > 0) {
-        data.push({
-          PolicyNo: "BONDS",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          header: true,
-        });
-        for (const itm of BONDSDATA) {
-          const newData: Array<any> = [
-            {
-              PolicyNo: itm.PolicyNo,
-              Insured: itm.Shortname,
-              Premium: formatNumber(
-                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-              ),
-              From: format(new Date(itm.BidDate), "MM/dd/yyyy"),
-              To: bondsYear(itm),
-              GrossPremium: formatNumber(
-                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-              ),
-              solo: false,
-            },
-            {
-              PolicyNo: bondsPolicy(itm),
-              Insured: itm.Obligee,
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              solo: true,
-            },
-            {
-              PolicyNo: "",
-              Insured: "",
-              Premium: "",
-              From: "",
-              To: "",
-              GrossPremium: "",
-              gapPerRow: true,
-            },
-          ];
-          data.push(...newData);
-        }
-        data.push({
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gap: true,
-        });
-      }
-    }
+  if (req.body.soaType === "TPL") {
+    return PrintTPL(req, res);
+  } else {
+    return PrintAll(req, res);
   }
-
-  // const MSPRDATA = (await prisma.$queryRawUnsafe(
-  //   qry("msprpolicy")
-  // )) as Array<any>;
-
-  const getTotal = data.reduce((t, itm) => {
-    return (
-      t +
-      parseFloat(
-        (itm.GrossPremium && itm.GrossPremium !== "" ? itm.GrossPremium : 0)
-          .toString()
-          .replace(/,/g, "")
-      )
-    );
-  }, 0);
-
-  data.push({
-    PolicyNo: "",
-    Insured: "",
-    Premium: "",
-    From: "",
-    To: "",
-    GrossPremium: formatNumber(getTotal),
-    total: true,
-  });
-
-  function bondsYear(itm: any) {
-    const PolicyType = itm.PolicyType.trim();
-    if (PolicyType === "G02") {
-      return "120 Days";
-    } else if (
-      ["G13", "G31", "G02", "G16", "G40", "G41", "G42"].includes(PolicyType)
-    ) {
-      return "1YR";
-    } else if (PolicyType === "JCL15") {
-      return "1YR";
-    } else if (PolicyType === "JCL7") {
-      return "2YRS";
-    } else if (PolicyType === "C9") {
-      return "1YR";
-    } else {
-      return "";
-    }
-  }
-  function bondsPolicy(itm: any) {
-    const PolicyType = itm.PolicyType.trim();
-    if (PolicyType === "G13" || PolicyType === "G31") {
-      return "PERFORMANCE BOND";
-    } else if (PolicyType === "G02") {
-      return "BIDDER'S BOND";
-    } else if (PolicyType === "G16") {
-      return "SURETY BOND";
-    } else if (PolicyType === "G40") {
-      return "SURETY BOND";
-    } else if (PolicyType === "G41") {
-      return "WARRANTY BOND";
-    } else if (PolicyType === "G42") {
-      return "RETENTION BOND";
-    } else if (PolicyType === "JCL15") {
-      return "APPEAL BOND";
-    } else if (PolicyType === "JCL7") {
-      return "HEIR'S BOND";
-    } else if (PolicyType === "C9") {
-      return "JUDICIAL BOND";
-    } else {
-      return "";
-    }
-  }
-
-  const underlineIndexes = getIndexes(
-    data,
-    (item: any) => item?.header === true
-  );
-  const headerIndexes = getIndexes(
-    data,
-    (item: any) =>
-      item?.header === true || item?.solo === false || item?.total === true
-  );
-  const getSolo = getIndexes(data, (item: any) => item?.solo === true);
-  let PAGE_WIDTH = 660;
-  let PAGE_HEIGHT = 841;
-  let MIN_ROW_HEIGHT = 10;
-
-  const outputFilePath = "manok.pdf";
-  const doc = new PDFDocument({
-    size: [PAGE_WIDTH, PAGE_HEIGHT],
-    margin: 0,
-    bufferPages: true,
-  });
-
-  const writeStream = fs.createWriteStream(outputFilePath);
-  doc.pipe(writeStream);
-
-  const MARGIN = {
-    top: 50,
-    bottom: 70,
-    left: 30,
-    right: 30,
-  };
-
-  let startY = MARGIN.top;
-  let currentPage = 1;
-
-  const spanMap = new Map();
-  const boldedRows: Array<number> = [];
-  const underlineColumn = new Map();
-
-  const keys = ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"];
-  const headers = [
-    { headerName: "POLICY NO", textAlign: "left" },
-    { headerName: "INSURED", textAlign: "left" },
-    { headerName: "PREMIUM", textAlign: "right" },
-    { headerName: "FROM", textAlign: "left" },
-    { headerName: "TO", textAlign: "left" },
-    { headerName: "GROSS PREMIUM", textAlign: "right" },
-  ];
-  const columnWidths = [135, 190, 70, 60, 60, 85];
-
-  startY = drawTitleAndHeader(doc, startY, currentPage);
-  drawFooter(doc, startY);
-
-  drawPerPage();
-
-  data.forEach((row: any, rowIndex: any) => {
-    const rowHeight = calculateRowHeight(doc, row, rowIndex);
-    if (startY + rowHeight > PAGE_HEIGHT - MARGIN.bottom) {
-      doc.addPage({
-        size: [PAGE_WIDTH, PAGE_HEIGHT],
-        margin: 0,
-        bufferPages: true,
-      });
-      currentPage += 1;
-
-      startY = drawTitleAndHeader(doc, startY, currentPage);
-      drawFooter(doc, startY);
-    }
-    drawRow(doc, row, rowIndex, startY);
-    startY += rowHeight;
-  });
-  subReport();
-  drawPageNumber();
-
-  function drawPerPage() {
-    getSolo.forEach((itm: any) => {
-      SpanRow(itm, 1, 5);
-    });
-    headerIndexes.forEach((itm: any) => {
-      boldRow(itm);
-    });
-    underlineIndexes.forEach((itm: any) => {
-      underLineColumn(itm, ["PolicyNo", "GrossPremium"]);
-    });
-  }
-  function underLineColumn(rowIndex: number, colIdx: Array<string>) {
-    underlineColumn.set(rowIndex, { colIdx });
-  }
-  function boldRow(rowIndex: number) {
-    boldedRows.push(rowIndex);
-  }
-  function SpanRow(
-    rowIndex: number,
-    columnIndex: number,
-    spanLength: number,
-    key: string = "",
-    textAlign: string = "left"
-  ) {
-    spanMap.set(rowIndex, { columnIndex, spanLength, key, textAlign });
-  }
-  function drawRow(
-    doc: PDFKit.PDFDocument,
-    row: any,
-    rowIndex: number,
-    startY: number
-  ) {
-    const isBold = boldedRows.some((itm) => itm === rowIndex);
-
-    if (isBold) {
-      doc.font("Helvetica-Bold");
-    } else {
-      doc.font("Helvetica");
-    }
-
-    let startX = MARGIN.left;
-
-    const underLineInfo = underlineColumn.get(rowIndex);
-    const { colIdx } = underLineInfo || {};
-
-    // Check if the current row has a span
-    const spanInfo = spanMap.get(rowIndex);
-    const {
-      columnIndex,
-      spanLength,
-      key: SpanKey,
-      textAlign: SpanTextAlign,
-    } = spanInfo || {};
-
-    let getRowHeight = 0;
-
-    keys.forEach((key, colIndex) => {
-      // Skip columns that fall within a span range (except the starting column)
-      if (
-        spanInfo &&
-        colIndex > columnIndex &&
-        colIndex < columnIndex + spanLength
-      ) {
-        return;
-      }
-
-      // Calculate the column width (spanned width if applicable)
-      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
-      const colWidth = columnWidths
-        .slice(colIndex, colIndex + colSpan)
-        .reduce((sum, width) => sum + width, 0);
-
-      let cellValue = "";
-      let textHeader = "" as
-        | "left"
-        | "center"
-        | "justify"
-        | "right"
-        | undefined;
-
-      if (spanInfo && colIndex === columnIndex && SpanKey !== "") {
-        textHeader = SpanTextAlign;
-        cellValue = row[SpanKey];
-      } else {
-        textHeader = headers[colIndex].textAlign as
-          | "left"
-          | "center"
-          | "justify"
-          | "right"
-          | undefined;
-        cellValue = row[key];
-      }
-
-      if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "COMPREHENSIVE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(105, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "GPA"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(53, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "FIRE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(53, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "MARINE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(66, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "CGL & CARI"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(81, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "BONDS"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(65, startY + 8)
-          .stroke();
-      } else if (row.total) {
-         doc
-          .moveTo(640, startY - 6)
-          .lineTo(570, startY - 6)
-          .stroke();
-
-        doc
-          .moveTo(640, startY + 10.5)
-          .lineTo(570, startY + 10.5)
-          .stroke();
-
-        doc
-          .moveTo(640, startY + 13)
-          .lineTo(570, startY + 13)
-          .stroke();
-      }
-
-      if (cellValue.includes("DELETED:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("DELETED:");
-        doc.text("DELETED:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else if (cellValue.includes("REPLACEMENT:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("REPLACEMENT:");
-
-        doc.text("REPLACEMENT:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else if (cellValue.includes("ADDITIONAL:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("ADDITIONAL:");
-        doc.text("ADDITIONAL:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else {
-        doc.text(cellValue?.toString() || "", startX + 5, startY, {
-          width: colWidth - 10,
-          align: textHeader,
-        });
-      }
-      // let startY_ = startY + 5;
-
-      startX += colWidth;
-    });
-  }
-  function drawTitleAndHeader(
-    doc: PDFKit.PDFDocument,
-    startY: number,
-    currentPage: number
-  ) {
-    startY = 50;
-    doc.image(
-      path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
-      30,
-      startY,
-      {
-        fit: [120, 120],
-      }
-    );
-
-    startY += 10;
-    doc.fontSize(60);
-    doc.font("Helvetica-Bold");
-    doc.text("UPWARD", 155, startY);
-    startY += 50;
-
-    if (process.env.DEPARTMENT === "UMIS") {
-      doc.fontSize(9);
-      doc.text("MANAGEMENT INSURANCE SERVICES", 245, startY);
-    }
-    if (process.env.DEPARTMENT === "UCSMI") {
-      doc.fontSize(9);
-      doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, startY);
-    }
-
-    startY += 30;
-    doc.text(`STATEMENT OF ACCOUNT`, 30, startY, {
-      width: PAGE_WIDTH - 60,
-      align: "center",
-    });
-
-    startY += 12;
-    doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, startY, {
-      width: PAGE_WIDTH - 60,
-      align: "center",
-    });
-
-    startY += 20;
-    doc.fontSize(9);
-    doc.text(`Ref. No. : ${req.body.reference_no}`, 30, startY, {
-      width: PAGE_WIDTH - 60,
-      align: "right",
-    });
-    startY += 30;
-
-    if (currentPage === 1) {
-      doc.fontSize(8);
-      const name = req.body.name || "";
-      const address = req.body.address || "";
-      const balance = formatNumber(getTotal);
-
-      const nameHeight = doc.heightOfString(name, {
-        width: PAGE_WIDTH - 170,
-        align: "left",
-      });
-      const addressHeight = doc.heightOfString(address, {
-        width: PAGE_WIDTH - 170,
-        align: "left",
-      });
-
-      // Name
-      doc.text("ACCT. NAME", 30, startY, {
-        width: 60,
-        align: "left",
-      });
-      doc.text(":", 90, startY, {
-        width: 10,
-        align: "center",
-      });
-      doc.text(name, 110, startY, {
-        width: PAGE_WIDTH - 170,
-        align: "left",
-      });
-
-      // Address
-      startY += nameHeight <= 0 ? 13 : nameHeight;
-      doc.text("ADDRESS", 30, startY, {
-        width: 60,
-        align: "left",
-      });
-      doc.text(":", 90, startY, {
-        width: 10,
-        align: "center",
-      });
-      doc.text(address, 110, startY, {
-        width: PAGE_WIDTH - 170,
-        align: "left",
-      });
-
-      // Balance
-      startY += addressHeight <= 0 ? 13 : addressHeight;
-      doc.text("ACCT. BAL", 30, startY, {
-        width: 60,
-        align: "left",
-      });
-      doc.text(":", 90, startY, {
-        width: 10,
-        align: "center",
-      });
-      doc.text(balance, 110, startY, {
-        width: 70,
-        align: "right",
-      });
-      startY += 10;
-      doc.moveTo(110, startY).lineTo(180, startY).stroke();
-      startY += 2;
-      doc.moveTo(110, startY).lineTo(180, startY).stroke();
-    }
-
-    startY += 13;
-    doc.fontSize(8);
-    let startX = MARGIN.left;
-
-    // doc.text("AMOUNT", 171, startY );
-    doc.text("COVERAGE", 447, startY);
-
-    headers.forEach((header, colIndex) => {
-      const colWidth = columnWidths[colIndex];
-      doc.text(header.headerName, startX + 5, startY + 12, {
-        width: colWidth - 10,
-        align:
-          header.textAlign === "right"
-            ? "center"
-            : (header.textAlign as
-                | "left"
-                | "center"
-                | "justify"
-                | "right"
-                | undefined),
-      });
-
-      startX += colWidth;
-    });
-
-    doc.fontSize(8);
-    doc.font("Helvetica");
-    doc
-      .moveTo(30, startY - 5)
-      .lineTo(PAGE_WIDTH - MARGIN.right, startY - 5)
-      .stroke();
-    doc
-      .moveTo(30, startY + 25)
-      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 25)
-      .stroke();
-    startY += 30;
-
-    return startY;
-  }
-  function drawFooter(doc: PDFKit.PDFDocument, startY: number) {
-    doc.text(
-      "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
-      30,
-      PAGE_HEIGHT - 40,
-      {
-        width: PAGE_WIDTH - 30,
-        align: "center",
-      }
-    );
-    doc.text(
-      "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
-      30,
-      PAGE_HEIGHT - 30,
-      {
-        width: PAGE_WIDTH - 30,
-        align: "center",
-      }
-    );
-  }
-  function calculateRowHeight(
-    doc: PDFKit.PDFDocument,
-    row: any,
-    rowIndex: number
-  ) {
-    doc.fontSize(8);
-
-    const spanInfo = spanMap.get(rowIndex);
-    const {
-      columnIndex,
-      spanLength,
-      key: SpanKey,
-      textAlign: SpanTextAlign,
-    } = spanInfo || {};
-
-    let maxHeight = MIN_ROW_HEIGHT;
-    keys.forEach((key, colIndex) => {
-      if (
-        spanInfo &&
-        colIndex > columnIndex &&
-        colIndex < columnIndex + spanLength
-      ) {
-        return;
-      }
-
-      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
-      const colWidth = columnWidths
-        .slice(colIndex, colIndex + colSpan)
-        .reduce((sum, width) => sum + width, 0);
-
-      // const colWidth = columnWidths[colIndex] || 50;
-      const cellValue = row[key];
-      const cellHeight = doc.heightOfString(cellValue?.toString() || "", {
-        width: colWidth - 10,
-      });
-      maxHeight = Math.max(maxHeight, cellHeight + 3);
-    });
-    return maxHeight;
-  }
-  function drawPageNumber() {
-    const range = doc.bufferedPageRange();
-    let i;
-    let end;
-
-    for (
-      i = range.start, end = range.start + range.count, range.start <= end;
-      i < end;
-      i++
-    ) {
-      doc.font("Helvetica");
-      doc.switchToPage(i);
-      doc.text(
-        `Page ${i + 1} of ${range.count}`,
-        PAGE_WIDTH - 60,
-        PAGE_HEIGHT - 20
-      );
-      doc.text(
-        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
-        20,
-        PAGE_HEIGHT - 20
-      );
-    }
-  }
-  function subReport() {
-    startY += 12;
-
-    const SUBREPORT_HEIGHT = 160;
-    const remainingSpace = PAGE_HEIGHT - startY - MARGIN.bottom;
-
-    if (remainingSpace < SUBREPORT_HEIGHT) {
-      doc.addPage({
-        size: [PAGE_WIDTH, PAGE_HEIGHT],
-        margin: 0,
-        bufferPages: true,
-      });
-      startY = MARGIN.top;
-      drawFooter(doc, startY);
-    }
-    doc.fontSize(10);
-    doc.font("Helvetica-Bold");
-    doc.text(req.body.attachment, 30, startY, {
-      width: PAGE_WIDTH - 30,
-      align: "center",
-    });
-
-    startY += 30;
-
-    doc.fontSize(7);
-    doc.font("Helvetica");
-    doc.text("Prepared by:", 100, startY, {
-      width: 100,
-      align: "center",
-    });
-    doc.text("Checked by:", 250, startY, {
-      width: 100,
-      align: "center",
-    });
-    doc.text("Noted by:", 400, startY, {
-      width: 100,
-      align: "center",
-    });
-
-    startY += 30;
-    doc.fontSize(7);
-    doc.font("Helvetica-Bold");
-    doc.text("ADacula", 100, startY, {
-      width: 100,
-      align: "center",
-    });
-    doc.text("MGBLlanera", 250, startY, {
-      width: 100,
-      align: "center",
-    });
-    doc.text("LVAquino", 400, startY, {
-      width: 100,
-      align: "center",
-    });
-    startY += 20;
-    doc.text(
-      "Received by:       ________________________________",
-      30,
-      startY,
-      {
-        width: 300,
-        align: "left",
-      }
-    );
-    startY += 15;
-    doc.text(
-      "Date:                    ________________________________",
-      30,
-      startY,
-      {
-        width: 300,
-        align: "left",
-      }
-    );
-    startY += 15;
-    doc.fontSize(7);
-    doc.text(
-      `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
-      30,
-      startY,
-      {
-        width: 500,
-        align: "left",
-      }
-    );
-    startY += 9;
-    doc.text(
-      `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
-      30,
-      startY,
-      {
-        width: 500,
-        align: "left",
-      }
-    );
-    startY += 9;
-    doc.text(
-      `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
-      30,
-      startY,
-      {
-        width: 500,
-        align: "left",
-      }
-    );
-  }
-
-  doc.end();
-  writeStream.on("finish", (e: any) => {
-    console.log(`PDF created successfully at: ${outputFilePath}`);
-    const readStream = fs.createReadStream(outputFilePath);
-    readStream.pipe(res);
-
-    readStream.on("end", () => {
-      fs.unlink(outputFilePath, (err) => {
-        if (err) {
-          console.error("Error deleting file:", err);
-        } else {
-          console.log(`File ${outputFilePath} deleted successfully.`);
-        }
-      });
-    });
-  });
-
-  doc.fontSize(10);
-  doc.font("Helvetica-Bold");
-  doc.text(req.body.attachment, 30, startY, {
-    width: PAGE_WIDTH - 30,
-    align: "center",
-  });
-
-  startY += 30;
-
-  doc.fontSize(7);
-  doc.font("Helvetica");
-  doc.text("Prepared by:", 100, startY, {
-    width: 100,
-    align: "center",
-  });
-  doc.text("Checked by:", 250, startY, {
-    width: 100,
-    align: "center",
-  });
-  doc.text("Noted by:", 400, startY, {
-    width: 100,
-    align: "center",
-  });
-
-  //     startY += 30;
-  //     doc.fontSize(7);
-  //     doc.font("Helvetica-Bold");
-  //     doc.text("ADacula", 100, startY, {
-  //       width: 100,
-  //       align: "center",
-  //     });
-  //     doc.text("MGBLlanera", 250, startY, {
-  //       width: 100,
-  //       align: "center",
-  //     });
-  //     doc.text("LVAquino", 400, startY, {
-  //       width: 100,
-  //       align: "center",
-  //     });
-  //     startY += 20;
-  //     doc.text(
-  //       "Received by:       ________________________________",
-  //       30,
-  //       startY,
-  //       {
-  //         width: 300,
-  //         align: "left",
-  //       }
-  //     );
-  //     startY += 15;
-  //     doc.text(
-  //       "Date:                    ________________________________",
-  //       30,
-  //       startY,
-  //       {
-  //         width: 300,
-  //         align: "left",
-  //       }
-  //     );
-  //     startY += 15;
-  //     doc.fontSize(7);
-  //     doc.text(
-  //       `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
-  //       30,
-  //       startY,
-  //       {
-  //         width: 500,
-  //         align: "left",
-  //       }
-  //     );
-  //     startY += 9;
-  //     doc.text(
-  //       `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
-  //       30,
-  //       startY,
-  //       {
-  //         width: 500,
-  //         align: "left",
-  //       }
-  //     );
-  //     startY += 9;
-  //     doc.text(
-  //       `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
-  //       30,
-  //       startY,
-  //       {
-  //         width: 500,
-  //         align: "left",
-  //       }
-  //     );
-  //   },
-  // };
-  // const pdfReportGenerator = new PDFReportGenerator(props);
-  // return pdfReportGenerator.generatePDF(res, false);
 });
 StatementOfAccount.post("/soa/generate-soa-careof", async (req, res) => {
   const qry = (policytablename: string) => `
@@ -2521,7 +1391,1931 @@ StatementOfAccount.post("/soa/generate-soa-careof", async (req, res) => {
   const pdfReportGenerator = new PDFReportGenerator(props);
   return pdfReportGenerator.generatePDF(res, false);
 });
+async function PrintAll(req: Request, res: Response) {
+  const qry = (policytablename: string, policies: string) => `
+  SELECT * FROM ${policytablename} a 
+  left join policy b on a.PolicyNo = b.PolicyNo
+  left join (${selectClient}) c on b.IDNo = c.IDNo
+  where a.PolicyNo in ('${policies}') ;`;
+  const data: Array<any> = [];
 
+  for (const itm of req.body.data) {
+    if (itm.Type === "COM") {
+      const COMDATA = (await prisma.$queryRawUnsafe(
+        qry("vpolicy", itm.data.join("','"))
+      )) as Array<any>;
+
+      if (COMDATA.length > 0) {
+        data.push({
+          PolicyNo: "COMPREHENSIVE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of COMDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.PlateNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.ChassisNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "FIRE") {
+      const FIREDATA = (await prisma.$queryRawUnsafe(
+        qry("fpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (FIREDATA.length > 0) {
+        data.push({
+          PolicyNo: "FIRE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of FIREDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.Location,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "MAR") {
+      const MARINEDATA = (await prisma.$queryRawUnsafe(
+        qry("mpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (MARINEDATA.length > 0) {
+        data.push({
+          PolicyNo: "MARINE",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of MARINEDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "PA") {
+      const PADATA = (await prisma.$queryRawUnsafe(
+        qry("papolicy", itm.data.join("','"))
+      )) as Array<any>;
+
+      if (PADATA.length > 0) {
+        data.push({
+          PolicyNo: "GPA",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of PADATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else if (itm.Type === "ED") {
+      const EDDATA = (await prisma.$queryRawUnsafe(
+        `SELECT * FROM gpa_endorsement where endorsement_no in  ('${itm.data.join(
+          "','"
+        )}')`
+      )) as Array<any>;
+
+      if (EDDATA.length > 0) {
+        if (!data.some((itm: any) => itm.PolicyNo === "GPA")) {
+          data.push({
+            PolicyNo: "GPA",
+            Insured: "",
+            Premium: "",
+            From: "",
+            To: "",
+            GrossPremium: "",
+            header: true,
+          });
+        }
+        for (const itm of EDDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.endorsement_no,
+              Insured: itm.name,
+              Premium: formatNumber(
+                parseFloat(itm.totalpremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.datefrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.dateto), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.totaldue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+          ];
+          if (typeof itm.deleted === "string" && itm.deleted !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `DELETED:  ${itm.deleted}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+          if (typeof itm.replacement === "string" && itm.replacement !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `REPLACEMENT:  ${itm.replacement}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+          if (typeof itm.additional === "string" && itm.additional !== "") {
+            newData.push({
+              PolicyNo: "",
+              Insured: `ADDITIONAL:  ${itm.additional}`,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+              endorsement: true,
+            });
+          }
+
+          newData[1].PolicyNo = "ENDORSEMENT";
+
+          newData.push({
+            PolicyNo: "",
+            Insured: "",
+            Premium: "",
+            From: "",
+            To: "",
+            GrossPremium: "",
+            gap: true,
+          });
+
+          data.push(...newData);
+        }
+      }
+    } else if (itm.Type === "CGL") {
+      const CGLDATA = (await prisma.$queryRawUnsafe(
+        qry("cglpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (CGLDATA.length > 0) {
+        data.push({
+          PolicyNo: "CGL & CARI",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of CGLDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.PeriodFrom), "MM/dd/yyyy"),
+              To: format(new Date(itm.PeriodTo), "MM/dd/yyyy"),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: "",
+              Insured: itm.PolicyNo,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    } else {
+      const BONDSDATA = (await prisma.$queryRawUnsafe(
+        qry("bpolicy", itm.data.join("','"))
+      )) as Array<any>;
+      if (BONDSDATA.length > 0) {
+        data.push({
+          PolicyNo: "BONDS",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          header: true,
+        });
+        for (const itm of BONDSDATA) {
+          const newData: Array<any> = [
+            {
+              PolicyNo: itm.PolicyNo,
+              Insured: itm.Shortname,
+              Premium: formatNumber(
+                parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+              ),
+              From: format(new Date(itm.BidDate), "MM/dd/yyyy"),
+              To: bondsYear(itm),
+              GrossPremium: formatNumber(
+                parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+              ),
+              solo: false,
+            },
+            {
+              PolicyNo: bondsPolicy(itm),
+              Insured: itm.Obligee,
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              solo: true,
+            },
+            {
+              PolicyNo: "",
+              Insured: "",
+              Premium: "",
+              From: "",
+              To: "",
+              GrossPremium: "",
+              gapPerRow: true,
+            },
+          ];
+          data.push(...newData);
+        }
+        data.push({
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gap: true,
+        });
+      }
+    }
+  }
+
+  // const MSPRDATA = (await prisma.$queryRawUnsafe(
+  //   qry("msprpolicy")
+  // )) as Array<any>;
+
+  const getTotal = data.reduce((t, itm) => {
+    return (
+      t +
+      parseFloat(
+        (itm.GrossPremium && itm.GrossPremium !== "" ? itm.GrossPremium : 0)
+          .toString()
+          .replace(/,/g, "")
+      )
+    );
+  }, 0);
+
+  data.push({
+    PolicyNo: "",
+    Insured: "",
+    Premium: "",
+    From: "",
+    To: "",
+    GrossPremium: formatNumber(getTotal),
+    total: true,
+  });
+
+  function bondsYear(itm: any) {
+    const PolicyType = itm.PolicyType.trim();
+    if (PolicyType === "G02") {
+      return "120 Days";
+    } else if (
+      ["G13", "G31", "G02", "G16", "G40", "G41", "G42"].includes(PolicyType)
+    ) {
+      return "1YR";
+    } else if (PolicyType === "JCL15") {
+      return "1YR";
+    } else if (PolicyType === "JCL7") {
+      return "2YRS";
+    } else if (PolicyType === "C9") {
+      return "1YR";
+    } else {
+      return "";
+    }
+  }
+  function bondsPolicy(itm: any) {
+    const PolicyType = itm.PolicyType.trim();
+    if (PolicyType === "G13" || PolicyType === "G31") {
+      return "PERFORMANCE BOND";
+    } else if (PolicyType === "G02") {
+      return "BIDDER'S BOND";
+    } else if (PolicyType === "G16") {
+      return "SURETY BOND";
+    } else if (PolicyType === "G40") {
+      return "SURETY BOND";
+    } else if (PolicyType === "G41") {
+      return "WARRANTY BOND";
+    } else if (PolicyType === "G42") {
+      return "RETENTION BOND";
+    } else if (PolicyType === "JCL15") {
+      return "APPEAL BOND";
+    } else if (PolicyType === "JCL7") {
+      return "HEIR'S BOND";
+    } else if (PolicyType === "C9") {
+      return "JUDICIAL BOND";
+    } else {
+      return "";
+    }
+  }
+
+  const underlineIndexes = getIndexes(
+    data,
+    (item: any) => item?.header === true
+  );
+  const headerIndexes = getIndexes(
+    data,
+    (item: any) =>
+      item?.header === true || item?.solo === false || item?.total === true
+  );
+  const getSolo = getIndexes(data, (item: any) => item?.solo === true);
+  let PAGE_WIDTH = 660;
+  let PAGE_HEIGHT = 841;
+  let MIN_ROW_HEIGHT = 10;
+
+  const outputFilePath = "manok.pdf";
+  const doc = new PDFDocument({
+    size: [PAGE_WIDTH, PAGE_HEIGHT],
+    margin: 0,
+    bufferPages: true,
+  });
+
+  const writeStream = fs.createWriteStream(outputFilePath);
+  doc.pipe(writeStream);
+
+  const MARGIN = {
+    top: 50,
+    bottom: 70,
+    left: 30,
+    right: 30,
+  };
+
+  let startY = MARGIN.top;
+  let currentPage = 1;
+
+  const spanMap = new Map();
+  const boldedRows: Array<number> = [];
+  const underlineColumn = new Map();
+
+  const keys = ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"];
+  const headers = [
+    { headerName: "POLICY NO", textAlign: "left" },
+    { headerName: "INSURED", textAlign: "left" },
+    { headerName: "PREMIUM", textAlign: "right" },
+    { headerName: "FROM", textAlign: "left" },
+    { headerName: "TO", textAlign: "left" },
+    { headerName: "GROSS PREMIUM", textAlign: "right" },
+  ];
+  const columnWidths = [135, 190, 70, 60, 60, 85];
+
+  startY = drawTitleAndHeader(doc, startY, currentPage);
+  drawFooter(doc, startY);
+
+  drawPerPage();
+
+  data.forEach((row: any, rowIndex: any) => {
+    const rowHeight = calculateRowHeight(doc, row, rowIndex);
+    if (startY + rowHeight > PAGE_HEIGHT - MARGIN.bottom) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+      currentPage += 1;
+
+      startY = drawTitleAndHeader(doc, startY, currentPage);
+      drawFooter(doc, startY);
+    }
+    drawRow(doc, row, rowIndex, startY);
+    startY += rowHeight;
+  });
+  subReport();
+  drawPageNumber();
+
+  function drawPerPage() {
+    getSolo.forEach((itm: any) => {
+      SpanRow(itm, 1, 5);
+    });
+    headerIndexes.forEach((itm: any) => {
+      boldRow(itm);
+    });
+    underlineIndexes.forEach((itm: any) => {
+      underLineColumn(itm, ["PolicyNo", "GrossPremium"]);
+    });
+  }
+  function underLineColumn(rowIndex: number, colIdx: Array<string>) {
+    underlineColumn.set(rowIndex, { colIdx });
+  }
+  function boldRow(rowIndex: number) {
+    boldedRows.push(rowIndex);
+  }
+  function SpanRow(
+    rowIndex: number,
+    columnIndex: number,
+    spanLength: number,
+    key: string = "",
+    textAlign: string = "left"
+  ) {
+    spanMap.set(rowIndex, { columnIndex, spanLength, key, textAlign });
+  }
+  function drawRow(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number,
+    startY: number
+  ) {
+    const isBold = boldedRows.some((itm) => itm === rowIndex);
+
+    if (isBold) {
+      doc.font("Helvetica-Bold");
+    } else {
+      doc.font("Helvetica");
+    }
+
+    let startX = MARGIN.left;
+
+    const underLineInfo = underlineColumn.get(rowIndex);
+    const { colIdx } = underLineInfo || {};
+
+    // Check if the current row has a span
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
+
+    let getRowHeight = 0;
+
+    keys.forEach((key, colIndex) => {
+      // Skip columns that fall within a span range (except the starting column)
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
+      }
+
+      // Calculate the column width (spanned width if applicable)
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
+
+      let cellValue = "";
+      let textHeader = "" as
+        | "left"
+        | "center"
+        | "justify"
+        | "right"
+        | undefined;
+
+      if (spanInfo && colIndex === columnIndex && SpanKey !== "") {
+        textHeader = SpanTextAlign;
+        cellValue = row[SpanKey];
+      } else {
+        textHeader = headers[colIndex].textAlign as
+          | "left"
+          | "center"
+          | "justify"
+          | "right"
+          | undefined;
+        cellValue = row[key];
+      }
+
+      if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "COMPREHENSIVE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(105, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "GPA"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "FIRE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "MARINE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(66, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "CGL & CARI"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(81, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "BONDS"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(65, startY + 8)
+          .stroke();
+      } else if (row.total) {
+        doc
+          .moveTo(640, startY - 6)
+          .lineTo(570, startY - 6)
+          .stroke();
+
+        doc
+          .moveTo(640, startY + 10.5)
+          .lineTo(570, startY + 10.5)
+          .stroke();
+
+        doc
+          .moveTo(640, startY + 13)
+          .lineTo(570, startY + 13)
+          .stroke();
+      }
+
+      if (cellValue.includes("DELETED:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("DELETED:");
+        doc.text("DELETED:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("REPLACEMENT:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("REPLACEMENT:");
+
+        doc.text("REPLACEMENT:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("ADDITIONAL:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+        doc.text("ADDITIONAL:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else {
+        doc.text(cellValue?.toString() || "", startX + 5, startY, {
+          width: colWidth - 10,
+          align: textHeader,
+        });
+      }
+      // let startY_ = startY + 5;
+
+      startX += colWidth;
+    });
+  }
+  function drawTitleAndHeader(
+    doc: PDFKit.PDFDocument,
+    startY: number,
+    currentPage: number
+  ) {
+    startY = 50;
+    doc.image(
+      path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+      30,
+      startY,
+      {
+        fit: [120, 120],
+      }
+    );
+
+    startY += 10;
+    doc.fontSize(60);
+    doc.font("Helvetica-Bold");
+    doc.text("UPWARD", 155, startY);
+    startY += 50;
+
+    if (process.env.DEPARTMENT === "UMIS") {
+      doc.fontSize(9);
+      doc.text("MANAGEMENT INSURANCE SERVICES", 245, startY);
+    }
+    if (process.env.DEPARTMENT === "UCSMI") {
+      doc.fontSize(9);
+      doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, startY);
+    }
+
+    startY += 30;
+    doc.text(`STATEMENT OF ACCOUNT`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 12;
+    doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 20;
+    doc.fontSize(9);
+    doc.text(`Ref. No. : ${req.body.reference_no}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "right",
+    });
+    startY += 30;
+
+    if (currentPage === 1) {
+      doc.fontSize(8);
+      const name = req.body.name || "";
+      const address = req.body.address || "";
+      const balance = formatNumber(getTotal);
+
+      const nameHeight = doc.heightOfString(name, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+      const addressHeight = doc.heightOfString(address, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Name
+      doc.text("ACCT. NAME", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(name, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Address
+      startY += nameHeight <= 0 ? 13 : nameHeight;
+      doc.text("ADDRESS", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(address, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Balance
+      startY += addressHeight <= 0 ? 13 : addressHeight;
+      doc.text("ACCT. BAL", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(balance, 110, startY, {
+        width: 70,
+        align: "right",
+      });
+      startY += 10;
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+      startY += 2;
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+    }
+
+    startY += 13;
+    doc.fontSize(8);
+    let startX = MARGIN.left;
+
+    // doc.text("AMOUNT", 171, startY );
+    doc.text("COVERAGE", 447, startY);
+
+    headers.forEach((header, colIndex) => {
+      const colWidth = columnWidths[colIndex];
+      doc.text(header.headerName, startX + 5, startY + 12, {
+        width: colWidth - 10,
+        align:
+          header.textAlign === "right"
+            ? "center"
+            : (header.textAlign as
+                | "left"
+                | "center"
+                | "justify"
+                | "right"
+                | undefined),
+      });
+
+      startX += colWidth;
+    });
+
+    doc.fontSize(8);
+    doc.font("Helvetica");
+    doc
+      .moveTo(30, startY - 5)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY - 5)
+      .stroke();
+    doc
+      .moveTo(30, startY + 25)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 25)
+      .stroke();
+    startY += 30;
+
+    return startY;
+  }
+  function drawFooter(doc: PDFKit.PDFDocument, startY: number) {
+    doc.text(
+      "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
+      30,
+      PAGE_HEIGHT - 40,
+      {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      }
+    );
+    doc.text(
+      "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
+      30,
+      PAGE_HEIGHT - 30,
+      {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      }
+    );
+  }
+  function calculateRowHeight(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number
+  ) {
+    doc.fontSize(8);
+
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
+
+    let maxHeight = MIN_ROW_HEIGHT;
+    keys.forEach((key, colIndex) => {
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
+      }
+
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
+
+      // const colWidth = columnWidths[colIndex] || 50;
+      const cellValue = row[key];
+      const cellHeight = doc.heightOfString(cellValue?.toString() || "", {
+        width: colWidth - 10,
+      });
+      maxHeight = Math.max(maxHeight, cellHeight + 3);
+    });
+    return maxHeight;
+  }
+  function drawPageNumber() {
+    const range = doc.bufferedPageRange();
+    let i;
+    let end;
+
+    for (
+      i = range.start, end = range.start + range.count, range.start <= end;
+      i < end;
+      i++
+    ) {
+      doc.font("Helvetica");
+      doc.switchToPage(i);
+      doc.text(
+        `Page ${i + 1} of ${range.count}`,
+        PAGE_WIDTH - 60,
+        PAGE_HEIGHT - 20
+      );
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 20
+      );
+    }
+  }
+  function subReport() {
+    startY += 12;
+
+    const SUBREPORT_HEIGHT = 160;
+    const remainingSpace = PAGE_HEIGHT - startY - MARGIN.bottom;
+
+    if (remainingSpace < SUBREPORT_HEIGHT) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+      startY = MARGIN.top;
+      drawFooter(doc, startY);
+    }
+    doc.fontSize(10);
+    doc.font("Helvetica-Bold");
+    doc.text(req.body.attachment, 30, startY, {
+      width: PAGE_WIDTH - 30,
+      align: "center",
+    });
+
+    startY += 30;
+
+    doc.fontSize(7);
+    doc.font("Helvetica");
+    doc.text("Prepared by:", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Checked by:", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Noted by:", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+
+    startY += 30;
+    doc.fontSize(7);
+    doc.font("Helvetica-Bold");
+    doc.text("ADacula", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("MGLLumidao", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("LVAquino", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+    startY += 20;
+    doc.text(
+      "Received by:       ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.text(
+      "Date:                    ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.fontSize(7);
+    doc.text(
+      `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+  }
+
+  doc.end();
+  writeStream.on("finish", (e: any) => {
+    console.log(`PDF created successfully at: ${outputFilePath}`);
+    const readStream = fs.createReadStream(outputFilePath);
+    readStream.pipe(res);
+
+    readStream.on("end", () => {
+      fs.unlink(outputFilePath, (err) => {
+        if (err) {
+          console.error("Error deleting file:", err);
+        } else {
+          console.log(`File ${outputFilePath} deleted successfully.`);
+        }
+      });
+    });
+  });
+}
+async function PrintTPL(req: Request, res: Response) {
+  const qry = (policytablename: string, policies: string) => `
+  SELECT * FROM ${policytablename} a 
+  left join policy b on a.PolicyNo = b.PolicyNo
+  left join (${selectClient}) c on b.IDNo = c.IDNo
+  where a.PolicyNo in ('${policies}') and  a.PolicyType = 'TPL';`;
+  const data: Array<any> = [];
+  const tableData = req.body.data[0].data;
+  const COMDATA = (await prisma.$queryRawUnsafe(
+    qry("vpolicy", tableData.join("','"))
+  )) as Array<any>;
+
+  if (COMDATA.length > 0) {
+    data.push({
+      PolicyNo: "TPL",
+      Insured: "",
+      Premium: "",
+      From: "",
+      To: "",
+      GrossPremium: "",
+      header: true,
+    });
+    for (const itm of COMDATA) {
+      const newData: Array<any> = [
+        {
+          PolicyNo: itm.PolicyNo,
+          Insured: itm.Shortname,
+          Premium: formatNumber(
+            parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
+          ),
+          From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
+          To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
+          GrossPremium: formatNumber(
+            parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
+          ),
+          solo: false,
+        },
+        {
+          PolicyNo: "",
+          Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          solo: true,
+        },
+        {
+          PolicyNo: "",
+          Insured: itm.PlateNo,
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          solo: true,
+        },
+        {
+          PolicyNo: "",
+          Insured: itm.ChassisNo,
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          solo: true,
+        },
+        {
+          PolicyNo: "",
+          Insured: "",
+          Premium: "",
+          From: "",
+          To: "",
+          GrossPremium: "",
+          gapPerRow: true,
+        },
+      ];
+      data.push(...newData);
+    }
+    data.push({
+      PolicyNo: "",
+      Insured: "",
+      Premium: "",
+      From: "",
+      To: "",
+      GrossPremium: "",
+      gap: true,
+    });
+  }
+  const getTotal = data.reduce((t, itm) => {
+    return (
+      t +
+      parseFloat(
+        (itm.GrossPremium && itm.GrossPremium !== "" ? itm.GrossPremium : 0)
+          .toString()
+          .replace(/,/g, "")
+      )
+    );
+  }, 0);
+
+  data.push({
+    PolicyNo: "",
+    Insured: "",
+    Premium: "",
+    From: "",
+    To: "",
+    GrossPremium: formatNumber(getTotal),
+    total: true,
+  });
+  const underlineIndexes = getIndexes(
+    data,
+    (item: any) => item?.header === true
+  );
+  const headerIndexes = getIndexes(
+    data,
+    (item: any) =>
+      item?.header === true || item?.solo === false || item?.total === true
+  );
+  const getSolo = getIndexes(data, (item: any) => item?.solo === true);
+  let PAGE_WIDTH = 660;
+  let PAGE_HEIGHT = 841;
+  let MIN_ROW_HEIGHT = 10;
+
+  const outputFilePath = "manok.pdf";
+  const doc = new PDFDocument({
+    size: [PAGE_WIDTH, PAGE_HEIGHT],
+    margin: 0,
+    bufferPages: true,
+  });
+
+  const writeStream = fs.createWriteStream(outputFilePath);
+  doc.pipe(writeStream);
+
+  const MARGIN = {
+    top: 50,
+    bottom: 70,
+    left: 30,
+    right: 30,
+  };
+
+  let startY = MARGIN.top;
+  let currentPage = 1;
+
+  const spanMap = new Map();
+  const boldedRows: Array<number> = [];
+  const underlineColumn = new Map();
+
+  const keys = ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"];
+  const headers = [
+    { headerName: "POLICY NO", textAlign: "left" },
+    { headerName: "INSURED", textAlign: "left" },
+    { headerName: "PREMIUM", textAlign: "right" },
+    { headerName: "FROM", textAlign: "left" },
+    { headerName: "TO", textAlign: "left" },
+    { headerName: "GROSS PREMIUM", textAlign: "right" },
+  ];
+  const columnWidths = [135, 190, 70, 60, 60, 85];
+
+  startY = drawTitleAndHeader(doc, startY, currentPage);
+  drawFooter(doc, startY);
+
+  drawPerPage();
+
+  data.forEach((row: any, rowIndex: any) => {
+    const rowHeight = calculateRowHeight(doc, row, rowIndex);
+    if (startY + rowHeight > PAGE_HEIGHT - MARGIN.bottom) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+      currentPage += 1;
+
+      startY = drawTitleAndHeader(doc, startY, currentPage);
+      drawFooter(doc, startY);
+    }
+    drawRow(doc, row, rowIndex, startY);
+    startY += rowHeight;
+  });
+  subReport();
+  drawPageNumber();
+
+  function drawPerPage() {
+    getSolo.forEach((itm: any) => {
+      SpanRow(itm, 1, 5);
+    });
+    headerIndexes.forEach((itm: any) => {
+      boldRow(itm);
+    });
+    underlineIndexes.forEach((itm: any) => {
+      underLineColumn(itm, ["PolicyNo", "GrossPremium"]);
+    });
+  }
+  function underLineColumn(rowIndex: number, colIdx: Array<string>) {
+    underlineColumn.set(rowIndex, { colIdx });
+  }
+  function boldRow(rowIndex: number) {
+    boldedRows.push(rowIndex);
+  }
+  function SpanRow(
+    rowIndex: number,
+    columnIndex: number,
+    spanLength: number,
+    key: string = "",
+    textAlign: string = "left"
+  ) {
+    spanMap.set(rowIndex, { columnIndex, spanLength, key, textAlign });
+  }
+  function drawRow(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number,
+    startY: number
+  ) {
+    const isBold = boldedRows.some((itm) => itm === rowIndex);
+
+    if (isBold) {
+      doc.font("Helvetica-Bold");
+    } else {
+      doc.font("Helvetica");
+    }
+
+    let startX = MARGIN.left;
+
+    const underLineInfo = underlineColumn.get(rowIndex);
+    const { colIdx } = underLineInfo || {};
+
+    // Check if the current row has a span
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
+
+    let getRowHeight = 0;
+
+    keys.forEach((key, colIndex) => {
+      // Skip columns that fall within a span range (except the starting column)
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
+      }
+
+      // Calculate the column width (spanned width if applicable)
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
+
+      let cellValue = "";
+      let textHeader = "" as
+        | "left"
+        | "center"
+        | "justify"
+        | "right"
+        | undefined;
+
+      if (spanInfo && colIndex === columnIndex && SpanKey !== "") {
+        textHeader = SpanTextAlign;
+        cellValue = row[SpanKey];
+      } else {
+        textHeader = headers[colIndex].textAlign as
+          | "left"
+          | "center"
+          | "justify"
+          | "right"
+          | undefined;
+        cellValue = row[key];
+      }
+
+      if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "COMPREHENSIVE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(105, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "GPA"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "FIRE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(53, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "MARINE"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(66, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "CGL & CARI"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(81, startY + 8)
+          .stroke();
+      } else if (
+        colIdx?.includes(key) &&
+        key === "PolicyNo" &&
+        cellValue === "BONDS"
+      ) {
+        doc
+          .moveTo(35, startY + 8)
+          .lineTo(65, startY + 8)
+          .stroke();
+      } else if (row.total) {
+        doc
+          .moveTo(640, startY - 6)
+          .lineTo(570, startY - 6)
+          .stroke();
+
+        doc
+          .moveTo(640, startY + 10.5)
+          .lineTo(570, startY + 10.5)
+          .stroke();
+
+        doc
+          .moveTo(640, startY + 13)
+          .lineTo(570, startY + 13)
+          .stroke();
+      }
+
+      if (cellValue.includes("DELETED:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("DELETED:");
+        doc.text("DELETED:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("REPLACEMENT:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("REPLACEMENT:");
+
+        doc.text("REPLACEMENT:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else if (cellValue.includes("ADDITIONAL:")) {
+        doc.font("Helvetica-Bold");
+        const [label, value] = cellValue?.toString().split("ADDITIONAL:");
+        doc.text("ADDITIONAL:", startX + 5, startY, {
+          width: 75,
+          align: textHeader,
+        });
+        doc.font("Helvetica");
+        doc.text(value.trim(), startX + 75, startY, {
+          width: colWidth - 10 + 75,
+          align: textHeader,
+        });
+      } else {
+        doc.text(cellValue?.toString() || "", startX + 5, startY, {
+          width: colWidth - 10,
+          align: textHeader,
+        });
+      }
+      // let startY_ = startY + 5;
+
+      startX += colWidth;
+    });
+  }
+  function drawTitleAndHeader(
+    doc: PDFKit.PDFDocument,
+    startY: number,
+    currentPage: number
+  ) {
+    startY = 50;
+    doc.image(
+      path.join(path.dirname(__dirname), "../../../static/image/logo.png"),
+      30,
+      startY,
+      {
+        fit: [120, 120],
+      }
+    );
+
+    startY += 10;
+    doc.fontSize(60);
+    doc.font("Helvetica-Bold");
+    doc.text("UPWARD", 155, startY);
+    startY += 50;
+
+    if (process.env.DEPARTMENT === "UMIS") {
+      doc.fontSize(9);
+      doc.text("MANAGEMENT INSURANCE SERVICES", 245, startY);
+    }
+    if (process.env.DEPARTMENT === "UCSMI") {
+      doc.fontSize(9);
+      doc.text("CONSULTANCY SERVICES AND MANAGEMENT INC.", 190, startY);
+    }
+
+    startY += 30;
+    doc.text(`STATEMENT OF ACCOUNT`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 12;
+    doc.text(`${format(new Date(), "MMMM dd, yyyy")}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "center",
+    });
+
+    startY += 20;
+    doc.fontSize(9);
+    doc.text(`Ref. No. : ${req.body.reference_no}`, 30, startY, {
+      width: PAGE_WIDTH - 60,
+      align: "right",
+    });
+    startY += 30;
+
+    if (currentPage === 1) {
+      doc.fontSize(8);
+      const name = req.body.name || "";
+      const address = req.body.address || "";
+      const balance = formatNumber(getTotal);
+
+      const nameHeight = doc.heightOfString(name, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+      const addressHeight = doc.heightOfString(address, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Name
+      doc.text("ACCT. NAME", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(name, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Address
+      startY += nameHeight <= 0 ? 13 : nameHeight;
+      doc.text("ADDRESS", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(address, 110, startY, {
+        width: PAGE_WIDTH - 170,
+        align: "left",
+      });
+
+      // Balance
+      startY += addressHeight <= 0 ? 13 : addressHeight;
+      doc.text("ACCT. BAL", 30, startY, {
+        width: 60,
+        align: "left",
+      });
+      doc.text(":", 90, startY, {
+        width: 10,
+        align: "center",
+      });
+      doc.text(balance, 110, startY, {
+        width: 70,
+        align: "right",
+      });
+      startY += 10;
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+      startY += 2;
+      doc.moveTo(110, startY).lineTo(180, startY).stroke();
+    }
+
+    startY += 13;
+    doc.fontSize(8);
+    let startX = MARGIN.left;
+
+    // doc.text("AMOUNT", 171, startY );
+    doc.text("COVERAGE", 447, startY);
+
+    headers.forEach((header, colIndex) => {
+      const colWidth = columnWidths[colIndex];
+      doc.text(header.headerName, startX + 5, startY + 12, {
+        width: colWidth - 10,
+        align:
+          header.textAlign === "right"
+            ? "center"
+            : (header.textAlign as
+                | "left"
+                | "center"
+                | "justify"
+                | "right"
+                | undefined),
+      });
+
+      startX += colWidth;
+    });
+
+    doc.fontSize(8);
+    doc.font("Helvetica");
+    doc
+      .moveTo(30, startY - 5)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY - 5)
+      .stroke();
+    doc
+      .moveTo(30, startY + 25)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 25)
+      .stroke();
+    startY += 30;
+
+    return startY;
+  }
+  function drawFooter(doc: PDFKit.PDFDocument, startY: number) {
+    doc.text(
+      "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City -  Telephone Numbers | 9441 - 8977 to 78 | 8374 - 0742 ",
+      30,
+      PAGE_HEIGHT - 40,
+      {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      }
+    );
+    doc.text(
+      "Mobile Numbers | 0919 - 078 - 5547 / 0919 - 078 - 5546 / 0919 - 078 - 5543",
+      30,
+      PAGE_HEIGHT - 30,
+      {
+        width: PAGE_WIDTH - 30,
+        align: "center",
+      }
+    );
+  }
+  function calculateRowHeight(
+    doc: PDFKit.PDFDocument,
+    row: any,
+    rowIndex: number
+  ) {
+    doc.fontSize(8);
+
+    const spanInfo = spanMap.get(rowIndex);
+    const {
+      columnIndex,
+      spanLength,
+      key: SpanKey,
+      textAlign: SpanTextAlign,
+    } = spanInfo || {};
+
+    let maxHeight = MIN_ROW_HEIGHT;
+    keys.forEach((key, colIndex) => {
+      if (
+        spanInfo &&
+        colIndex > columnIndex &&
+        colIndex < columnIndex + spanLength
+      ) {
+        return;
+      }
+
+      const colSpan = spanInfo && colIndex === columnIndex ? spanLength : 1;
+      const colWidth = columnWidths
+        .slice(colIndex, colIndex + colSpan)
+        .reduce((sum, width) => sum + width, 0);
+
+      // const colWidth = columnWidths[colIndex] || 50;
+      const cellValue = row[key];
+      const cellHeight = doc.heightOfString(cellValue?.toString() || "", {
+        width: colWidth - 10,
+      });
+      maxHeight = Math.max(maxHeight, cellHeight + 3);
+    });
+    return maxHeight;
+  }
+  function drawPageNumber() {
+    const range = doc.bufferedPageRange();
+    let i;
+    let end;
+
+    for (
+      i = range.start, end = range.start + range.count, range.start <= end;
+      i < end;
+      i++
+    ) {
+      doc.font("Helvetica");
+      doc.switchToPage(i);
+      doc.text(
+        `Page ${i + 1} of ${range.count}`,
+        PAGE_WIDTH - 60,
+        PAGE_HEIGHT - 20
+      );
+      doc.text(
+        `Printed ${format(new Date(), "MM/dd/yyyy hh:mm a")}`,
+        20,
+        PAGE_HEIGHT - 20
+      );
+    }
+  }
+  function subReport() {
+    startY += 12;
+
+    const SUBREPORT_HEIGHT = 160;
+    const remainingSpace = PAGE_HEIGHT - startY - MARGIN.bottom;
+
+    if (remainingSpace < SUBREPORT_HEIGHT) {
+      doc.addPage({
+        size: [PAGE_WIDTH, PAGE_HEIGHT],
+        margin: 0,
+        bufferPages: true,
+      });
+      startY = MARGIN.top;
+      drawFooter(doc, startY);
+    }
+    doc.fontSize(10);
+    doc.font("Helvetica-Bold");
+    doc.text(req.body.attachment, 30, startY, {
+      width: PAGE_WIDTH - 30,
+      align: "center",
+    });
+
+    startY += 30;
+
+    doc.fontSize(7);
+    doc.font("Helvetica");
+    doc.text("Prepared by:", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Checked by:", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("Noted by:", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+
+    startY += 30;
+    doc.fontSize(7);
+    doc.font("Helvetica-Bold");
+    doc.text("ADacula", 100, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("MGLLumidao", 250, startY, {
+      width: 100,
+      align: "center",
+    });
+    doc.text("LVAquino", 400, startY, {
+      width: 100,
+      align: "center",
+    });
+    startY += 20;
+    doc.text(
+      "Received by:       ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.text(
+      "Date:                    ________________________________",
+      30,
+      startY,
+      {
+        width: 300,
+        align: "left",
+      }
+    );
+    startY += 15;
+    doc.fontSize(7);
+    doc.text(
+      `"Please check your Statement of Account immediately and feel free to call us for nay questions within 30 days from`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `date of receipt. Otherwise, Upward Management Services will deem the statement true and correct"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+    startY += 9;
+    doc.text(
+      `"As per Insurance Code, no cancellation of policy after 90 days from the date of issuance"`,
+      30,
+      startY,
+      {
+        width: 500,
+        align: "left",
+      }
+    );
+  }
+
+  doc.end();
+  writeStream.on("finish", (e: any) => {
+    console.log(`PDF created successfully at: ${outputFilePath}`);
+    const readStream = fs.createReadStream(outputFilePath);
+    readStream.pipe(res);
+
+    readStream.on("end", () => {
+      fs.unlink(outputFilePath, (err) => {
+        if (err) {
+          console.error("Error deleting file:", err);
+        } else {
+          console.log(`File ${outputFilePath} deleted successfully.`);
+        }
+      });
+    });
+  });
+}
 const getIndexes = (array: Array<any>, condition: any) => {
   return array.reduce((indexes, item, index) => {
     if (condition(item)) {
@@ -2530,137 +3324,4 @@ const getIndexes = (array: Array<any>, condition: any) => {
     return indexes;
   }, []);
 };
-
-const printQuery = (policies: string) => `
-SELECT 
-    *
-FROM
-    policy AS Policy
-        LEFT JOIN
-    bpolicy AS BPolicy ON Policy.PolicyNo = BPolicy.PolicyNo
-        LEFT JOIN
-    vpolicy ON Policy.PolicyNo = vpolicy.PolicyNo
-        LEFT JOIN
-    mpolicy AS MPolicy ON Policy.PolicyNo = MPolicy.PolicyNo
-        LEFT JOIN
-    papolicy AS PAPolicy ON Policy.PolicyNo = PAPolicy.PolicyNo
-        LEFT JOIN
-    cglpolicy AS CGLPolicy ON Policy.PolicyNo = CGLPolicy.PolicyNo
-        LEFT JOIN
-    msprpolicy AS MSPRPolicy ON Policy.PolicyNo = MSPRPolicy.PolicyNo
-        LEFT JOIN
-    fpolicy AS FPolicy ON Policy.PolicyNo = FPolicy.PolicyNo
-     LEFT JOIN (
-    select * from (SELECT 
-    if(aa.option = "individual", CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as ShortName,
-    aa.entry_client_id AS IDNo,
-    aa.firstname,
-    aa.middlename,
-    aa.company,
-    aa.address,
-    aa.option AS options,
-    aa.sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    aa.client_contact_details_id AS contact_details_id,
-    NULL AS description,
-    NULL AS remarks,
-	NULL AS VAT_Type,
-    NULL AS tin_no
-FROM
-    entry_client aa 
-UNION ALL SELECT 
-    CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS ShortName,
-    aa.entry_agent_id AS IDNo,
-    aa.firstname,
-    aa.middlename,
-    NULL AS company,
-    aa.address,
-    NULL AS options,
-    NULL AS sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    aa.agent_contact_details_id AS contact_details_id,
-    NULL AS description,
-    NULL AS remarks,
-	NULL AS VAT_Type,
-    NULL AS tin_no
-FROM
-    entry_agent aa 
-UNION ALL SELECT 
-    CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '', CONCAT(aa.lastname, ', '),''), aa.firstname) AS ShortName,
-    aa.entry_employee_id AS IDNo,
-    aa.firstname,
-    aa.middlename,
-    NULL AS company,
-    aa.address,
-    NULL AS options,
-    aa.sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    NULL AS contact_details_id,
-    NULL AS description,
-    NULL AS remarks,
-	NULL AS VAT_Type,
-    NULL AS tin_no
-FROM
-    entry_employee aa 
-UNION ALL SELECT 
-    aa.fullname AS ShortName,
-    aa.entry_fixed_assets_id AS IDNo,
-    NULL AS firstname,
-    NULL AS middlename,
-    NULL AS company,
-    NULL AS address,
-    NULL AS options,
-    NULL AS sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    NULL AS contact_details_id,
-    aa.description,
-    aa.remarks,
-	NULL AS VAT_Type,
-    NULL AS tin_no
-FROM
-    entry_fixed_assets aa 
-UNION ALL SELECT 
-    aa.description AS ShortName,
-    aa.entry_others_id AS IDNo,
-    NULL AS firstname,
-    NULL AS middlename,
-    NULL AS company,
-    NULL AS address,
-    NULL AS options,
-    NULL AS sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    NULL AS contact_details_id,
-    NULL AS description,
-    NULL AS remarks,
-	NULL AS VAT_Type,
-    NULL AS tin_no
-FROM
-    entry_others aa
- UNION ALL SELECT 
-    if(aa.option = "individual", CONCAT(IF(aa.lastname is not null and trim(aa.lastname) <> '',  CONCAT(aa.lastname, ', '), ''),aa.firstname), aa.company) as ShortName,
-    aa.entry_supplier_id AS IDNo,
-    aa.firstname,
-    aa.middlename,
-    aa.company,
-    aa.address,
-    aa.option as options,
-    NULL AS sub_account,
-    aa.createdAt,
-    aa.update AS updatedAt,
-    aa.supplier_contact_details_id as  contact_details_id,
-    NULL AS description,
-    NULL AS remarks,
-    aa.VAT_Type,
-    aa.tin_no
-FROM
-    entry_supplier aa) id_entry
-    ) client ON Policy.IDNo = client.IDNo
-    left join gpa_endorsement on gpa_endorsement.policyNo =  PAPolicy.PolicyNo
-    where Policy.PolicyNo in ${policies}
-`;
 export default StatementOfAccount;

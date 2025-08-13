@@ -87,6 +87,7 @@ Endorsement.post("/endorsement/add-new-endorsement", async (req, res) => {
 
       await saveUserLogs(req, req.body.endorsement_no, "add", "Endorsement");
     }
+    
     let message =
       req.body.mode === "update"
         ? `Successfully Update  Endorsement - ${req.body.endorsement_no}`

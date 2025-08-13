@@ -16,8 +16,8 @@ import {
   getPolicySummary,
 } from "../../../model/Task/Production/policy";
 import { getRateType } from "../../../model/Task/Production/fire-policy";
-const Policy = express.Router();
 
+const Policy = express.Router();
 Policy.post("/get-policy-summary", async (req, res) => {
   try {
     const PolicyNo = req.body.PolicyNo;
@@ -204,7 +204,6 @@ Policy.get("/get-rates", async (req, res) => {
     });
   }
 });
-
 Policy.post("/get-rates", async (req, res) => {
   try {
     const Type = req.body.Type.trim();
@@ -224,7 +223,6 @@ Policy.post("/get-rates", async (req, res) => {
     });
   }
 });
-
 Policy.get("/get-mortgagee", async (req, res) => {
   try {
     res.send({
@@ -245,7 +243,6 @@ Policy.get("/get-mortgagee", async (req, res) => {
     });
   }
 });
-
 Policy.get("/search-policy-account", async (req, res) => {
   try {
     const { policyAccountSearch } = req.query;
@@ -267,7 +264,6 @@ Policy.get("/search-policy-account", async (req, res) => {
     });
   }
 });
-
 Policy.get("/search-rates", async (req, res) => {
   try {
     const { ratesSearch } = req.query;
@@ -290,7 +286,6 @@ Policy.get("/search-rates", async (req, res) => {
     });
   }
 });
-
 Policy.get("/search-mortgagee", async (req, res) => {
   try {
     const { mortgageeSearch } = req.query;
@@ -310,7 +305,6 @@ Policy.get("/search-mortgagee", async (req, res) => {
     });
   }
 });
-
 Policy.get("/bond-policy-account", async (req, res) => {
   try {
     res.send({
@@ -336,7 +330,6 @@ Policy.get("/bond-policy-account", async (req, res) => {
     });
   }
 });
-
 Policy.get("/policy-type", async (req, res) => {
   try {
     res.send({
@@ -346,7 +339,6 @@ Policy.get("/policy-type", async (req, res) => {
     });
   } catch (err: any) {
     console.log(err.message);
-
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,

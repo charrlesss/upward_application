@@ -217,6 +217,8 @@ PulloutRequest.post(
         if (!(await saveUserLogsCode(req, "edit", RCPNo, "Pullout"))) {
           return res.send({ message: "Invalid User Code", success: false });
         }
+      }else{
+        await saveUserLogs(req, RCPNo, "add", "Pullout");
       }
 
       const subtitle = `
@@ -255,6 +257,9 @@ PulloutRequest.post(
 
       const approvalCode = generateRandomNumber(6);
       if (req.body.flag === "edit" && tableData.length <= 0) {
+
+
+
         
       }else{
         await createPulloutRequest(
@@ -325,9 +330,7 @@ PulloutRequest.post(
         );
       }
         
-      
-
-      await saveUserLogs(req, RCPNo, "add", "Pullout");
+  
 
       res.send({
         message: "Save Successfully",
@@ -379,23 +382,23 @@ PulloutApporved.post("/pullout/approved/load-details", async (req, res) => {
 });
 PulloutApporved.post("/pullout/approved/confirm", async (req, res) => {
   try {
-    // const RCPNo = req.body.RCPNo;
-    // const code = req.body.code;
-    // const dt = (await checkApprovedCode(req, code)) as Array<any>;
-    // const dt1 = (await checkApprovedCodeIsUsed(req, RCPNo)) as Array<any>;
-    // if (dt.length <= 0) {
-    //   return res.send({
-    //     message: "Invalid Authorization Code",
-    //     success: false,
-    //   });
-    // }
+    const RCPNo = req.body.RCPNo;
+    const code = req.body.code;
+    const dt = (await checkApprovedCode(req, code)) as Array<any>;
+    const dt1 = (await checkApprovedCodeIsUsed(req, RCPNo)) as Array<any>;
+    if (dt.length <= 0) {
+      return res.send({
+        message: "Invalid Authorization Code",
+        success: false,
+      });
+    }
 
-    // if (dt1.length > 0) {
-    //   return res.send({
-    //     message: `Request No. ${RCPNo} had already been approved/disapproved!`,
-    //     success: false,
-    //   });
-    // }
+    if (dt1.length > 0) {
+      return res.send({
+        message: `Request No. ${RCPNo} had already been approved/disapproved!`,
+        success: false,
+      });
+    }
 
     res.send({
       message: "You want to confirm this transaction?",
