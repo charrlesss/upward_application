@@ -94,7 +94,11 @@ export async function getCheckList(search: string, req: Request) {
         Temp_SlipCode AS Deposit_Slip,
         date_format(deposit.Temp_SlipDate,'%m/%d/%Y' ) AS Depo_Date,
         deposit.Check_No AS Check_No,
-        date_format(deposit.Check_Date ,'%m/%d/%Y') as Check_Date,
+        CASE 
+          WHEN deposit.Check_Date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$' 
+            THEN deposit.Check_Date
+          ELSE DATE_FORMAT(STR_TO_DATE(deposit.Check_Date, '%Y-%m-%d'), '%m/%d/%Y')
+        END AS Check_Date,
         FORMAT(deposit.Credit, 2) AS Amount,
         deposit.Bank,
         Official_Receipt,

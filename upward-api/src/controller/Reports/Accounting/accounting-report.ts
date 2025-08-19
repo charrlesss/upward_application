@@ -141,19 +141,19 @@ WHERE
     OR a.Reason LIKE ?
     `;
 
-    const data  = await prisma.$queryRawUnsafe(
-        qry,
+    const data = (await prisma.$queryRawUnsafe(
+      qry,
 
-        `%${req.body.search}%`,
-        `%${req.body.search}%`,
-        `%${req.body.search}%`,
-        `%${req.body.search}%`
-      ) as Array<any>
-      
+      `%${req.body.search}%`,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`
+    )) as Array<any>;
+
     res.send({
       message: "Successfully Get Report",
       success: true,
-      data: data
+      data: data,
     });
   } catch (err: any) {
     console.log(err.message);
@@ -331,17 +331,17 @@ accountingReporting.post("/report/search-postponement", async (req, res) => {
       OR b.Name like ?
     `;
 
-    const data  = await prisma.$queryRawUnsafe(
-        qry,
-        `%${req.body.search}%`,
-        `%${req.body.search}%`,
-        `%${req.body.search}%`,
-      ) as Array<any>
-      
+    const data = (await prisma.$queryRawUnsafe(
+      qry,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`,
+      `%${req.body.search}%`
+    )) as Array<any>;
+
     res.send({
       message: "Successfully Get Report",
       success: true,
-      data: data
+      data: data,
     });
   } catch (err: any) {
     console.log(err.message);
@@ -374,6 +374,21 @@ accountingReporting.post(
   async (req, res) => {
     try {
       SubsidiaryLedger(req, res);
+    } catch (err: any) {
+      res.send({
+        message: err.message,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+// Subsidiary Ledger Excel
+accountingReporting.post(
+  "/report/generate-report-excel-subsidiary-ledger",
+  async (req, res) => {
+    try {
+      SubsidiaryLedgerExcel(req, res);
     } catch (err: any) {
       res.send({
         message: err.message,
@@ -605,7 +620,7 @@ accountingReporting.post(
         req.body.RCPNo
       )) as Array<any>;
 
-      console.log(data)
+      console.log(data);
       const newData = data.map((itm, idx: number) => {
         itm.Check_Amnt = formatNumber(
           parseFloat(itm.Check_Amnt.toString().replace(/,/g, ""))
@@ -785,7 +800,7 @@ accountingReporting.post(
   "/report/generate-report-postponement",
   async (req, res) => {
     try {
-     const data = (await prisma.$queryRawUnsafe(
+      const data = (await prisma.$queryRawUnsafe(
         `   
          selecT 
           PNNO, 
@@ -2175,6 +2190,753 @@ async function SubsidiaryLedger(req: Request, res: Response) {
 
     const pdfReportGenerator = new PDFReportGenerator(props);
     return pdfReportGenerator.generatePDF(res);
+  }
+}
+async function SubsidiaryLedgerExcel(req: Request, res: Response) {
+  console.log(req.body);
+  const _qryJournal = qryJournal();
+  let sFilter = " ";
+  let Qry = "";
+  // Global variables (you can set them as needed)
+  let GL_Code = req.body.account; // Example: "ALL"
+  let DateFrom: any = new Date(req.body.dateFrom);
+  let DateTo: any = new Date(req.body.dateTo);
+
+  const _mSubsi: any = req.body.subsi;
+  let mInput = req.body.subsi_options; // User input for Sub-Acct or ID
+  let mField = req.body.mField; // Example: Address or any other field
+  let dt: any = []; // Result data
+
+  if (GL_Code === "") GL_Code = "ALL";
+  // Define your logic
+  // Delete from xSubsidiary
+  await prisma.$queryRawUnsafe("DELETE FROM xsubsidiary");
+
+  switch (_mSubsi.trim()) {
+    case "ALL":
+      // Check if specific GL Code is provided
+      if (GL_Code.trim() !== "ALL") {
+        // If DateFrom is the first day of the month
+        if (
+          format(new Date(DateFrom), "yyyy-MM-01") ===
+          format(new Date(DateFrom), "yyyy-MM-dd")
+        ) {
+          // Build SQL query for 'BF' or 'AB' Source_Type
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Source_Type IN ('BF', 'AB') 
+                AND qryJournal.Date_Query >= '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+              AND  qryJournal.Date_Query  <= '${format(
+                DateFrom,
+                "yyyy-MM-dd"
+              )}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        } else {
+          // Build SQL query excluding 'BFD' and 'BFS'
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Source_Type NOT IN ('BFD', 'BFS') 
+                AND qryJournal.Date_Query >= '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-dd"
+                )}' 
+                AND  qryJournal.Date_Query <= '${format(
+                  subDays(DateFrom, 1),
+                  "yyyy-MM-dd"
+                )}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        }
+        console.log(Qry);
+      } else {
+        // If all GL codes are considered
+        if (
+          format(new Date(DateFrom), "yyyy-MM-01") ===
+          format(new Date(DateFrom), "yyyy-MM-dd")
+        ) {
+          // SQL query for all GL Codes, Source_Type 'BF' or 'AB'
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Source_Type IN ('BF', 'AB') 
+                AND qryJournal.Date_Query >=  '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND  qryJournal.Date_Query <= '${format(
+                  DateFrom,
+                  "yyyy-MM-dd"
+                )}' 
+              GROUP BY qryJournal.GL_Acct 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        } else {
+          // SQL query for all GL Codes, excluding 'BFD' and 'BFS'
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Source_Type NOT IN ('BFD', 'BFS') 
+                AND qryJournal.Date_Query >= '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND qryJournal.Date_Query <= '${format(
+                  subDays(DateFrom, 1),
+                  "yyyy-MM-dd"
+                )}' 
+              GROUP BY qryJournal.GL_Acct 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        }
+      }
+      // Execute the raw query
+      dt = await prisma.$queryRawUnsafe(Qry);
+
+      // If we get results, insert them into xSubsidiary
+      if (dt.length > 0) {
+        for (const row of dt) {
+          let debit = row.mDebit;
+          let credit = row.mCredit;
+          let balance = parseFloat(debit) - parseFloat(credit);
+
+          // Insert query into xSubsidiary
+          await prisma.$queryRawUnsafe(`
+              INSERT INTO xsubsidiary 
+              (Date_Entry, Sort_Number, Source_Type, Source_No, Explanation, Debit, Credit, Bal, Balance, Address, GL_Acct) 
+              VALUES 
+              ('${format(subDays(DateFrom, 1), "yyyy-MM-dd")}', 1, 'BF', 
+               '${format(
+                 subDays(DateFrom, 1),
+                 "MMddyy"
+               )}', 'Balance Forwarded', 
+               ${debit}, ${credit}, ${balance}, ${balance}, '${mField}', '${
+            row.GL_Acct
+          }');
+            `);
+        }
+      }
+      break;
+    case "ID #":
+      // Handle cases for "ID #"
+      sFilter = `AND qryJournal.ID_No = '${mInput}'`;
+
+      if (GL_Code.trim() !== "ALL") {
+        if (
+          format(new Date(DateFrom), "yyyy-MM-01") ===
+          format(new Date(DateFrom), "yyyy-MM-dd")
+        ) {
+          // Query for a specific GL code with ID filter
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.ID_No = '${mInput}' 
+                AND qryJournal.Source_Type IN ('BFD', 'AB') 
+                AND qryJournal.Date_Query >= '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND qryJournal.Date_Query <= '${format(
+                  DateFrom,
+                  "yyyy-MM-dd"
+                )}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        } else {
+          // Query excluding 'BF' and 'BFS' for specific GL code with ID filter
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.ID_No = '${mInput}' 
+                AND qryJournal.Source_Type NOT IN ('BF', 'BFS') 
+                AND qryJournal.Date_Query >= '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND  qryJournal.Date_Query <  '${format(
+                  DateFrom,
+                  "yyyy-MM-dd"
+                )}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        }
+      } else {
+      }
+
+      dt = await prisma.$queryRawUnsafe(Qry);
+
+      // If we get results, insert them into xSubsidiary
+      if (dt.length > 0) {
+        for (const row of dt) {
+          let debit = row.mDebit;
+          let credit = row.mCredit;
+          let balance = parseFloat(debit) - parseFloat(credit);
+
+          // Insert query into xSubsidiary
+          await prisma.$queryRawUnsafe(`
+              INSERT INTO xsubsidiary 
+              (
+                Date_Entry, 
+                Sort_Number, 
+                Source_Type, 
+                Source_No, 
+                Explanation, 
+                Debit, 
+                Credit, 
+                Bal, 
+                Balance,
+                Address, 
+                GL_Acct
+              ) 
+              VALUES 
+              (
+              '${format(subDays(DateFrom, 1), "yyyy-MM-dd")}',
+               1,
+               'BF', 
+               '${format(subDays(DateFrom, 1), "MMddyy")}',
+                'Balance Forwarded', 
+               ${debit},
+              ${credit}, 
+              ${balance}, 
+              ${balance}, 
+              '${mField}', 
+              '${row.GL_Acct}'
+              );
+            `);
+        }
+      }
+
+      // Execute and handle results similar to above
+      // Add logic for inserting into xSubsidiary if needed.
+      break;
+    case "Sub-Acct #":
+      sFilter = `AND qryJournal.Sub_Acct = '${mInput}'`;
+
+      // Check if specific GL Code is provided
+      if (GL_Code.trim() !== "ALL") {
+        // If DateFrom is the first day of the month
+        if (
+          format(new Date(DateFrom), "yyyy-MM-01") ===
+          format(new Date(DateFrom), "yyyy-MM-dd")
+        ) {
+          // Build SQL query for 'BFS' or 'AB' Source_Type with Sub-Acct
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Sub_Acct = '${mInput}' 
+                AND qryJournal.Source_Type IN ('BFS', 'AB') 
+                AND qryJournal.Date_Query BETWEEN '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND '${format(DateFrom, "yyyy-MM-dd")}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        } else {
+          // Build SQL query excluding 'BF' and 'BFD' with Sub-Acct
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Sub_Acct = '${mInput}' 
+                AND qryJournal.Source_Type NOT IN ('BF', 'BFD') 
+                AND qryJournal.Date_Query BETWEEN '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND '${format(subDays(DateFrom, 1), "yyyy-MM-dd")}' 
+              GROUP BY qryJournal.GL_Acct 
+              HAVING qryJournal.GL_Acct = '${GL_Code.trim()}' 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        }
+      } else {
+        // If all GL codes are considered
+        if (
+          format(new Date(DateFrom), "yyyy-MM-01") ===
+          format(new Date(DateFrom), "yyyy-MM-dd")
+        ) {
+          // SQL query for all GL Codes with Sub-Acct, Source_Type 'BFS' or 'AB'
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Sub_Acct = '${mInput}' 
+                AND qryJournal.Source_Type IN ('BFS', 'AB') 
+                AND qryJournal.Date_Query BETWEEN '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND '${format(DateFrom, "yyyy-MM-dd")}' 
+              GROUP BY qryJournal.GL_Acct 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        } else {
+          // SQL query for all GL Codes, excluding 'BF' and 'BFD' with Sub-Acct
+          Qry = `
+              SELECT qryJournal.GL_Acct, 
+                     SUM(IFNULL(qryJournal.mDebit, 0)) AS mDebit, 
+                     SUM(IFNULL(qryJournal.mCredit, 0)) AS mCredit 
+              FROM (${_qryJournal}) qryJournal 
+              WHERE qryJournal.Sub_Acct = '${mInput}' 
+                AND qryJournal.Source_Type NOT IN ('BF', 'BFD') 
+                AND qryJournal.Date_Query BETWEEN '${format(
+                  new Date(DateFrom),
+                  "yyyy-MM-01"
+                )}' 
+                AND '${format(subDays(DateFrom, 1), "yyyy-MM-dd")}' 
+              GROUP BY qryJournal.GL_Acct 
+              ORDER BY qryJournal.GL_Acct;
+            `;
+        }
+      }
+      // Execute the raw query
+      dt = await prisma.$queryRawUnsafe(Qry);
+
+      // If we get results, insert them into xSubsidiary
+      if (dt.length > 0) {
+        for (const row of dt) {
+          let debit = row.mDebit;
+          let credit = row.mCredit;
+          let balance = parseFloat(debit) - parseFloat(credit);
+
+          // Insert query into xSubsidiary
+          await prisma.$queryRawUnsafe(`
+              INSERT INTO xsubsidiary 
+              (Date_Entry, Sort_Number, Source_Type, Source_No, Explanation, Debit, Credit, Bal, Balance, Address, GL_Acct) 
+              VALUES 
+              ('${format(subDays(DateFrom, 1), "yyyy-MM-dd")}', 1, 'BF', 
+               '${format(
+                 subDays(DateFrom, 1),
+                 "yyyy-MM-dd"
+               )}', 'Balance Forwarded', 
+               ${debit}, ${credit}, ${balance}, ${balance}, '${mField}', '${
+            row.GL_Acct
+          }');
+            `);
+        }
+      }
+
+      break;
+    // Add similar cases for 'Sub-Acct #' and others as needed
+  }
+  // Transaction Query
+  if (GL_Code.trim() !== "ALL") {
+    // For specific GL_Code
+    Qry = `
+          SELECT 
+          qryJournal.Number, 
+          qryJournal.Hide_Code, 
+          qryJournal.Date_Entry, 
+          qryJournal.Source_Type,
+                qryJournal.Source_No, 
+                COALESCE(qryJournal.Explanation, '') as Explanation, 
+                COALESCE(qryJournal.Payto, '') as Payto, 
+                qryJournal.GL_Acct, qryJournal.Sub_Acct, 
+                qryJournal.ID_No, 
+                qryJournal.mShort, 
+                qryJournal.mSub_Acct, 
+                qryJournal.mID, 
+                qryJournal.mDebit, 
+                qryJournal.mCredit, 
+                COALESCE(qryJournal.Check_Date, '') as Check_Date, 
+                COALESCE(qryJournal.Checked, '') as Checked, 
+                COALESCE(qryJournal.Bank, '') as Bank, 
+                COALESCE(qryJournal.Remarks, '') as Remarks 
+          FROM (${_qryJournal}) qryJournal
+          WHERE qryJournal.Date_Entry BETWEEN '${format(
+            DateFrom,
+            "yyyy-MM-dd"
+          )}' AND '${format(addDays(DateTo, 1), "yyyy-MM-dd")}'
+            AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
+            AND qryJournal.GL_Acct = '${GL_Code.trim()}'
+          ${sFilter}
+          ORDER BY  qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;
+        `;
+  } else {
+    // For all GL codes
+    Qry = `
+          SELECT qryJournal.Number, qryJournal.Hide_Code, qryJournal.Date_Entry, qryJournal.Source_Type,
+                qryJournal.Source_No, qryJournal.Explanation, qryJournal.Payto, qryJournal.GL_Acct,
+                qryJournal.Sub_Acct, qryJournal.ID_No, qryJournal.mShort, qryJournal.mSub_Acct, 
+                qryJournal.mID, qryJournal.mDebit, qryJournal.mCredit, qryJournal.Check_Date, 
+                qryJournal.Checked, qryJournal.Bank, qryJournal.Remarks
+          FROM (${_qryJournal}) qryJournal
+          WHERE qryJournal.Date_Entry BETWEEN '${format(
+            DateFrom,
+            "yyyy-MM-dd"
+          )}' AND '${format(addDays(DateTo, 1), "yyyy-MM-dd")}'
+            AND qryJournal.Source_Type NOT IN ('BF', 'BFD', 'BFS')
+          ${sFilter}
+          ORDER BY   qryJournal.Number,qryJournal.Date_Entry,qryJournal.Source_No, qryJournal.Auto;
+        `;
+  }
+
+  // Execute the transaction query
+  dt = await prisma.$queryRawUnsafe(Qry);
+
+  // Processing query results
+  console.log(Qry);
+
+  if (dt.length > 0) {
+    let lastAcct = "";
+    let sParticular = "";
+    let Balance = 0;
+
+    for (let i = 0; i < dt.length; i++) {
+      const row = dt[i];
+      // Check if the GL_Acct has changed
+
+      if (lastAcct !== row.GL_Acct) {
+        lastAcct = row.GL_Acct;
+
+        // Query to get the Balance from xSubsidiary
+        let balanceQuery = `
+              SELECT Balance 
+              FROM xsubsidiary 
+              WHERE GL_Acct = '${lastAcct}' 
+         
+            `;
+        //       AND Explanation = 'Balance Forwarded';
+
+        let dtBal: any = await prisma.$queryRawUnsafe(balanceQuery);
+        if (dtBal.length > 0) {
+          Balance = parseFloat(
+            (dtBal[0].Balance || 0).toString().replace(/,/g, "")
+          );
+        } else {
+          Balance = 0;
+        }
+      }
+      // Update Balance
+      Balance += parseFloat(row.mDebit) - parseFloat(row.mCredit);
+
+      // Set sParticular based on mField
+      switch (mField) {
+        case "Explanations":
+          sParticular = clrStr(row.Explanation);
+          break;
+        case "Payee":
+          sParticular = clrStr(row.Payto);
+          break;
+        case "Remarks":
+          sParticular = clrStr(row.Remarks);
+          break;
+      }
+
+      // const xsubsidiary_id = uuidV4();
+
+      // Insert the record into xSubsidiary
+      // Execute the insert query
+      await prisma.xsubsidiary.create({
+        data: {
+          Date_Entry: defaultFormat(new Date(row.Date_Entry)),
+          Sort_Number: parseInt(row.Number),
+          Source_Type: row["Hide_Code"],
+          Source_No: row.Source_No,
+          Explanation: clrStr(row.Explanation),
+          Payto: clrStr(row.Payto),
+          GL_Acct: row.GL_Acct,
+          Sub_Acct: row.Sub_Acct || "",
+          ID_No: clrStr(row.ID_No || ""),
+          cGL_Acct: clrStr(row.mShort),
+          cSub_Acct: clrStr(row.mSub_Acct),
+          cID_No: clrStr(row.mID),
+          Debit: row.mDebit,
+          Credit: row.mCredit,
+          Bal: parseFloat(row.mDebit) - parseFloat(row.mCredit),
+          Balance: Balance,
+          Check_Date:
+            row.Check_Date !== "" && row.Check_Date !== null
+              ? defaultFormat(new Date(row.Check_Date))
+              : null,
+          Check_No: row.Checked,
+          Check_Bank: clrStr(row.Bank),
+          Address: mField,
+          Particulars: sParticular,
+        },
+      });
+    }
+  }
+
+  const result = (await prisma.$queryRawUnsafe(
+    "select * FROM xsubsidiary order by Date_Entry "
+  )) as Array<any>;
+  let runningBalance = 0;
+
+  const data = result.map((itm: any) => {
+    itm.Date_Entry = format(new Date(itm.Date_Entry), "MM/dd/yyyy");
+    const Debit = parseFloat(itm.Debit.toString().replace(/,/g, ""));
+    const Credit = parseFloat(itm.Credit.toString().replace(/,/g, ""));
+    itm.Debit = formatNumber(Debit);
+    itm.Credit = formatNumber(Credit);
+    runningBalance = runningBalance + (Debit - Credit);
+    itm.Balance = formatNumber(runningBalance);
+    return {
+      ...itm,
+      refs: `${itm.Source_Type}  ${itm.Source_No}`,
+    };
+  });
+
+  const totalDebit = getSum(data, "Debit");
+  const totalCredit = getSum(data, "Credit");
+
+  let PAGE_WIDTH = 612;
+  let PAGE_HEIGHT = 792;
+  if (req.body.format === "No Running Balance") {
+    data.push({
+      Date_Entry: "",
+      Sort_Number: 0,
+      Source_Type: "",
+      Source_No: "",
+      Explanation: "",
+      Particulars: `${formatNumber(totalDebit - totalCredit)}`,
+      Payto: "",
+      Address: "",
+      Check_Date: "",
+      Check_No: "TOTAL",
+      Check_Bank: "",
+      GL_Acct: "",
+      Sub_Acct: "",
+      ID_No: " ",
+      cGL_Acct: "",
+      cSub_Acct: "",
+      cID_No: "",
+      Debit: formatNumber(totalDebit),
+      Credit: formatNumber(totalCredit),
+      Bal: -15500,
+      Balance: "0",
+      refs: "",
+    });
+
+    drawExcel(res, {
+      columns: [
+        { key: "Date_Entry", width: 22 },
+        { key: "refs", width: 25 },
+        { key: "Sub_Acct", width: 15 },
+        { key: "ID_No", width: 15 },
+        { key: "Check_No", width: 16 },
+        { key: "Debit", width: 16 },
+        { key: "Credit", width: 17 },
+        { key: "Particulars", width: 75 },
+      ],
+      data: data,
+      beforeDraw: (props: any, worksheet: any) => {
+        req.body.title.split("\n").forEach((t: string, idx: number) => {
+          const tt = worksheet.addRow([t]);
+          props.mergeCells(
+            idx + 1,
+            props.alphabet[0],
+            props.alphabet[props.columns.length - 1]
+          );
+          tt.font = { bolder: true };
+        });
+
+    
+        props.setFontSize([1, 2, 3], 12);
+
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+        // Now, insert the column header row after the custom rows (row 3)
+        const headerRow = worksheet.addRow([
+          "DATE",
+          "REF No.",
+          "SUB ACCT",
+          "ID NO",
+          "CHECK NO",
+          "DEBIT",
+          "CREDIT",
+          "EXPLANATION",
+        ]);
+        headerRow.font = { bold: true };
+        props.addBorder(11, props.alphabet.slice(0, props.columns.length), {
+          bottom: { style: "thin" },
+        });
+      },
+      onDraw: (props: any, rowItm: any, rowIdx: number) => {
+    props.setAlignment(rowIdx, ["F"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+        props.setAlignment(rowIdx, ["G"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+    
+      },
+      afterDraw: (props: any, worksheet: any) => {
+       
+      },
+    });
+  } else {
+    data.push({
+      Date_Entry: "",
+      Sort_Number: 0,
+      Source_Type: "",
+      Source_No: "",
+      Explanation: "",
+      Particulars: ``,
+      Payto: "",
+      Address: "",
+      Check_Date: "",
+      Check_No: "TOTAL",
+      Check_Bank: "",
+      GL_Acct: "",
+      Sub_Acct: "",
+      ID_No: " ",
+      cGL_Acct: "",
+      cSub_Acct: "",
+      cID_No: "",
+      Debit: formatNumber(totalDebit),
+      Credit: formatNumber(totalCredit),
+      Bal: -15500,
+      Balance: `${formatNumber(totalDebit - totalCredit)}`,
+      refs: "",
+    });
+
+    drawExcel(res, {
+      columns: [
+        { key: "Date_Entry", width: 22 },
+        { key: "refs", width: 25 },
+        { key: "Sub_Acct", width: 15 },
+        { key: "ID_No", width: 25 },
+        { key: "Check_No", width: 16 },
+        { key: "Debit", width: 16 },
+        { key: "Credit", width: 17 },
+        { key: "Balance", width: 17 },
+        { key: "Particulars", width: 75 },
+      ],
+      data: data,
+      beforeDraw: (props: any, worksheet: any) => {
+      
+
+
+  req.body.title.split("\n").forEach((t: string, idx: number) => {
+          const tt = worksheet.addRow([t]);
+       props.mergeCells(
+            idx + 1,
+            props.alphabet[0],
+            props.alphabet[props.columns.length - 1]
+          );
+          tt.font = { bolder: true };
+        });
+
+        
+
+        props.setFontSize([1, 2, 3], 12);
+
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+        // Now, insert the column header row after the custom rows (row 3)
+        const headerRow = worksheet.addRow([
+          "DATE",
+          "REF No.",
+          "SUB ACCT",
+          "ID NO",
+          "CHECK NO",
+          "DEBIT",
+          "CREDIT",
+          "BALANCE",
+          "EXPLANATION",
+        ]);
+        headerRow.font = { bold: true };
+        props.addBorder(6, props.alphabet.slice(0, props.columns.length), {
+          bottom: { style: "thin" },
+        });
+      },
+      onDraw: (props: any, rowItm: any, rowIdx: number) => {
+      if(rowIdx > 11){
+        props.setAlignment(rowIdx, ["F"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+        props.setAlignment(rowIdx, ["G"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+        props.setAlignment(rowIdx, ["H"], {
+          horizontal: "right",
+          vertical: "middle",
+        });
+      }
+        
+      },
+      afterDraw: (props: any, worksheet: any) => {
+        // props.boldText(1, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        // props.boldText(2, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        // props.boldText(3, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        // dailyDateIndexes.forEach((idx: number) => {
+        //   props.mergeCells(idx + 7, "A", "H");
+        //   props.boldText(idx + 7, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        // });
+        // dailyTotalIndexes.forEach((idx: number) => {
+        //   props.mergeCells(idx + 7, "A", "C");
+        //   props.mergeCells(idx + 7, "D", "F");
+        //   props.boldText(idx + 7, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        //   props.addBorder(idx + 7, ["G"], {
+        //     top: { style: "thin" },
+        //   });
+        // });
+        // monthTotalIndexes.forEach((idx: number) => {
+        //   props.mergeCells(idx + 7, "A", "C");
+        //   props.mergeCells(idx + 7, "D", "F");
+        //   props.boldText(idx + 7, ["A", "B", "C", "D", "E", "F", "G", "H"]);
+        //   props.addBorder(idx + 7, ["G"], {
+        //     top: { style: "thin" },
+        //   });
+        // });
+        // props.mergeCells(data.length - 1 + 7, "A", "C");
+        // props.mergeCells(data.length - 1 + 7, "D", "F");
+        // props.boldText(data.length - 1 + 7, [
+        //   "A",
+        //   "B",
+        //   "C",
+        //   "D",
+        //   "E",
+        //   "F",
+        //   "G",
+        //   "H",
+        // ]);
+        // props.addBorder(data.length - 1 + 7, ["G"], {
+        //   top: { style: "thin" },
+        // });
+        // props.setAlignment(data.length - 1 + 7, ["G"], {
+        //   horizontal: "right",
+        //   vertical: "middle",
+        // });
+      },
+    });
   }
 }
 async function TrialBalance(req: Request, res: Response) {
@@ -3691,7 +4453,7 @@ async function PostDatedChecksRegistry(req: Request, res: Response) {
   let PAGE_HEIGHT = 892;
   const props: any = {
     data: data,
-    columnWidths: [90, 80, 150, 80, 60, 80, 80, 60,100],
+    columnWidths: [90, 80, 150, 80, 60, 80, 80, 60, 100],
     headers: [
       { headerName: "DATE RECEIVED", textAlign: "left" },
       { headerName: "ACCT NO.", textAlign: "left" },
@@ -4076,6 +4838,7 @@ async function PostDatedChecksRegistryExcel(req: Request, res: Response) {
         horizontal: "right",
         vertical: "middle",
       });
+      
     },
     afterDraw: (props: any, worksheet: any) => {
       props.boldText(1, ["A", "B", "C", "D", "E", "F", "G", "H"]);
