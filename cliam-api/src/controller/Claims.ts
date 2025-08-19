@@ -1380,26 +1380,18 @@ Claims.post(
               });
             });
           }
-
           await __prisma.claims_details.create({
             data: {
               claim_id: claimId,
               claim_reference_no: metadata.reference,
               document_id: metadata.documentId,
               claim_type: metadata.claim_type,
-              date_report:
-                metadata.date_report_not_formated !== ""
-                  ? new Date(metadata.date_report_not_formated)
-                  : null,
+              date_report: checkValidDate(metadata.date_report_not_formated),
               date_accident: new Date(metadata.date_accident_not_formated),
-              date_received:
-                metadata.date_receive_not_formated !== ""
-                  ? new Date(metadata.date_receive_not_formated)
-                  : null,
-              date_approved:
-                metadata.date_approved_not_formated !== ""
-                  ? new Date(metadata.date_approved_not_formated)
-                  : null,
+              date_received: checkValidDate(metadata.date_receive_not_formated),
+              date_approved: checkValidDate(
+                metadata.date_approved_not_formated
+              ),
               status: metadata.status,
               claimStatus: metadata.claimStatus,
               amount_claim: metadata.amount_claim.replace(/,/g, ""),
@@ -1597,6 +1589,7 @@ Claims.post(
               });
             });
           }
+          console.log(metadata);
 
           await __prisma.claims_details.create({
             data: {
@@ -1604,19 +1597,12 @@ Claims.post(
               claim_reference_no: metadata.reference,
               document_id: metadata.documentId,
               claim_type: metadata.claim_type,
-              date_report:
-                metadata.date_report_not_formated !== ""
-                  ? new Date(metadata.date_report_not_formated)
-                  : undefined,
+              date_report: checkValidDate(metadata.date_report_not_formated),
               date_accident: new Date(metadata.date_accident_not_formated),
-              date_received:
-                metadata.date_receive_not_formated !== ""
-                  ? new Date(metadata.date_receive_not_formated)
-                  : undefined,
-              date_approved:
-                metadata.date_approved_not_formated !== ""
-                  ? new Date(metadata.date_approved_not_formated)
-                  : undefined,
+              date_received: checkValidDate(metadata.date_receive_not_formated),
+              date_approved: checkValidDate(
+                metadata.date_approved_not_formated
+              ),
               status: metadata.status,
               claimStatus: metadata.claimStatus,
               amount_claim: metadata.amount_claim.replace(/,/g, ""),
@@ -2261,6 +2247,11 @@ Claims.post("/generate-claim-sheet", async (req, res) => {
     }
   }
 });
+function checkValidDate(params: any) {
+  if (params === null || params === undefined || params === "") return null;
+
+  return new Date(params);
+}
 export function getFileExtension(filename: string) {
   let dotIndex = filename.lastIndexOf(".");
   if (dotIndex === -1) return null; // No extension found
