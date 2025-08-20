@@ -2653,6 +2653,7 @@ async function PrintTPL(req: Request, res: Response) {
   });
 
   const headerIndexes = getIndexes(data, (item: any) => item?.header === true);
+  const totalIndexes = getIndexes(data, (item: any) => item?.total === true);
 
   let PAGE_WIDTH = 660;
   let PAGE_HEIGHT = 820;
@@ -2700,7 +2701,7 @@ async function PrintTPL(req: Request, res: Response) {
     { headerName: "MOTOR NO", textAlign: "left" },
     { headerName: "TOTAL", textAlign: "right" },
   ];
-  const columnWidths = [65, 170, 70, 60, 100, 80, 70];
+  const columnWidths = [70, 170, 70, 60, 100, 80, 70];
 
   startY = drawTitleAndHeader(doc, startY, currentPage);
   drawFooter(doc, startY);
@@ -2733,11 +2734,11 @@ async function PrintTPL(req: Request, res: Response) {
     if (headerIndexes.includes(rowIndex)) {
       doc
         .moveTo(MARGIN.left, yAxis - 3)
-        .lineTo(MARGIN.left + 65, yAxis - 3)
+        .lineTo(MARGIN.left + 70, yAxis - 3)
         .stroke();
       doc
         .moveTo(MARGIN.left, yAxis + 9)
-        .lineTo(MARGIN.left + 65, yAxis + 9)
+        .lineTo(MARGIN.left + 70, yAxis + 9)
         .stroke();
 
       // side
@@ -2747,25 +2748,23 @@ async function PrintTPL(req: Request, res: Response) {
         .stroke();
 
       doc
-        .moveTo(MARGIN.left + 65, yAxis - 3)
-        .lineTo(MARGIN.left + 65, yAxis + 9)
+        .moveTo(MARGIN.left + 70, yAxis - 3)
+        .lineTo(MARGIN.left + 70, yAxis + 9)
         .stroke();
     }
-    // headerIndexes.forEach((itm: any) => {
-    //   doc
-    //     .moveTo(MARGIN.left, yAxis - 5)
-    //     .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
-    //     .stroke();
-    // });
+
+    if (totalIndexes.includes(rowIndex)) {
+      doc
+        .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 3)
+        .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 3)
+        .stroke();
+         doc
+        .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 5)
+        .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
+        .stroke();
+    }
   }
-  function drawPerPage() {
-    // headerIndexes.forEach((itm: any) => {
-    //   doc
-    //     .moveTo(MARGIN.left, yAxis - 5)
-    //     .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
-    //     .stroke();
-    // });
-  }
+  function drawPerPage() {}
   function underLineColumn(rowIndex: number, colIdx: Array<string>) {
     underlineColumn.set(rowIndex, { colIdx });
   }
