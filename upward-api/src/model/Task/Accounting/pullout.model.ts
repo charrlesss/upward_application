@@ -138,7 +138,9 @@ export async function loadDetails(req: Request, RCPNo: string) {
       From pullout_request a 
       Inner join pullout_request_details b on a.RCPNo = b.RCPNo 
       Inner join pdc c on b.CheckNo = c.Check_No and a.PNNo = c.PNo 
-      Where a.RCPNo =  ?
+      Where 
+        a.RCPNo =  ?
+        and b.cancel = 0
       order by Check_Date asc
     `,
     RCPNo

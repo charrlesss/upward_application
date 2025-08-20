@@ -2567,122 +2567,95 @@ async function PrintAll(req: Request, res: Response) {
 }
 async function PrintTPL(req: Request, res: Response) {
   const qry = (policytablename: string, policies: string) => `
-  SELECT * FROM ${policytablename} a 
+  SELECT 
+   	b.DateIssued,
+	  b.PolicyNo,
+    c.Shortname,
+    a.PlateNo,
+    a.ChassisNo,
+    a.MotorNo,
+    b.TotalDue,
+    d.Vehicle
+  FROM ${policytablename} a 
   left join policy b on a.PolicyNo = b.PolicyNo
   left join (${selectClient}) c on b.IDNo = c.IDNo
+  left join ctplregistration d on a.PolicyNo BETWEEN CONCAT(d.Prefix, d.NumSeriesFrom) AND CONCAT(d.Prefix, d.NumSeriesTo)
   where a.PolicyNo in ('${policies}') and  a.PolicyType = 'TPL';`;
   const data: Array<any> = [];
   const tableData = req.body.data[0].data;
+
   const COMDATA = (await prisma.$queryRawUnsafe(
     qry("vpolicy", tableData.join("','"))
   )) as Array<any>;
 
   if (COMDATA.length > 0) {
-    data.push({
-      PolicyNo: "TPL",
-      Insured: "",
-      Premium: "",
-      From: "",
-      To: "",
-      GrossPremium: "",
-      header: true,
-    });
-    for (const itm of COMDATA) {
-      const newData: Array<any> = [
-        {
-          PolicyNo: itm.PolicyNo,
-          Insured: itm.Shortname,
-          Premium: formatNumber(
-            parseFloat(itm.TotalPremium.toString().replace(/,/g, ""))
-          ),
-          From: format(new Date(itm.DateFrom), "MM/dd/yyyy"),
-          To: format(new Date(itm.DateTo), "MM/dd/yyyy"),
-          GrossPremium: formatNumber(
-            parseFloat(itm.TotalDue.toString().replace(/,/g, ""))
-          ),
-          solo: false,
-        },
-        {
-          PolicyNo: "",
-          Insured: `${itm.Model} ${itm.Make} ${itm.BodyType}`,
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          solo: true,
-        },
-        {
-          PolicyNo: "",
-          Insured: itm.PlateNo,
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          solo: true,
-        },
-        {
-          PolicyNo: "",
-          Insured: itm.ChassisNo,
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          solo: true,
-        },
-        {
-          PolicyNo: "",
-          Insured: "",
-          Premium: "",
-          From: "",
-          To: "",
-          GrossPremium: "",
-          gapPerRow: true,
-        },
-      ];
-      data.push(...newData);
+    const grouped = COMDATA.reduce((acc, item) => {
+      const key = item.Vehicle;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    }, {});
+    for (const vehicle in grouped) {
+      data.push({
+        DateIssued: vehicle,
+        Assured: "",
+        PolicyNo: "",
+        PlateNo: "",
+        ChassisNo: "",
+        MotorNo: "",
+        Total: "",
+        header: true,
+      });
+      grouped[vehicle].forEach((item: any) => {
+        console.log("   PolicyNo:", item.PolicyNo, "Owner:", item.Owner);
+        data.push({
+          DateIssued: format(new Date(item.DateIssued), "MM/dd/yyyy"),
+          Assured: item.Shortname,
+          PolicyNo: item.PolicyNo,
+          PlateNo: item.PlateNo,
+          ChassisNo: item.ChassisNo,
+          MotorNo: item.MotorNo,
+          Total: item.TotalDue,
+        });
+      });
     }
-    data.push({
-      PolicyNo: "",
-      Insured: "",
-      Premium: "",
-      From: "",
-      To: "",
-      GrossPremium: "",
-      gap: true,
-    });
   }
   const getTotal = data.reduce((t, itm) => {
     return (
       t +
       parseFloat(
-        (itm.GrossPremium && itm.GrossPremium !== "" ? itm.GrossPremium : 0)
+        (itm.Total && itm.Total !== "" ? itm.Total : 0)
           .toString()
           .replace(/,/g, "")
       )
     );
   }, 0);
-
   data.push({
+    DateIssued: "",
+    Assured: "",
     PolicyNo: "",
-    Insured: "",
-    Premium: "",
-    From: "",
-    To: "",
-    GrossPremium: formatNumber(getTotal),
+    PlateNo: "",
+    ChassisNo: "",
+    MotorNo: "",
+    Total: "",
+  });
+  data.push({
+    DateIssued: "",
+    Assured: "",
+    PolicyNo: "",
+    PlateNo: "",
+    ChassisNo: "",
+    MotorNo: "",
+    Total: formatNumber(getTotal),
     total: true,
   });
-  const underlineIndexes = getIndexes(
-    data,
-    (item: any) => item?.header === true
-  );
-  const headerIndexes = getIndexes(
-    data,
-    (item: any) =>
-      item?.header === true || item?.solo === false || item?.total === true
-  );
-  const getSolo = getIndexes(data, (item: any) => item?.solo === true);
+
+  const headerIndexes = getIndexes(data, (item: any) => item?.header === true);
+
   let PAGE_WIDTH = 660;
-  let PAGE_HEIGHT = 841;
+  let PAGE_HEIGHT = 820;
   let MIN_ROW_HEIGHT = 10;
 
   const outputFilePath = "manok.pdf";
@@ -2698,8 +2671,8 @@ async function PrintTPL(req: Request, res: Response) {
   const MARGIN = {
     top: 50,
     bottom: 70,
-    left: 30,
-    right: 30,
+    left: 20,
+    right: 20,
   };
 
   let startY = MARGIN.top;
@@ -2709,22 +2682,29 @@ async function PrintTPL(req: Request, res: Response) {
   const boldedRows: Array<number> = [];
   const underlineColumn = new Map();
 
-  const keys = ["PolicyNo", "Insured", "Premium", "From", "To", "GrossPremium"];
-  const headers = [
-    { headerName: "POLICY NO", textAlign: "left" },
-    { headerName: "INSURED", textAlign: "left" },
-    { headerName: "PREMIUM", textAlign: "right" },
-    { headerName: "FROM", textAlign: "left" },
-    { headerName: "TO", textAlign: "left" },
-    { headerName: "GROSS PREMIUM", textAlign: "right" },
+  const keys = [
+    "DateIssued",
+    "Assured",
+    "PolicyNo",
+    "PlateNo",
+    "ChassisNo",
+    "MotorNo",
+    "Total",
   ];
-  const columnWidths = [135, 190, 70, 60, 60, 85];
+  const headers = [
+    { headerName: "DATE ISSUED", textAlign: "center" },
+    { headerName: "ASSURED NAME", textAlign: "left" },
+    { headerName: "POLICY NO", textAlign: "left" },
+    { headerName: "PLATE NO", textAlign: "left" },
+    { headerName: "CHASSIS NO", textAlign: "left" },
+    { headerName: "MOTOR NO", textAlign: "left" },
+    { headerName: "TOTAL", textAlign: "right" },
+  ];
+  const columnWidths = [65, 170, 70, 60, 100, 80, 70];
 
   startY = drawTitleAndHeader(doc, startY, currentPage);
   drawFooter(doc, startY);
-
   drawPerPage();
-
   data.forEach((row: any, rowIndex: any) => {
     const rowHeight = calculateRowHeight(doc, row, rowIndex);
     if (startY + rowHeight > PAGE_HEIGHT - MARGIN.bottom) {
@@ -2738,22 +2718,53 @@ async function PrintTPL(req: Request, res: Response) {
       startY = drawTitleAndHeader(doc, startY, currentPage);
       drawFooter(doc, startY);
     }
+    drawPerPageRow(doc, startY, rowIndex);
     drawRow(doc, row, rowIndex, startY);
     startY += rowHeight;
   });
   subReport();
   drawPageNumber();
 
+  function drawPerPageRow(
+    doc: PDFKit.PDFDocument,
+    yAxis: number,
+    rowIndex: number
+  ) {
+    if (headerIndexes.includes(rowIndex)) {
+      doc
+        .moveTo(MARGIN.left, yAxis - 3)
+        .lineTo(MARGIN.left + 65, yAxis - 3)
+        .stroke();
+      doc
+        .moveTo(MARGIN.left, yAxis + 9)
+        .lineTo(MARGIN.left + 65, yAxis + 9)
+        .stroke();
+
+      // side
+      doc
+        .moveTo(MARGIN.left, yAxis - 3)
+        .lineTo(MARGIN.left, yAxis + 9)
+        .stroke();
+
+      doc
+        .moveTo(MARGIN.left + 65, yAxis - 3)
+        .lineTo(MARGIN.left + 65, yAxis + 9)
+        .stroke();
+    }
+    // headerIndexes.forEach((itm: any) => {
+    //   doc
+    //     .moveTo(MARGIN.left, yAxis - 5)
+    //     .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
+    //     .stroke();
+    // });
+  }
   function drawPerPage() {
-    getSolo.forEach((itm: any) => {
-      SpanRow(itm, 1, 5);
-    });
-    headerIndexes.forEach((itm: any) => {
-      boldRow(itm);
-    });
-    underlineIndexes.forEach((itm: any) => {
-      underLineColumn(itm, ["PolicyNo", "GrossPremium"]);
-    });
+    // headerIndexes.forEach((itm: any) => {
+    //   doc
+    //     .moveTo(MARGIN.left, yAxis - 5)
+    //     .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
+    //     .stroke();
+    // });
   }
   function underLineColumn(rowIndex: number, colIdx: Array<string>) {
     underlineColumn.set(rowIndex, { colIdx });
@@ -2837,121 +2848,10 @@ async function PrintTPL(req: Request, res: Response) {
         cellValue = row[key];
       }
 
-      if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "COMPREHENSIVE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(105, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "GPA"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(53, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "FIRE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(53, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "MARINE"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(66, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "CGL & CARI"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(81, startY + 8)
-          .stroke();
-      } else if (
-        colIdx?.includes(key) &&
-        key === "PolicyNo" &&
-        cellValue === "BONDS"
-      ) {
-        doc
-          .moveTo(35, startY + 8)
-          .lineTo(65, startY + 8)
-          .stroke();
-      } else if (row.total) {
-        doc
-          .moveTo(640, startY - 6)
-          .lineTo(570, startY - 6)
-          .stroke();
-
-        doc
-          .moveTo(640, startY + 10.5)
-          .lineTo(570, startY + 10.5)
-          .stroke();
-
-        doc
-          .moveTo(640, startY + 13)
-          .lineTo(570, startY + 13)
-          .stroke();
-      }
-
-      if (cellValue.includes("DELETED:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("DELETED:");
-        doc.text("DELETED:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else if (cellValue.includes("REPLACEMENT:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("REPLACEMENT:");
-
-        doc.text("REPLACEMENT:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else if (cellValue.includes("ADDITIONAL:")) {
-        doc.font("Helvetica-Bold");
-        const [label, value] = cellValue?.toString().split("ADDITIONAL:");
-        doc.text("ADDITIONAL:", startX + 5, startY, {
-          width: 75,
-          align: textHeader,
-        });
-        doc.font("Helvetica");
-        doc.text(value.trim(), startX + 75, startY, {
-          width: colWidth - 10 + 75,
-          align: textHeader,
-        });
-      } else {
-        doc.text(cellValue?.toString() || "", startX + 5, startY, {
-          width: colWidth - 10,
-          align: textHeader,
-        });
-      }
-      // let startY_ = startY + 5;
+      doc.text(cellValue?.toString() || "", startX + 5, startY, {
+        width: colWidth - 10,
+        align: textHeader,
+      });
 
       startX += colWidth;
     });
@@ -3075,11 +2975,9 @@ async function PrintTPL(req: Request, res: Response) {
     let startX = MARGIN.left;
 
     // doc.text("AMOUNT", 171, startY );
-    doc.text("COVERAGE", 447, startY);
-
     headers.forEach((header, colIndex) => {
       const colWidth = columnWidths[colIndex];
-      doc.text(header.headerName, startX + 5, startY + 12, {
+      doc.text(header.headerName, startX + 5, startY, {
         width: colWidth - 10,
         align:
           header.textAlign === "right"
@@ -3098,14 +2996,14 @@ async function PrintTPL(req: Request, res: Response) {
     doc.fontSize(8);
     doc.font("Helvetica");
     doc
-      .moveTo(30, startY - 5)
+      .moveTo(MARGIN.left, startY - 5)
       .lineTo(PAGE_WIDTH - MARGIN.right, startY - 5)
       .stroke();
     doc
-      .moveTo(30, startY + 25)
-      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 25)
+      .moveTo(MARGIN.left, startY + 12)
+      .lineTo(PAGE_WIDTH - MARGIN.right, startY + 12)
       .stroke();
-    startY += 30;
+    startY += 18;
 
     return startY;
   }

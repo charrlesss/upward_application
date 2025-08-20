@@ -33,19 +33,19 @@ const Pullout = express.Router();
 const PulloutRequest = express.Router();
 const PulloutApporved = express.Router();
 
-const UMISEmailToSend = [
-  "upwardinsurance.grace@gmail.com",
-  "lva_ancar@yahoo.com",
-  "upwardinsurance.grace@gmail.com",
-];
-const UCSMIEmailToSend = [
-  "upward.csmi@yahoo.com",
-  "upward.csmi@gmail.com",
-  "upwardinsurance.grace@gmail.com",
-];
+// const UMISEmailToSend = [
+//   "upwardinsurance.grace@gmail.com",
+//   "lva_ancar@yahoo.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
+// const UCSMIEmailToSend = [
+//   "upward.csmi@yahoo.com",
+//   "upward.csmi@gmail.com",
+//   "upwardinsurance.grace@gmail.com",
+// ];
 
-// const UMISEmailToSend = ["charlespalencia21@gmail.com"];
-// const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
+const UMISEmailToSend = ["charlespalencia21@gmail.com"];
+const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
@@ -132,16 +132,17 @@ PulloutRequest.post(`/pullout/reqeust/get-rcpn-no`, async (req, res) => {
   try {
     const data = await prisma.$queryRawUnsafe(
       `
-      SELECT DISTINCT
-            (RCPNo)
+     SELECT DISTINCT
+            (a.RCPNo)
         FROM
-            pullout_request
+            pullout_request a
+            left join pullout_request_details b on a.RCPNo = b.RCPNo
         WHERE
             Branch = 'HO' 
             AND Status = 'PENDING' 
-            and cancel = 0
-            and RCPNo like ?
-        ORDER BY RCPNo
+            and b.cancel = 0
+            and a.RCPNo like ?
+        ORDER BY a.RCPNo
       `,
       `%${req.body.search}%`
     );
