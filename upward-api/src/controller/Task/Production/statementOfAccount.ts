@@ -2617,7 +2617,9 @@ async function PrintTPL(req: Request, res: Response) {
           PlateNo: item.PlateNo,
           ChassisNo: item.ChassisNo,
           MotorNo: item.MotorNo,
-          Total: item.TotalDue,
+          Total: formatNumber(
+            parseFloat((item.TotalDue || 0).toString().replace(/,/g, ""))
+          ),
         });
       });
     }
@@ -2758,7 +2760,7 @@ async function PrintTPL(req: Request, res: Response) {
         .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 3)
         .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 3)
         .stroke();
-         doc
+      doc
         .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 5)
         .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
         .stroke();
