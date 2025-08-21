@@ -28,11 +28,9 @@ import { selectClient } from "../../../model/Task/Accounting/pdc.model";
 import { format } from "date-fns";
 const ReturnCheck = express.Router();
 
-
 // new ============
 
 ReturnCheck.post("/return-check/load-entries", async (req, res) => {
-
   const qry1 = await __executeQuery(
     `
     SELECT 
@@ -281,7 +279,6 @@ ReturnCheck.post("/get-check-list", async (req, res) => {
   }
 });
 
-
 ReturnCheck.get("/return-checks/generate-id", async (req, res) => {
   try {
     const yyMM = format(new Date(), "yyMM");
@@ -360,7 +357,8 @@ ReturnCheck.post(
       const data1 = await __executeQuery(qry1, req);
       const data2 = await __executeQuery(qry2, req);
 
-      const replacer = (key:any, value:any) => (typeof value === 'bigint' ? value.toString() : value);
+      const replacer = (key: any, value: any) =>
+        typeof value === "bigint" ? value.toString() : value;
 
       res.send({
         message: `Successfully Search Return Checks.`,
@@ -419,18 +417,18 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
           req.body.date,
           req.body.refNo,
           req.body.explanation,
-          selCheckItm[4],
-          selCheckItm[3],
-          parseFloat(selCheckItm[6].toString().replace(/,/g, "")),
-          selCheckItm[9],
-          selCheckItm[7],
-          selCheckItm[5],
-          selCheckItm[10],
-          selCheckItm[2],
-          selCheckItm[0],
-          selCheckItm[8],
+          selCheckItm.CheckNo,
+          selCheckItm.DepoDate,
+          parseFloat(selCheckItm.Amount.toString().replace(/,/g, "")),
+          selCheckItm.Reason,
+          selCheckItm.Bank,
+          selCheckItm.CheckDate,
+          selCheckItm.ReturnDate,
+          selCheckItm.DepoSlip,
+          selCheckItm.ORNo,
+          selCheckItm.BankAccount,
           (index + 1).toString().padStart(2, "00"),
-          selCheckItm[1],
+          selCheckItm.ORDate,
           `${req.body.refNo}${(parseInt(req.body.refNo.split("-")[1]) + index)
             .toString()
             .padStart(2, "0")}`,
@@ -440,14 +438,14 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
 
       await __executeQueryWithParams(
         `UPDATE pdc SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
-        [selCheckItm[4]],
+        [selCheckItm.CheckNo],
         req
       );
 
       // Update Journal
       await __executeQueryWithParams(
         `UPDATE journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
-        [selCheckItm[4], selCheckItm[0]],
+        [selCheckItm.CheckNo, selCheckItm.ORNo],
         req
       );
     });
@@ -496,22 +494,22 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
           "RC",
           req.body.refNo,
           req.body.explanation,
-          accountingEntrItm[0],
-          accountingEntrItm[1],
-          BranchCode,
-          BranchName,
-          accountingEntrItm[4],
+          accountingEntrItm.Code,
+          accountingEntrItm.AccountName,
+          accountingEntrItm.SubAcct,
+          accountingEntrItm.SubAcctName,
+          accountingEntrItm.IDNo,
 
-          accountingEntrItm[5],
-          parseFloat(accountingEntrItm[2].toString().replace(/,/g, "")),
-          parseFloat(accountingEntrItm[3].toString().replace(/,/g, "")),
-          accountingEntrItm[10],
-          accountingEntrItm[8],
-          accountingEntrItm[9],
-          accountingEntrItm[11],
-          accountingEntrItm[14],
-          accountingEntrItm[15],
-          accountingEntrItm[12],
+          accountingEntrItm.Identity,
+          parseFloat(accountingEntrItm.Debit.toString().replace(/,/g, "")),
+          parseFloat(accountingEntrItm.Credit.toString().replace(/,/g, "")),
+          accountingEntrItm.CheckDate,
+          accountingEntrItm.CheckNo,
+          accountingEntrItm.Bank,
+          accountingEntrItm.CheckReturn,
+          accountingEntrItm.DateDeposit,
+          accountingEntrItm.DateCollection,
+          accountingEntrItm.CheckReason,
 
           "RTC",
           "",
@@ -524,11 +522,13 @@ ReturnCheck.post("/return-checks/save", async (req, res) => {
     await saveUserLogs(
       req,
       req.body.refNo,
-      req.body.mode === "add" ? "edit" : "update",
+      req.body.mode === "add" ? "add" : "update",
       "Return Check"
     );
     res.send({
-      message: "Successfully Save Return Check",
+      message: `Successfully ${
+        req.body.mode === "add" ? "Save" : "Update"
+      } Return Check`,
       success: true,
     });
   } catch (error: any) {
@@ -554,8 +554,9 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
       });
     }
 
-
-    if (!(await saveUserLogsCode(req, "update", req.body.refNo, "Return Checks"))) {
+    if (
+      !(await saveUserLogsCode(req, "update", req.body.refNo, "Return Checks"))
+    ) {
       return res.send({ message: "Invalid User Code", success: false });
     }
 
@@ -596,18 +597,18 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
           req.body.date,
           req.body.refNo,
           req.body.explanation,
-          selCheckItm[4],
-          selCheckItm[3],
-          parseFloat(selCheckItm[6].toString().replace(/,/g, "")),
-          selCheckItm[9],
-          selCheckItm[7],
-          selCheckItm[5],
-          selCheckItm[10],
-          selCheckItm[2],
-          selCheckItm[0],
-          selCheckItm[8],
+          selCheckItm.CheckNo,
+          selCheckItm.DepoDate,
+          parseFloat(selCheckItm.Amount.toString().replace(/,/g, "")),
+          selCheckItm.Reason,
+          selCheckItm.Bank,
+          selCheckItm.CheckDate,
+          selCheckItm.ReturnDate,
+          selCheckItm.DepoSlip,
+          selCheckItm.ORNo,
+          selCheckItm.BankAccount,
           (index + 1).toString().padStart(2, "00"),
-          selCheckItm[1],
+          selCheckItm.ORDate,
           `${req.body.refNo}${(parseInt(req.body.refNo.split("-")[1]) + index)
             .toString()
             .padStart(2, "0")}`,
@@ -617,14 +618,14 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
 
       await __executeQueryWithParams(
         `UPDATE pdc SET SlipCode = '', ORNum = '' WHERE Check_No = ?`,
-        [selCheckItm[4]],
+        [selCheckItm.CheckNo],
         req
       );
 
       // Update Journal
       await __executeQueryWithParams(
         `UPDATE journal SET TC = 'RTC' WHERE Check_No = ? AND Source_No = ? AND Source_Type = 'OR'`,
-        [selCheckItm[4], selCheckItm[0]],
+        [selCheckItm.CheckNo, selCheckItm.ORNo],
         req
       );
     });
@@ -673,22 +674,22 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
           "RC",
           req.body.refNo,
           req.body.explanation,
-          accountingEntrItm[0],
-          accountingEntrItm[1],
-          BranchCode,
-          BranchName,
-          accountingEntrItm[4],
+          accountingEntrItm.Code,
+          accountingEntrItm.AccountName,
+          accountingEntrItm.SubAcct,
+          accountingEntrItm.SubAcctName,
+          accountingEntrItm.IDNo,
 
-          accountingEntrItm[5],
-          parseFloat(accountingEntrItm[2].toString().replace(/,/g, "")),
-          parseFloat(accountingEntrItm[3].toString().replace(/,/g, "")),
-          accountingEntrItm[10],
-          accountingEntrItm[8],
-          accountingEntrItm[9],
-          accountingEntrItm[11],
-          accountingEntrItm[14],
-          accountingEntrItm[15],
-          accountingEntrItm[12],
+          accountingEntrItm.Identity,
+          parseFloat(accountingEntrItm.Debit.toString().replace(/,/g, "")),
+          parseFloat(accountingEntrItm.Credit.toString().replace(/,/g, "")),
+          accountingEntrItm.CheckDate,
+          accountingEntrItm.CheckNo,
+          accountingEntrItm.Bank,
+          accountingEntrItm.CheckReturn,
+          accountingEntrItm.DateDeposit,
+          accountingEntrItm.DateCollection,
+          accountingEntrItm.CheckReason,
 
           "RTC",
           "",
@@ -700,11 +701,13 @@ ReturnCheck.post("/return-checks/update", async (req, res) => {
     await saveUserLogs(
       req,
       req.body.refNo,
-      req.body.mode === "add" ? "edit" : "update",
+      req.body.mode === "add" ? "add" : "update",
       "Return Check"
     );
     res.send({
-      message: "Successfully Save Return Check",
+      message: `Successfully ${
+        req.body.mode === "add" ? "Save" : "Update"
+      } Return Check`,
       success: true,
     });
   } catch (error: any) {

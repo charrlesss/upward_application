@@ -247,36 +247,36 @@ export async function getSearchCollection(ORNo: string, req: Request) {
   return await prisma.$queryRawUnsafe(
     `
   SELECT 
-    a.Date, 
-    a.ORNo, 
-    a.IDNo, 
-    a.Name, 
-    a.Payment, 
+  a.Date, 
+  a.ORNo, 
+  a.IDNo, 
+  a.Name, 
+	a.Payment, 
     a.Bank,
-    a.Check_Date,
-    a.Check_No,
-    a.DRCode,
-    a.DRTitle,
-    a.DRRemarks,
+	a.Check_Date,
+	a.Check_No,
+	a.DRCode,
+	a.DRTitle,
+	a.DRRemarks,
     a.Debit,
-    if(a.Purpose is null OR a.Purpose = '',c.Description,a.Purpose) as Purpose,
+    a.Purpose,
     c.Acct_Code  as CRCode,
     c.Acct_Title as CRTitle,
     a.Credit,
     a.CRRemarks,
     a.ID_No,
     a.Official_Receipt,
-    a.Temp_OR,
-    a.Date_OR,
-    a.Short,
-    a.SlipCode,
-    a.Status,
-    a.CRLoanID,
-    a.CRLoanName,
-    a.CRRemarks2,
+	a.Temp_OR,
+	a.Date_OR,
+	a.Short,
+	a.SlipCode,
+	a.Status,
+	a.CRLoanID,
+	a.CRLoanName,
+	a.CRRemarks2,
     a.CRVATType,
     a.CRInvoiceNo,
-    c.Code as TC,
+	c.Code as TC,
     date_format(a.Date_OR,'%Y-%m-%d') as Date_OR,
     b.Bank_Code, 
     b.Bank AS BankName,
@@ -287,7 +287,7 @@ export async function getSearchCollection(ORNo: string, req: Request) {
       bank b ON b.Bank_Code = TRIM(BOTH ' ' FROM SUBSTRING_INDEX(a.Bank, '/', 1))
      left join  (
      select chart_account.* ,transaction_code.Description ,transaction_code.Code from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code 
-     ) c on a.DRCode = c.Acct_Code 
+     ) c on a.Purpose = c.Description 
   WHERE
     a.Official_Receipt = ?
   ORDER BY a.Temp_OR
