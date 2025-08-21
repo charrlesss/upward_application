@@ -32,8 +32,70 @@ const ReturnCheck = express.Router();
 // new ============
 
 ReturnCheck.post("/return-check/load-entries", async (req, res) => {
+
   const qry1 = await __executeQuery(
-    `SELECT Account_ID, Short, BankAccounts.IDNo FROM bankaccounts as BankAccounts LEFT JOIN chart_account as Chart_Account ON BankAccounts.Account_ID = Chart_Account.Acct_Code WHERE Account_No = '${req.body.Account_No}'`,
+    `
+    SELECT 
+    Account_ID, Short, BankAccounts.IDNo, id_entry.Shortname
+FROM
+    bankaccounts AS BankAccounts
+        LEFT JOIN
+    chart_account AS Chart_Account ON BankAccounts.Account_ID = Chart_Account.Acct_Code
+        LEFT JOIN
+    (SELECT 
+        'Client' AS IDType,
+            aa.entry_client_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_client_id AS client_id,
+            aa.address
+    FROM
+        entry_client aa UNION ALL SELECT 
+        'Agent' AS IDType,
+            aa.entry_agent_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_agent_id AS client_id,
+            aa.address
+    FROM
+        entry_agent aa UNION ALL SELECT 
+        'Employee' AS IDType,
+            aa.entry_employee_id AS IDNo,
+            aa.sub_account,
+            CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS Shortname,
+            aa.entry_employee_id AS client_id,
+            aa.address
+    FROM
+        entry_employee aa UNION ALL SELECT 
+        'Supplier' AS IDType,
+            aa.entry_supplier_id AS IDNo,
+            aa.sub_account,
+            IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                AND aa.lastname <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS Shortname,
+            aa.entry_supplier_id AS client_id,
+            aa.address
+    FROM
+        entry_supplier aa UNION ALL SELECT 
+        'Fixed Assets' AS IDType,
+            aa.entry_fixed_assets_id AS IDNo,
+            aa.sub_account,
+            aa.fullname AS Shortname,
+            aa.entry_fixed_assets_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_fixed_assets aa UNION ALL SELECT 
+        'Others' AS IDType,
+            aa.entry_others_id AS IDNo,
+            aa.sub_account,
+            aa.description AS Shortname,
+            aa.entry_others_id AS client_id,
+            aa.description AS address
+    FROM
+        entry_others aa) id_entry ON BankAccounts.IDNo = id_entry.IDNo
+    WHERE Account_No = '${req.body.Account_No}'`,
     req
   );
   const qry2 = await __executeQuery(
