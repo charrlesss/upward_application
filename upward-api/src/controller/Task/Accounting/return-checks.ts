@@ -26,6 +26,7 @@ import {
 } from "../../../model/Task/Production/policy";
 import { selectClient } from "../../../model/Task/Accounting/pdc.model";
 import { format } from "date-fns";
+import { prisma } from "../..";
 const ReturnCheck = express.Router();
 
 // new ============
@@ -352,10 +353,19 @@ ReturnCheck.post(
   "/return-checks/return-checks-search-selected",
   async (req, res) => {
     try {
-      const qry1 = `SELECT * FROM return_checks WHERE RC_No = '${req.body.RefNo}' ORDER BY nSort`;
-      const qry2 = `SELECT * FROM journal WHERE Source_Type = 'RC' and Source_No = '${req.body.RefNo}'`;
-      const data1 = await __executeQuery(qry1, req);
-      const data2 = await __executeQuery(qry2, req);
+      const data1 = await prisma.$queryRawUnsafe(
+        `SELECT * FROM return_checks WHERE RC_No = ? ORDER BY nSort`,
+        req.body.RefNo
+      );
+      const data2 = await prisma.$queryRawUnsafe(
+        `SELECT 
+          *
+        FROM journal
+        WHERE 
+          Source_No = ? 
+          and Source_Type = 'RC'`,
+        req.body.RefNo
+      );
 
       const replacer = (key: any, value: any) =>
         typeof value === "bigint" ? value.toString() : value;

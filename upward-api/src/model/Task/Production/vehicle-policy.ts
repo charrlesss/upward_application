@@ -100,7 +100,7 @@ export async function getTPL_IDS(search: string, req: Request) {
     from (
     SELECT 
         a.*,
-        p.PolicyNo
+        ifnull(p.PolicyNo, a.NumSeriesFrom - 1) as PolicyNo
     FROM
         ctplregistration a
     LEFT JOIN LATERAL (
