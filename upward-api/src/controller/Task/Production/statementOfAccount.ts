@@ -1005,6 +1005,7 @@ StatementOfAccount.post("/soa/generate-soa-careof", async (req, res) => {
 
   function bondsYear(itm: any) {
     const PolicyType = itm.PolicyType.trim();
+    console.log(itm, "qweqw");
     if (PolicyType === "G02") {
       return "120 Days";
     } else if (
@@ -2141,6 +2142,19 @@ async function PrintAll(req: Request, res: Response) {
           .lineTo(65, startY + 8)
           .stroke();
       } else if (row.total) {
+        if (colIndex === 0) {
+          doc.font("Helvetica-Bold");
+          doc.text(
+            "TOTAL PREMIUM: ",
+            PAGE_WIDTH - (140 + MARGIN.right),
+            startY,
+            {
+              width: 100,
+              align: "left",
+            }
+          );
+        }
+
         doc
           .moveTo(640, startY - 6)
           .lineTo(570, startY - 6)
@@ -2756,6 +2770,7 @@ async function PrintTPL(req: Request, res: Response) {
     }
 
     if (totalIndexes.includes(rowIndex)) {
+      boldRow(rowIndex);
       doc
         .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 3)
         .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 3)
@@ -2764,6 +2779,12 @@ async function PrintTPL(req: Request, res: Response) {
         .moveTo(PAGE_WIDTH - (70 + MARGIN.right), yAxis - 5)
         .lineTo(PAGE_WIDTH - MARGIN.right, yAxis - 5)
         .stroke();
+      doc.font("Helvetica-Bold");
+      doc.text("TOTAL PREMIUM: ", PAGE_WIDTH - (140 + MARGIN.right), yAxis, {
+        width: 100,
+        align: "left",
+      });
+      doc.font("Helvetica");
     }
   }
   function drawPerPage() {}

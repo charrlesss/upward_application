@@ -120,7 +120,7 @@ export async function getCheckList(search: string, req: Request) {
         AND ((deposit.Check_No) <> ''))
         AND (Check_No LIKE ? OR Bank LIKE ?)
     ORDER BY deposit.Check_Date Desc
-    LIMIT 100
+    LIMIT 500
   `,
     `%${search}%`,
     `%${search}%`

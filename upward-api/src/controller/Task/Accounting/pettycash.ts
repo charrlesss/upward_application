@@ -16,25 +16,9 @@ import generateUniqueUUID from "../../../lib/generateUniqueUUID";
 import saveUserLogs from "../../../lib/save_user_logs";
 import { saveUserLogsCode } from "../../../lib/saveUserlogsCode";
 import { VerifyToken } from "../../Authentication";
+import { prisma } from "../..";
 
 const PettyCash = express.Router();
-
-PettyCash.get("/get-petty-log", async (req, res) => {
-  try {
-    res.send({
-      message: "Successfully get petty log",
-      success: true,
-      pettyLog: await getPettyLog(req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      pettyLog: [],
-    });
-  }
-});
 
 PettyCash.get("/get-petty-cash-id", async (req, res) => {
   try {
@@ -52,7 +36,6 @@ PettyCash.get("/get-petty-cash-id", async (req, res) => {
     });
   }
 });
-
 PettyCash.post("/add-petty-cash", async (req, res) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -192,26 +175,6 @@ PettyCash.post("/add-petty-cash", async (req, res) => {
     });
   }
 });
-
-PettyCash.get("/search-petty-cash", async (req, res) => {
-  try {
-    const { searchPettyCash: search } = req.query;
-
-    res.send({
-      message: "Successfully search petty cash",
-      success: true,
-      searchPettyCash: await searchPettyCash(search as string, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      searchPettyCash: [],
-    });
-  }
-});
-
 PettyCash.post("/search-petty-cash", async (req, res) => {
   try {
     res.send({
@@ -224,11 +187,10 @@ PettyCash.post("/search-petty-cash", async (req, res) => {
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      searchPettyCash: [],
+      data: [],
     });
   }
 });
-
 PettyCash.post("/load-selected-petty-cash", async (req, res) => {
   try {
     const { PC_No } = req.body;
@@ -243,11 +205,10 @@ PettyCash.post("/load-selected-petty-cash", async (req, res) => {
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      pettyCash: [],
+      loadSelectedPettyCash: [],
     });
   }
 });
-
 PettyCash.get("/load-transcation", async (req, res) => {
   try {
     res.send({
@@ -260,9 +221,35 @@ PettyCash.get("/load-transcation", async (req, res) => {
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      pettyCash: [],
+      laodTranscation: [],
     });
   }
 });
-
+PettyCash.post("/load-transcation-details", async (req, res) => {
+  try {
+    res.send({
+      message: "Successfully search petty cash",
+      success: true,
+      data: await prisma.$queryRawUnsafe(`
+        SELECT DISTINCT
+              Chart_Account.Acct_Code,
+              Chart_Account.Acct_Title,
+              Chart_Account.Short
+          FROM
+             petty_log as Petty_Log
+                  LEFT JOIN
+             chart_account as  Chart_Account ON Petty_Log.Acct_Code = Chart_Account.Acct_Code
+          WHERE
+              Petty_Log.Acct_Code = ? 
+        `,req.body.Acct_Code),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
 export default PettyCash;

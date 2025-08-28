@@ -81,7 +81,6 @@ BankAccount.post("/search-client-from-bank-account", async (req: Request, res: R
     });
   }
 });
-
 BankAccount.get("/get-bank-account", async (req: Request, res: Response) => {
   const { bankAccountSearch } = req.query;
   try {

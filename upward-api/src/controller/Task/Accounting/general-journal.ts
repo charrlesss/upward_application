@@ -30,6 +30,7 @@ import {
   formatNumber,
   getSum,
 } from "../../Reports/Production/production-report";
+import { prisma } from "../..";
 const GeneralJournal = express.Router();
 
 /// new
@@ -299,6 +300,236 @@ GeneralJournal.post("/general-journal/print", async (req, res) => {
     });
   }
 });
+GeneralJournal.post(
+  "/general-journal/rpt-transacation-astra",
+  async (req, res) => {
+    try {
+      let dtFrom = req.body.dtFrom;
+      let dtTo = req.body.dtTo;
+      let iRow = 0;
+
+      const qry = `
+      select 
+        a.PolicyNo,
+        a.IDNo,
+        (TotalDue - ifnull(b.TotalPaid,0)) as 'Amount',
+        c.Mortgagee 
+      from policy a 
+        left join (
+          select 
+            IDNo,
+            sum(Debit) as 'TotalPaid' 
+          from collection 
+          group by IDNo
+        ) b on b.IDNo = a.PolicyNo 
+        inner join vpolicy c on c.PolicyNo = a.PolicyNo 
+        where
+        (TotalDue - ifnull(b.TotalPaid,0)) <> 0 and 
+        a.PolicyType = 'TPL' and 
+        c.Mortgagee = 'N I L - ASTRA' and 
+        (
+          a.DateIssued >= ? and 
+          a.DateIssued <= ?
+        ) 
+        order by a.DateIssued
+      `;
+      let dgvJournal: any = [];
+      const data: any = await prisma.$queryRawUnsafe(qry, dtFrom, dtTo);
+      const dataArray = data;
+
+      let totalAmount = 0;
+      if (dataArray.length > 0) {
+        let i = 0;
+        for (const itm of dataArray) {
+          let tmpID = "";
+          if (i === 0) {
+            iRow = 0;
+          } else {
+            iRow = iRow + 1;
+          }
+
+          tmpID = itm.IDNo;
+          const tmpNameRes: any = await prisma.$queryRawUnsafe(
+            `SELECT Shortname ,Sub_ShortName, Sub_Acct FROM (${ID_Entry}) id_entry WHERE IDNo = ?`,
+            tmpID
+          );
+
+          dgvJournal[iRow] = {
+            code: "1.03.01",
+            acctName: "Premium Receivables",
+            subAcctName: tmpNameRes[0]?.Sub_ShortName,
+            IDNo: itm.PolicyNo,
+            ClientName: tmpNameRes[0]?.Shortname,
+            debit: "0.00",
+            credit: formatNumber(itm.Amount),
+            TC_Code: "RPT",
+            remarks: "",
+            vatType: "Non-VAT",
+            invoice: "",
+            TempID: "",
+            BranchCode: tmpNameRes[0]?.Sub_Acct,
+          };
+
+          totalAmount =
+            totalAmount + parseFloat(itm.Amount.toString().replace(/,/g, ""));
+          i += 1;
+        }
+
+        const tmpNameRes: any = await prisma.$queryRawUnsafe(
+          `SELECT Shortname ,Sub_ShortName, Sub_Acct FROM (${ID_Entry}) id_entry WHERE IDNo = 'C-1024-04785'`
+        );
+
+        dgvJournal[iRow + 1] = {
+          code: "1.03.01",
+          acctName: "Premium Receivables",
+          subAcctName: tmpNameRes[0]?.Sub_ShortName,
+          IDNo: "C-1024-04785",
+          ClientName: tmpNameRes[0]?.Shortname,
+          debit: formatNumber(totalAmount),
+          credit: "0.00",
+          TC_Code: "RPT",
+          remarks: "",
+          vatType: "Non-VAT",
+          invoice: "",
+          TempID: "",
+          BranchCode: tmpNameRes[0]?.Sub_Acct,
+        };
+      }
+
+      res.send({
+        message: `Successfully generate rpt astra`,
+        success: false,
+        data: dgvJournal,
+        totalAmount,
+      });
+    } catch (error: any) {
+      console.log(error.message);
+
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+GeneralJournal.post(
+  "/general-journal/rpt-transacation-NILHN",
+  async (req, res) => {
+    try {
+      let dtFrom = req.body.dtFrom;
+      let dtTo = req.body.dtTo;
+      let iRow = 0;
+
+      const qry = `
+      select 
+      a.PolicyNo,
+      a.IDNo,
+      (TotalDue - ifnull(b.TotalPaid,0)) as 'Amount',
+      c.Mortgagee 
+    from policy a 
+      left join (
+        select 
+          IDNo,
+          sum(Debit) as 'TotalPaid' 
+        from collection 
+        group by IDNo
+      ) b on b.IDNo = a.PolicyNo 
+      inner join vpolicy c on c.PolicyNo = a.PolicyNo 
+      where
+      (TotalDue - ifnull(b.TotalPaid,0)) <> 0 and 
+      a.PolicyType = 'TPL' and 
+      c.Mortgagee = 'N I L - HN' and 
+      (
+        a.DateIssued >= ? and 
+        a.DateIssued <= ?
+      ) 
+      order by a.DateIssued
+      `;
+
+      let dgvJournal: any = [];
+      const dataArray: Array<any> = await prisma.$queryRawUnsafe(
+        qry,
+        dtFrom,
+        dtTo
+      );
+      let totalAmount = 0;
+      if (dataArray.length > 0) {
+        let i = 0;
+        for (const itm of dataArray) {
+          let tmpID = "";
+          if (i === 0) {
+            iRow = 0;
+          } else {
+            iRow = iRow + 1;
+          }
+
+          tmpID = itm.IDNo;
+          const tmpNameRes: any = await prisma.$queryRawUnsafe(
+            `SELECT Shortname ,Sub_ShortName, Sub_Acct FROM (${ID_Entry}) id_entry WHERE IDNo = ?`,
+            tmpID
+          );
+
+          dgvJournal[iRow] = {
+            code: "1.03.01",
+            acctName: "Premium Receivables",
+            subAcctName: tmpNameRes[0]?.Sub_ShortName,
+            IDNo: itm.PolicyNo,
+            ClientName: tmpNameRes[0]?.Shortname,
+            debit: "0.00",
+            credit: formatNumber(itm.Amount),
+            TC_Code: "RPT",
+            remarks: "",
+            vatType: "Non-VAT",
+            invoice: "",
+            TempID: "",
+            BranchCode: tmpNameRes[0]?.Sub_Acct,
+          };
+
+          totalAmount =
+            totalAmount + parseFloat(itm.Amount.toString().replace(/,/g, ""));
+          i += 1;
+        }
+
+        const tmpNameRes: any = await prisma.$queryRawUnsafe(
+          `SELECT Shortname ,Sub_ShortName, Sub_Acct FROM (${ID_Entry}) id_entry WHERE IDNo = 'C-1024-01370'`
+        );
+
+        dgvJournal[iRow + 1] = {
+          code: "1.03.01",
+          acctName: "Premium Receivables",
+          subAcctName: tmpNameRes[0]?.Sub_ShortName,
+          IDNo: "C-1024-01370",
+          ClientName: tmpNameRes[0]?.Shortname,
+          debit: formatNumber(totalAmount),
+          credit: "0.00",
+          TC_Code: "RPT",
+          remarks: "",
+          vatType: "Non-VAT",
+          invoice: "",
+          TempID: "",
+          BranchCode: tmpNameRes[0]?.Sub_Acct,
+        };
+      }
+
+      res.send({
+        message: `Successfully generate rpt astra`,
+        success: false,
+        data: dgvJournal,
+        totalAmount,
+      });
+    } catch (error: any) {
+      console.log(error.message);
+
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+
 //// old
 GeneralJournal.post(
   "/general-journal/add-general-journal",
@@ -361,7 +592,7 @@ GeneralJournal.post(
             ID_No: item.IDNo,
             VAT_Type: item.vatType,
             OR_Invoice_No: item.invoice,
-            VATItemNo:item.rowIndex
+            VATItemNo: item.rowIndex,
           },
           req
         );
@@ -670,7 +901,7 @@ GeneralJournal.post("/general-journal/jobs", async (req, res) => {
       );
       break;
     case "12":
-     const { from: fromNilAstraData, to: toNilAstraDate } = RPTComputationDate(
+      const { from: fromNilAstraData, to: toNilAstraDate } = RPTComputationDate(
         req.body.jobTransactionDate
       );
       response = await RPTComputation(
@@ -830,5 +1061,57 @@ async function MonthlyProductionComputation(
 
   return milestoneData;
 }
+
+const ID_Entry = `
+SELECT 
+       id_entry.IDNo,
+       id_entry.ShortName as Shortname,
+       IDType,
+       b.Acronym as Sub_Acct,
+       b.ShortName as Sub_ShortName
+   FROM
+       (SELECT 
+           IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                   AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
+               aa.entry_client_id AS IDNo,
+               aa.sub_account,
+               'Client' as IDType
+       FROM
+           entry_client aa UNION ALL SELECT 
+           CONCAT(IF(aa.lastname IS NOT NULL
+                   AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
+               aa.entry_agent_id AS IDNo,
+               aa.sub_account,
+               'Agent' as IDType
+       FROM
+           entry_agent aa UNION ALL SELECT 
+           CONCAT(IF(aa.lastname IS NOT NULL
+                   AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname) AS ShortName,
+               aa.entry_employee_id AS IDNo,
+               aa.sub_account,
+               'Employee' as IDType
+       FROM
+           entry_employee aa UNION ALL SELECT 
+           aa.fullname AS ShortName,
+               aa.entry_fixed_assets_id AS IDNo,
+               sub_account,
+                'Fixed Assets' as IDType
+       FROM
+           entry_fixed_assets aa UNION ALL SELECT 
+           aa.description AS ShortName,
+               aa.entry_others_id AS IDNo,
+               aa.sub_account,
+               'Others' as IDType
+       FROM
+           entry_others aa UNION ALL SELECT 
+           IF(aa.option = 'individual', CONCAT(IF(aa.lastname IS NOT NULL
+                   AND TRIM(aa.lastname) <> '', CONCAT(aa.lastname, ', '), ''), aa.firstname), aa.company) AS ShortName,
+               aa.entry_supplier_id AS IDNo,
+               aa.sub_account,
+                'Supplier' as IDType
+       FROM
+           entry_supplier aa) id_entry
+      left join sub_account b ON id_entry.sub_account = b.Sub_Acct
+ `;
 
 export default GeneralJournal;

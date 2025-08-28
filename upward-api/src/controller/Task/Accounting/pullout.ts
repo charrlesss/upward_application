@@ -47,6 +47,85 @@ const UCSMIEmailToSend = [
 // const UMISEmailToSend = ["charlespalencia21@gmail.com"];
 // const UCSMIEmailToSend = ["charlespalencia21@gmail.com"];
 
+PulloutRequest.post(`/pullout/reqeust/auto-id`, async (req, res) => {
+  try {
+    const data = await prisma.$queryRawUnsafe(
+      `SELECT CONCAT(
+                'HOPO',
+                DATE_FORMAT(CURDATE(), '%y'),  -- current 2-digit year
+                LPAD(
+                      CAST(RIGHT(RCPNo, 4) AS UNSIGNED) + 1,  -- increment last 4 digits
+                      4,
+                      '0'
+                )
+            ) AS newRCPNo
+      FROM pullout_request
+      ORDER BY RCPNo DESC
+      LIMIT 1;`
+    );
+
+    res.send({
+      message: "Save Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+PulloutRequest.post(`/pullout/reqeust/load-checks`, async (req, res) => {
+  try {
+    const data = await prisma.$queryRawUnsafe(
+      `  SELECT DISTINCT
+        Check_Date,
+        Bank,
+        Check_No,
+        Check_Amnt,
+        ifnull(b.Status,'--') AS Status,
+        ifnull(b.RCPNo,'--') AS RCPNO 
+    FROM
+        pdc a
+        left join (
+        SELECT 
+          PNNo,
+          a.RCPNo,
+          Status,
+          CheckNo 
+        FROM pullout_request  a
+        left join pullout_request_details b on a.RCPNo = b.RCPNo
+        where 
+        b.cancel = 0
+        and PNNo = ? 
+
+        ) b on a.Check_No = b.CheckNo
+    WHERE
+        PNo = ?
+      AND PDC_Status = 'Stored'
+    order by Check_Date asc`,
+      req.body.PNo,
+      req.body.PNo
+    );
+
+    res.send({
+      message: "Save Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+
 PulloutRequest.post(
   `/pullout/reqeust/get-selected-rcpn-no`,
   async (req, res) => {

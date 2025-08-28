@@ -1,0 +1,1 @@
+{"version":3,"file":"static/js/7016.ad148338.chunk.js","mappings":"mKAAe,SAASA,IACtB,OAAOC,EAAAA,EAAAA,KAAA,SACT,C","sources":["feautures/Admin/Reference/Booklet.tsx"],"sourcesContent":["export default function Booklet() {\n  return <div></div>;\n}\n"],"names":["Booklet","_jsx"],"sourceRoot":""}

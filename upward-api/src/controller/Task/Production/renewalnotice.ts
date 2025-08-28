@@ -778,14 +778,20 @@ async function PDFCOM(res: Response, req: Request) {
             value4: formatNumber(grossPrem2),
           },
         ];
+
         for (let i = 0; i < policyDetails.length; i++) {
           const itm = policyDetails[i];
-          doc.font("Helvetica");
-          const valueHeight = doc.heightOfString(itm.value, {
+          doc.font("Helvetica-Bold");
+          let valueHeight = doc.heightOfString(itm.value, {
             width: PAGE_WIDTH_WITH_MARGIN - 160,
             align: "left",
           });
 
+          if (valueHeight <= 0) {
+            valueHeight = 11;
+          }
+
+          doc.font("Helvetica");
           doc.text(itm.label, 30, pdy, {
             width: 150,
             align: "left",
@@ -799,7 +805,8 @@ async function PDFCOM(res: Response, req: Request) {
             width: PAGE_WIDTH_WITH_MARGIN - 160,
             align: "left",
           });
-          pdy += (Math.round(valueHeight) || 10) + 1;
+
+          pdy += Math.round(valueHeight);
         }
         doc.font("Helvetica");
         pdy = pdy + 40;
@@ -1286,19 +1293,17 @@ async function PDFFIRE(res: Response, req: Request) {
         ];
         for (let i = 0; i < policyDetails.length; i++) {
           const itm = policyDetails[i];
-          doc.font("Helvetica");
-
-          const valueHeight = doc.heightOfString(itm.value, {
+          doc.font("Helvetica-Bold");
+          let valueHeight = doc.heightOfString(itm.value, {
             width: PAGE_WIDTH_WITH_MARGIN - 200,
             align: "left",
           });
 
-          let adjust = 11;
-          if (i === 6) {
-            adjust = 16;
+          if (valueHeight <= 0) {
+            valueHeight = 11;
           }
-          pdy += Math.round(valueHeight) + adjust;
 
+          doc.font("Helvetica");
           doc.text(itm.label, 70, pdy, {
             width: 150,
             align: "left",
@@ -1312,6 +1317,8 @@ async function PDFFIRE(res: Response, req: Request) {
             width: PAGE_WIDTH_WITH_MARGIN - 200,
             align: "left",
           });
+
+          pdy += Math.round(valueHeight);
         }
       }
 
@@ -1645,12 +1652,17 @@ async function PDFMAR(res: Response, req: Request) {
         ];
         for (let i = 0; i < policyDetails.length; i++) {
           const itm = policyDetails[i];
-          doc.font("Helvetica");
-          const valueHeight = doc.heightOfString(itm.value, {
+          doc.font("Helvetica-Bold");
+          let valueHeight = doc.heightOfString(itm.value, {
             width: PAGE_WIDTH_WITH_MARGIN - 160,
             align: "left",
           });
 
+          if (valueHeight <= 0) {
+            valueHeight = 11;
+          }
+
+          doc.font("Helvetica");
           doc.text(itm.label, 70, pdy, {
             width: 150,
             align: "left",
@@ -1665,11 +1677,7 @@ async function PDFMAR(res: Response, req: Request) {
             align: "left",
           });
 
-          if (i === 5 || i === 7) {
-            pdy += (Math.round(valueHeight) || 10) + 10;
-          } else {
-            pdy += (Math.round(valueHeight) || 10) + 1;
-          }
+          pdy += Math.round(valueHeight);
         }
       }
 
@@ -1986,22 +1994,22 @@ async function PDFPA(res: Response, req: Request) {
 
         for (let i = 0; i < policyDetails.length; i++) {
           const itm = policyDetails[i];
-          doc.font("Helvetica");
-          const valueHeight = doc.heightOfString(itm.value, {
+          doc.font("Helvetica-Bold");
+          let valueHeight = doc.heightOfString(itm.value, {
             width: PAGE_WIDTH_WITH_MARGIN - 160,
             align: "left",
           });
 
-          if (i === policyDetails.length - 1) {
-            pdy += (Math.round(valueHeight) || 10) + 10;
-          } else {
-            pdy += (Math.round(valueHeight) || 10) + 1;
+          if (valueHeight <= 0) {
+            valueHeight = 11;
           }
 
+          doc.font("Helvetica");
           doc.text(itm.label, 70, pdy, {
             width: 150,
             align: "left",
           });
+
           doc.font("Helvetica-Bold");
           doc.text(":", 220, pdy, {
             width: PAGE_WIDTH_WITH_MARGIN,
@@ -2012,6 +2020,7 @@ async function PDFPA(res: Response, req: Request) {
             width: PAGE_WIDTH_WITH_MARGIN - 160,
             align: "left",
           });
+          pdy += Math.round(valueHeight);
         }
       }
 

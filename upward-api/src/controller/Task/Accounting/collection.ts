@@ -34,10 +34,55 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import { AmountToWords } from "./cash-disbursement";
 import { getSum } from "../../Reports/Production/production-report";
+import { prisma } from "../..";
 
 const Collection = express.Router();
 
 /// NEW
+Collection.post("/save-credit", async (req, res) => {
+  try {
+    const data: Array<any> = await prisma.$queryRawUnsafe(
+      `SELECT * FROM transaction_code where Description = ?`,
+      req.body.transactionRef
+    );
+    if (data.length <= 0) {
+      return res.send({
+        message: "Transaction not yet defined!",
+        success: false,
+      });
+    }
+    res.send({
+      message: "Transaction is defined!.",
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/save-debit-check", async (req, res) => {
+  try {
+    console.log(req.body);
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data: await prisma.$queryRawUnsafe(
+        `select * from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code WHERE Code = 'CHK'`
+      ),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
 Collection.post("/search-checks-from-client-id", async (req, res) => {
   try {
     console.log(req.body);
@@ -1097,5 +1142,3 @@ export function formatNumber(num: number) {
   });
 }
 export default Collection;
-
-
