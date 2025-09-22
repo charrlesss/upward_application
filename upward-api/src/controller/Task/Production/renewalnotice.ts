@@ -1081,7 +1081,7 @@ async function PDFCOM(res: Response, req: Request) {
       );
 
       doc.text(
-        "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City - Telephone Numbers | 8441 - 8977 to 78 | 8374 - 0742 Mobile Number | 0919 - 078 - 5547 / 0919 - 078 - 5543",
+        "Address | i- Telephone Numbers | 8441 - 8977 to 78 | 8374 - 0742 Mobile Number | 0919 - 078 - 5547 / 0919 - 078 - 5543",
         30,
         pdfReportGenerator.PAGE_HEIGHT - 35,
         {

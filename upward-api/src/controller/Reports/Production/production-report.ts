@@ -35,7 +35,6 @@ ProductionReports.post("/production-report", async (req, res) => {
       req.body.cmbSort
     );
 
-    console.log(reportString)
     const data: Array<any> = await prisma.$queryRawUnsafe(reportString);
 
     if (formatValue === 0) {
@@ -591,7 +590,7 @@ ProductionReports.post("/production-report", async (req, res) => {
       } else if (req.body.cmbSubAcct === "PA") {
         const qry = `
         SELECT 
-            date_format(a.dateissued,'%m/%d/%Y') as DateIssued,
+            a.dateissued as DateIssued,
             endorsement_no as  PolicyNo,
             name as AssuredName, 
             date_format(a.datefrom,'%m/%d/%Y') as EffictiveDate,
@@ -608,9 +607,7 @@ ProductionReports.post("/production-report", async (req, res) => {
             a.dateissued <= '${dateTo}'
                 AND a.dateissued >= '${dateFrom}'
                 order by  a.endorsement_no`;
-
         const dataEd: Array<any> = await prisma.$queryRawUnsafe(qry);
-
         const newData = data.map((itm: any) => {
           itm.InsuredValue = formatNumber(
             parseFloat(itm.InsuredValue.toString().replace(/,/g, ""))
@@ -632,7 +629,8 @@ ProductionReports.post("/production-report", async (req, res) => {
           );
 
           return {
-            DateIssued: format(new Date(itm.DateIssued), "MM/dd/yyyy"),
+            // DateIssued: format(new Date(itm.DateIssued), "MM/dd/yyyy"),
+            DateIssued: itm.DateIssued,
             PolicyNo: itm.PolicyNo,
             AssuredName: itm.AssuredName,
             EffictiveDate: format(new Date(itm.EffictiveDate), "MM/dd/yyyy"),
@@ -644,18 +642,24 @@ ProductionReports.post("/production-report", async (req, res) => {
             TotalDue: itm.TotalDue,
           };
         });
-
-        const combined:Array<any> = [];
-        newData.forEach((policy) => {
-          combined.push(policy); // Add policy first
-          const relatedEndorsements = dataEd.filter(
-            (e) => e.policyNo === policy.PolicyNo
+        const newDataEd = dataEd.map((itm: any) => {
+          itm.DateIssued = format(new Date(itm.DateIssued), "yyyy-MM-dd");
+          return itm;
+        });
+        const combined: Array<any> = [...newData, ...newDataEd];
+        combined.sort((a: any, b: any) => {
+          return (
+            new Date(a.DateIssued.trim()).getTime() -
+            new Date(b.DateIssued.trim()).getTime()
           );
-          combined.push(...relatedEndorsements); // Then push its endorsements
+        });
+        combined.map((itm) => {
+          itm.DateIssued = format(new Date(itm.DateIssued), "MM/dd/yyyy");
+          return itm;
         });
 
         combined.push({
-          DateIssued: `No. of Records: ${data.length}`,
+          DateIssued: `No. of Records: ${combined.length}`,
           PolicyNo: "",
           AssuredName: "",
           EffictiveDate: "",
@@ -669,7 +673,7 @@ ProductionReports.post("/production-report", async (req, res) => {
 
         const props: any = {
           data: combined,
-          columnWidths: [90, 100, 250, 90, 100, 100, 100, 100, 100, 100],
+          columnWidths: [90, 150, 250, 90, 90, 90, 90, 90, 90, 90],
           headers: [
             { headerName: "DATE ISSUED", textAlign: "left" },
             { headerName: "POLICY NO", textAlign: "left" },
@@ -1815,7 +1819,7 @@ ProductionReports.post("/production-report-to-excel", async (req, res) => {
       } else if (req.body.cmbSubAcct === "PA") {
         const qry = `
         SELECT 
-            date_format(a.dateissued,'%m/%d/%Y') as DateIssued,
+            a.dateissued as DateIssued,
             endorsement_no as  PolicyNo,
             name as AssuredName, 
             date_format(a.datefrom,'%m/%d/%Y') as EffictiveDate,
@@ -1868,18 +1872,26 @@ ProductionReports.post("/production-report-to-excel", async (req, res) => {
             TotalDue: itm.TotalDue,
           };
         });
+        const newDataEd = dataEd.map((itm: any) => {
+          itm.DateIssued = format(new Date(itm.DateIssued), "MM/dd/yyyy");
+          return itm;
+        });
 
-        const combined:Array<any> = [];
-        newData.forEach((policy) => {
-          combined.push(policy); // Add policy first
-          const relatedEndorsements = dataEd.filter(
-            (e) => e.policyNo === policy.PolicyNo
+        const combined: Array<any> = [...newData, ...newDataEd];
+
+        combined.sort((a: any, b: any) => {
+          return (
+            new Date(a.DateIssued.trim()).getTime() -
+            new Date(b.DateIssued.trim()).getTime()
           );
-          combined.push(...relatedEndorsements); // Then push its endorsements
+        });
+        combined.map((itm) => {
+          itm.DateIssued = format(new Date(itm.DateIssued), "MM/dd/yyyy");
+          return itm;
         });
 
         combined.push({
-          DateIssued: `No. of Records: ${data.length}`,
+          DateIssued: `No. of Records: ${combined.length}`,
           PolicyNo: "",
           AssuredName: "",
           EffictiveDate: "",
@@ -2525,50 +2537,6 @@ export function getSum(data: Array<any>, key: string): number {
     return 0;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
   return data.reduce((total: number, row: any) => {
     total += parseFloat((row[key] || 0).toString().replace(/,/g, ""));
     return total;

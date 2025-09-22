@@ -29,27 +29,6 @@ import { getCashPayTo } from "../../../model/Task/Accounting/pdc.model";
 
 const CashDisbursement = express.Router();
 
-CashDisbursement.get("/search-payto-clients-name", async (req, res) => {
-  try {
-    const { searchPdcPolicyIds } = req.query;
-    const clientsId = await getClientFromPayTo(
-      searchPdcPolicyIds as string,
-      req
-    );
-    res.send({
-      clientsId,
-      data: clientsId,
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
 CashDisbursement.get("/cash-disbursement/generate-id", async (req, res) => {
   try {
     res.send({
@@ -66,6 +45,31 @@ CashDisbursement.get("/cash-disbursement/generate-id", async (req, res) => {
     });
   }
 });
+CashDisbursement.post(
+  "/cash-disbursement/get-selected-search-cash-disbursement",
+  async (req, res) => {
+    try {
+      const selectedCashDisbursement = await findSearchSelectedCashDisbursement(
+        req.body.Source_No,
+        req
+      );
+      res.send({
+        message: "Successfully get selected search in cash disbursement",
+        success: true,
+        selectedCashDisbursement,
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        selectedCashDisbursement: [],
+        PrintDetails1: [],
+        PrintDetails2: [],
+      });
+    }
+  }
+);
 CashDisbursement.post(
   "/cash-disbursement/add-cash-disbursement",
   async (req, res) => {
@@ -232,70 +236,6 @@ CashDisbursement.post(
       res.send({
         message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
         success: false,
-      });
-    }
-  }
-);
-CashDisbursement.get(
-  "/cash-disbursement/search-cash-disbursement",
-  async (req, res) => {
-    try {
-      const { searchCashDisbursement: search } = req.query;
-      res.send({
-        message: "Successfully get search cash disbursement",
-        success: true,
-        search: await searchCashDisbursement(search as string, req),
-      });
-    } catch (error: any) {
-      console.log(error.message);
-      res.send({
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-        success: false,
-        search: [],
-      });
-    }
-  }
-);
-CashDisbursement.post(
-  "/cash-disbursement/search-cash-disbursement",
-  async (req, res) => {
-    try {
-      res.send({
-        message: "Successfully get search cash disbursement",
-        success: true,
-        data: await searchCashDisbursement(req.body.search, req),
-      });
-    } catch (error: any) {
-      console.log(error.message);
-      res.send({
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-        success: false,
-        data: [],
-      });
-    }
-  }
-);
-CashDisbursement.post(
-  "/cash-disbursement/get-selected-search-cash-disbursement",
-  async (req, res) => {
-    try {
-      const selectedCashDisbursement = await findSearchSelectedCashDisbursement(
-        req.body.Source_No,
-        req
-      );
-      res.send({
-        message: "Successfully get selected search in cash disbursement",
-        success: true,
-        selectedCashDisbursement,
-      });
-    } catch (error: any) {
-      console.log(error.message);
-      res.send({
-        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-        success: false,
-        selectedCashDisbursement: [],
-        PrintDetails1: [],
-        PrintDetails2: [],
       });
     }
   }
@@ -828,6 +768,26 @@ CashDisbursement.post("/cash-disbursement/search-pay-to", async (req, res) => {
     });
   }
 });
+CashDisbursement.post(
+  "/cash-disbursement/search-cash-disbursement",
+  async (req, res) => {
+    try {
+      res.send({
+        message: "Successfully get search cash disbursement",
+        success: true,
+        data: await searchCashDisbursement(req.body.search, req),
+      });
+    } catch (error: any) {
+      console.log(error.message);
+      res.send({
+        message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+        success: false,
+        data: [],
+      });
+    }
+  }
+);
+
 export function AmountToWords(amount: number) {
   const formattedAmount = amount.toFixed(2);
   const ln = formattedAmount.length - 3;

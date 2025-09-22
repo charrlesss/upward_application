@@ -13,10 +13,6 @@ import {
   updatePDCSlipCode,
   updateDepositIDSequence,
   searchDeposit,
-  getCashDeposit,
-  getCheckDeposit,
-  getCashBreakDown,
-  getBanksFromDepositByAccountNo,
   deleteSlipCode,
   deleteDeposit,
   deleteCashBreakDown,
@@ -34,6 +30,24 @@ import {
 import { defaultFormat } from "../../../lib/defaultDateFormat";
 const Deposit = express.Router();
 
+
+Deposit.get("/get-deposit-slipcode", async (req, res) => {
+  try {
+    res.send({
+      message: "Successfully Get Deposit Slipcode Successfully.",
+      success: true,
+      slipcode: await depositIDSlipCodeGenerator(req),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      slipcode: [],
+    });
+  }
+});
 Deposit.get("/get-cash-collection", async (req, res) => {
   try {
     res.send({
@@ -65,154 +79,6 @@ Deposit.get("/get-check-collection", async (req, res) => {
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
       check: [],
-    });
-  }
-});
-Deposit.get("/getBanks", async (req, res) => {
-  const { bankDepositSearch } = req.query;
-  try {
-    res.send({
-      message: "Successfully Get Deposit Banks.",
-      success: true,
-      banks: await getBanksFromDeposit(bankDepositSearch as string, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      banks: [],
-    });
-  }
-});
-Deposit.post("/getBanks", async (req, res) => {
-  const { bankDepositSearch } = req.query;
-  try {
-    res.send({
-      message: "Successfully Get Deposit Banks.",
-      success: true,
-      data: await getBanksFromDeposit(req.body.search, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      banks: [],
-    });
-  }
-});
-Deposit.get("/get-deposit-slipcode", async (req, res) => {
-  try {
-    res.send({
-      message: "Successfully Get Deposit Slipcode Successfully.",
-      success: true,
-      slipcode: await depositIDSlipCodeGenerator(req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      slipcode: [],
-    });
-  }
-});
-Deposit.post("/add-deposit", async (req, res) => {
-  const { userAccess }: any = await VerifyToken(
-    req.cookies["up-ac-login"] as string,
-    process.env.USER_ACCESS as string
-  );
-  const BankAcctCode = (await __executeQuery(
-    `SELECT * FROM bankaccounts where Account_No = '${req.body.BankAcctCode}'`,
-    req
-  )) as Array<any>;
-  if (BankAcctCode.length <= 0) {
-    return res.send({
-      message: `${req.body.BankAcctCode} is not Found!`,
-      success: false,
-      collectionID: null,
-    });
-  }
-  if (userAccess.includes("ADMIN")) {
-    return res.send({
-      message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
-      success: false,
-    });
-  }
-
-  try {
-    if ((await findDepositBySlipCode(req.body.depositSlip, req)).length > 0) {
-      return res.send({
-        message: `${req.body.depositSlip} already exists`,
-        success: false,
-      });
-    }
-    addDeposit(req);
-    let parts = req.body.depositSlip.split("-");
-    let firstPart = parts[0].slice(0, 2);
-    let secondPart = parts[0].slice(2);
-
-
-    updateDepositIDSequence(
-      {
-        last_count: parts[1],
-        year: firstPart,
-        month: secondPart,
-      },
-      req
-    );
-    await saveUserLogs(req, req.body.depositSlip, "add", "Deposit");
-    res.send({
-      message: "Successfully Create New Deposit.",
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-    });
-  }
-});
-Deposit.get("/search-deposit", async (req, res) => {
-  try {
-    console.log('qweqw')
-    const deposit: any = await searchDeposit(
-      req.query.searchDeposit as string,
-      req
-    );
-    res.send({
-      message: "Successfully Search Deposit.",
-      success: true,
-      deposit,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-    });
-  }
-});
-Deposit.post("/search-deposit", async (req, res) => {
-  try {
-    console.log(req.body.search)
-
-    const data: any = await searchDeposit(req.body.search, req);
-    res.send({
-      message: "Successfully Search Deposit.",
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      success: false,
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
     });
   }
 });
@@ -340,6 +206,63 @@ Deposit.post("/search-cash-check", async (req, res) => {
     });
   }
 });
+Deposit.post("/add-deposit", async (req, res) => {
+  const { userAccess }: any = await VerifyToken(
+    req.cookies["up-ac-login"] as string,
+    process.env.USER_ACCESS as string
+  );
+  const BankAcctCode = (await __executeQuery(
+    `SELECT * FROM bankaccounts where Account_No = '${req.body.BankAcctCode}'`,
+    req
+  )) as Array<any>;
+  if (BankAcctCode.length <= 0) {
+    return res.send({
+      message: `${req.body.BankAcctCode} is not Found!`,
+      success: false,
+      collectionID: null,
+    });
+  }
+  if (userAccess.includes("ADMIN")) {
+    return res.send({
+      message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+      success: false,
+    });
+  }
+
+  try {
+    if ((await findDepositBySlipCode(req.body.depositSlip, req)).length > 0) {
+      return res.send({
+        message: `${req.body.depositSlip} already exists`,
+        success: false,
+      });
+    }
+    addDeposit(req);
+    let parts = req.body.depositSlip.split("-");
+    let firstPart = parts[0].slice(0, 2);
+    let secondPart = parts[0].slice(2);
+
+
+    updateDepositIDSequence(
+      {
+        last_count: parts[1],
+        year: firstPart,
+        month: secondPart,
+      },
+      req
+    );
+    await saveUserLogs(req, req.body.depositSlip, "add", "Deposit");
+    res.send({
+      message: "Successfully Create New Deposit.",
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+    });
+  }
+});
 Deposit.post("/update-deposit", async (req, res) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,
@@ -388,6 +311,43 @@ Deposit.post("/update-deposit", async (req, res) => {
     });
   }
 });
+Deposit.post("/getBanks", async (req, res) => {
+  try {
+    res.send({
+      message: "Successfully Get Deposit Banks.",
+      success: true,
+      data: await getBanksFromDeposit(req.body.search, req),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      banks: [],
+    });
+  }
+});
+Deposit.post("/search-deposit", async (req, res) => {
+  try {
+    console.log(req.body.search)
+
+    const data: any = await searchDeposit(req.body.search, req);
+    res.send({
+      message: "Successfully Search Deposit.",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      success: false,
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+    });
+  }
+});
+
+
 async function addDeposit(req: any) {
   console.log(req.body);
   const { IDEntryWithPolicy } = qry_id_policy_sub();

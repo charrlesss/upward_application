@@ -315,7 +315,6 @@ VehiclePolicy.post("/get-transaction-history", async (req, res) => {
     });
   }
 });
-
 VehiclePolicy.post("/temp-to-regular", async (req, res) => {
   try {
     const newPolicy = req.body.newPolicyNo;
@@ -484,7 +483,6 @@ VehiclePolicy.post("/temp-to-regular", async (req, res) => {
     });
   }
 });
-
 VehiclePolicy.post("/search-client-by-id-or-name", async (req, res) => {
   try {
     res.send({
@@ -964,7 +962,6 @@ VehiclePolicy.post("/com-update-regular", async (req, res) => {
     res.send({ message: err.message, success: false });
   }
 });
-
 VehiclePolicy.post("/com-update-regular-tpl", async (req, res) => {
   const { userAccess }: any = await VerifyToken(
     req.cookies["up-ac-login"] as string,

@@ -9,10 +9,8 @@ import {
   getSearchPDCheck,
   pdcIDGenerator,
   pdcUploads,
-  pdcUploadsUpdate,
   getPdcUpload,
   checkClientID,
-  getCashPayTo,
   getPdcPolicyIdAndCLientId500,
 } from "../../../model/Task/Accounting/pdc.model";
 import saveUserLogs from "../../../lib/save_user_logs";
@@ -24,117 +22,24 @@ import { v4 as uuidV4 } from "uuid";
 import { IDGenerator, UpdateId } from "../../../model/Reference/id-entry.model";
 import { VerifyToken } from "../../Authentication";
 import { format } from "date-fns";
-import PDFReportGenerator from "../../../lib/pdf-generator";
 import PDFDocument from "pdfkit";
 import { __executeQuery } from "../../../model/Task/Production/policy";
 const PDC = express.Router();
 
-PDC.post("/add-pdc", async (req, res) => {
-  const { userAccess }: any = await VerifyToken(
-    req.cookies["up-ac-login"] as string,
-    process.env.USER_ACCESS as string
-  );
-  if (userAccess.includes("ADMIN")) {
-    return res.send({
-      message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
-      success: false,
-    });
-  }
 
-  const client = (await checkClientID(req.body.PNo, req)) as Array<any>;
-  if (client.length <= 0) {
-    return res.send({
-      message: `${req.body.PNo} is not Found!`,
-      success: false,
-      collectionID: null,
-    });
-  }
-
+PDC.get("/pdc-new-ref-number", async (req, res) => {
   try {
-    if ((await findPdc(req.body.Ref_No, req)).length > 0) {
-      return res.send({ message: "REF No. Is Already Exist!", success: false });
-    }
-    await deletePdcByRefNo(req.body.Ref_No, req);
-    const checks = JSON.parse(req.body.checks);
-
-    checks.forEach(async (check: any) => {
-      if (check.DateDeposit === "") {
-        await createPDC(
-          {
-            Ref_No: req.body.Ref_No,
-            PNo: req.body.PNo,
-            IDNo: req.body.IDNo,
-            Date: req.body.Date,
-            Name: req.body.Name,
-            Remarks: req.body.Remarks,
-            Bank: check.BankCode,
-            Branch: check.Branch,
-            Check_Date: format(new Date(check.Check_Date), "yyyy-MM-dd"),
-            Check_No: check.Check_No,
-            Check_Amnt: check.Check_Amnt,
-            Check_Remarks: check.Check_Remarks,
-            ORNum: check.OR_No,
-            PDC_Status: "Received",
-          },
-          req
-        );
-      } else {
-        await createPDC(
-          {
-            Ref_No: req.body.Ref_No,
-            PNo: req.body.PNo,
-            IDNo: req.body.IDNo,
-            Date: req.body.Date,
-            Name: req.body.Name,
-            Remarks: req.body.Remarks,
-            Bank: check.BankCode,
-            Branch: check.Branch,
-            Check_Date: format(new Date(check.Check_Date), "yyyy-MM-dd"),
-            Check_No: check.Check_No,
-            Check_Amnt: check.Check_Amnt,
-            Check_Remarks: check.Check_Remarks,
-            SlipCode: check.Deposit_Slip,
-            DateDepo: check.DateDeposit === "" ? "" : check.DateDeposit,
-            ORNum: check.OR_No,
-            PDC_Status: "Received",
-          },
-          req
-        );
-      }
-    });
-
-    await UpdateId(
-      "pdc",
-      req.body.Ref_No.split(".")[1],
-      format(new Date(), "MM"),
-      format(new Date(), "yy"),
-      req
-    );
-
-    const uploadDir = path.join("./static/pdc", `${req.body.Ref_No}`);
-    if (fs.existsSync(uploadDir)) {
-      fs.rmSync(uploadDir, { recursive: true });
-    }
-    const files = UploadFile(req.body.fileToSave, uploadDir, res);
-    await pdcUploads(
-      {
-        pdc_upload_id: uuidV4(),
-        ref_no: req.body.Ref_No,
-        upload: JSON.stringify(files),
-      },
-      req
-    );
-    await saveUserLogs(req, req.body.Ref_No, "add", "PDC");
     res.send({
-      message: "Create New PDC Successfully.",
+      RefNo: await pdcIDGenerator(req),
       success: true,
     });
   } catch (error: any) {
     console.log(error.message);
+
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      PdcId: null,
+      RefNo: [],
     });
   }
 });
@@ -240,128 +145,6 @@ PDC.post("/update-pdc", async (req, res) => {
     });
   }
 });
-PDC.post("/search-pdc-policy-id", async (req, res) => {
-  try {
-    const data = await getPdcPolicyIdAndCLientId(req.body.search, req);
-    res.send({
-      data,
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
-PDC.post("/search-pdc-policy-ids", async (req, res) => {
-  try {
-    const data = await getPdcPolicyIdAndCLientId500(req.body.search, req);
-    res.send({
-      data,
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
-
-PDC.get("/search-pdc-policy-id", async (req, res) => {
-  try {
-    const { searchPdcPolicyIds } = req.query;
-    const clientsId = await getPdcPolicyIdAndCLientId(
-      searchPdcPolicyIds as string,
-      req
-    );
-    res.send({
-      clientsId,
-      data: clientsId,
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
-PDC.post("/search-pdc-banks", async (req, res) => {
-  try {
-    res.send({
-      data: await getPdcBanks(req.body.search, req),
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
-PDC.get("/search-pdc-banks", async (req, res) => {
-  try {
-    const { searchPdcBanks } = req.query;
-    res.send({
-      pdcBanks: await getPdcBanks(searchPdcBanks as string, req),
-      pdcID: await pdcIDGenerator(req),
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      bondsPolicy: null,
-    });
-  }
-});
-PDC.get("/pdc-new-ref-number", async (req, res) => {
-  try {
-    res.send({
-      RefNo: await pdcIDGenerator(req),
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      RefNo: [],
-    });
-  }
-});
-PDC.post("/search-pdc", async (req, res) => {
-  try {
-    const data = await searchPDC(req.body.search as string, req);
-    res.send({
-      message: "Search PDC Successfully",
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      searchPDC: [],
-    });
-  }
-});
 PDC.post("/get-search-pdc-check", async (req, res) => {
   try {
     const searchPDCData = await getSearchPDCheck(req.body.ref_no, req);
@@ -380,7 +163,6 @@ PDC.post("/get-search-pdc-check", async (req, res) => {
     });
   }
 });
-
 PDC.post("/print", async (req, res) => {
   try {
     if (req.body.printOption === "labeling") {
@@ -645,6 +427,185 @@ PDC.post("/print", async (req, res) => {
     });
   }
 });
+PDC.post("/search-pdc-policy-id", async (req, res) => {
+  try {
+    const data = await getPdcPolicyIdAndCLientId(req.body.search, req);
+    res.send({
+      data,
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      bondsPolicy: null,
+    });
+  }
+});
+PDC.post("/search-pdc", async (req, res) => {
+  try {
+    const data = await searchPDC(req.body.search as string, req);
+    res.send({
+      message: "Search PDC Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      searchPDC: [],
+    });
+  }
+});
+PDC.post("/search-pdc-banks", async (req, res) => {
+  try {
+    res.send({
+      data: await getPdcBanks(req.body.search, req),
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      bondsPolicy: null,
+    });
+  }
+});
+PDC.post("/add-pdc", async (req, res) => {
+  const { userAccess }: any = await VerifyToken(
+    req.cookies["up-ac-login"] as string,
+    process.env.USER_ACCESS as string
+  );
+  if (userAccess.includes("ADMIN")) {
+    return res.send({
+      message: `CAN'T SAVE, ADMIN IS FOR VIEWING ONLY!`,
+      success: false,
+    });
+  }
+
+  const client = (await checkClientID(req.body.PNo, req)) as Array<any>;
+  if (client.length <= 0) {
+    return res.send({
+      message: `${req.body.PNo} is not Found!`,
+      success: false,
+      collectionID: null,
+    });
+  }
+
+  try {
+    if ((await findPdc(req.body.Ref_No, req)).length > 0) {
+      return res.send({ message: "REF No. Is Already Exist!", success: false });
+    }
+    await deletePdcByRefNo(req.body.Ref_No, req);
+    const checks = JSON.parse(req.body.checks);
+
+    checks.forEach(async (check: any) => {
+      if (check.DateDeposit === "") {
+        await createPDC(
+          {
+            Ref_No: req.body.Ref_No,
+            PNo: req.body.PNo,
+            IDNo: req.body.IDNo,
+            Date: req.body.Date,
+            Name: req.body.Name,
+            Remarks: req.body.Remarks,
+            Bank: check.BankCode,
+            Branch: check.Branch,
+            Check_Date: format(new Date(check.Check_Date), "yyyy-MM-dd"),
+            Check_No: check.Check_No,
+            Check_Amnt: check.Check_Amnt,
+            Check_Remarks: check.Check_Remarks,
+            ORNum: check.OR_No,
+            PDC_Status: "Received",
+          },
+          req
+        );
+      } else {
+        await createPDC(
+          {
+            Ref_No: req.body.Ref_No,
+            PNo: req.body.PNo,
+            IDNo: req.body.IDNo,
+            Date: req.body.Date,
+            Name: req.body.Name,
+            Remarks: req.body.Remarks,
+            Bank: check.BankCode,
+            Branch: check.Branch,
+            Check_Date: format(new Date(check.Check_Date), "yyyy-MM-dd"),
+            Check_No: check.Check_No,
+            Check_Amnt: check.Check_Amnt,
+            Check_Remarks: check.Check_Remarks,
+            SlipCode: check.Deposit_Slip,
+            DateDepo: check.DateDeposit === "" ? "" : check.DateDeposit,
+            ORNum: check.OR_No,
+            PDC_Status: "Received",
+          },
+          req
+        );
+      }
+    });
+
+    await UpdateId(
+      "pdc",
+      req.body.Ref_No.split(".")[1],
+      format(new Date(), "MM"),
+      format(new Date(), "yy"),
+      req
+    );
+
+    const uploadDir = path.join("./static/pdc", `${req.body.Ref_No}`);
+    if (fs.existsSync(uploadDir)) {
+      fs.rmSync(uploadDir, { recursive: true });
+    }
+    const files = UploadFile(req.body.fileToSave, uploadDir, res);
+    await pdcUploads(
+      {
+        pdc_upload_id: uuidV4(),
+        ref_no: req.body.Ref_No,
+        upload: JSON.stringify(files),
+      },
+      req
+    );
+    await saveUserLogs(req, req.body.Ref_No, "add", "PDC");
+    res.send({
+      message: "Create New PDC Successfully.",
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      PdcId: null,
+    });
+  }
+});
+
+PDC.post("/search-pdc-policy-ids", async (req, res) => {
+  try {
+    const data = await getPdcPolicyIdAndCLientId500(req.body.search, req);
+    res.send({
+      data,
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      bondsPolicy: null,
+    });
+  }
+});
+
+
+
 
 function UploadFile(filesArr: Array<any>, uploadDir: string, res: Response) {
   const obj: any = [];

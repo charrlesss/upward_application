@@ -38,133 +38,22 @@ import { prisma } from "../..";
 
 const Collection = express.Router();
 
-/// NEW
-Collection.post("/save-credit", async (req, res) => {
-  try {
-    const data: Array<any> = await prisma.$queryRawUnsafe(
-      `SELECT * FROM transaction_code where Description = ?`,
-      req.body.transactionRef
-    );
-    if (data.length <= 0) {
-      return res.send({
-        message: "Transaction not yet defined!",
-        success: false,
-      });
-    }
-    res.send({
-      message: "Transaction is defined!.",
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      clientCheckedList: [],
-    });
-  }
-});
-Collection.post("/save-debit-check", async (req, res) => {
-  try {
-    console.log(req.body);
-    res.send({
-      message: "get Data Successfully",
-      success: true,
-      data: await prisma.$queryRawUnsafe(
-        `select * from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code WHERE Code = 'CHK'`
-      ),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      data: [],
-    });
-  }
-});
-Collection.post("/search-checks-from-client-id", async (req, res) => {
-  try {
-    console.log(req.body);
-    const data = await searchCheckFromClientId(req.body.search, req.body.PNo);
-    res.send({
-      message: "get Data Successfully",
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      clientCheckedList: [],
-    });
-  }
-});
-Collection.post("/get-search-checks-from-client-id", async (req, res) => {
-  try {
-    console.log(req.body);
 
-    const data = await getSearchCheckFromClientId(
-      req.body.checkNo,
-      req.body.PNo
-    );
-    res.send({
-      message: "get Data Successfully",
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      clientCheckedList: [],
-    });
-  }
-});
-Collection.get("/get-data-from-output-tax", async (req, res) => {
+// prepared 
+Collection.get("/get-new-or-number", async (req, res) => {
   try {
     res.send({
-      message: "get Data Successfully",
+      message: "Get New OR Number Successfully",
       success: true,
-      data: await getOutputTax(),
+      ORNo: await collectionIDGenerator(req),
     });
   } catch (error: any) {
     console.log(error.message);
+
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      clientCheckedList: [],
-    });
-  }
-});
-
-/// OLD
-Collection.get("/get-client-checked-by-id", async (req, res) => {
-  const { PNo, searchCheckedList } = req.query;
-
-  try {
-    const data1 = await getClientCheckedList(
-      searchCheckedList as string,
-      PNo as string,
-      req
-    );
-    res.send({
-      message: "get Data Successfully",
-      success: true,
-      clientCheckedList: JSON.parse(
-        JSON.stringify(data1, (key, value) =>
-          typeof value === "bigint" ? value.toString() : value
-        )
-      ),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      clientCheckedList: [],
+      ORNo: [],
     });
   }
 });
@@ -187,20 +76,59 @@ Collection.get("/get-transaction-code-title", async (req, res) => {
     });
   }
 });
-Collection.get("/get-new-or-number", async (req, res) => {
+Collection.get("/get-data-from-output-tax", async (req, res) => {
   try {
     res.send({
-      message: "Get New OR Number Successfully",
+      message: "get Data Successfully",
       success: true,
-      ORNo: await collectionIDGenerator(req),
+      data: await getOutputTax(),
     });
   } catch (error: any) {
     console.log(error.message);
-
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
-      ORNo: [],
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/update-collection", async (req, res) => {
+  const { userAccess }: any = await VerifyToken(
+    req.cookies["up-ac-login"] as string,
+    process.env.USER_ACCESS as string
+  );
+  if (userAccess.includes("ADMIN")) {
+    return res.send({
+      message: `CAN'T UPDATE, ADMIN IS FOR VIEWING ONLY!`,
+      success: false,
+    });
+  }
+
+  const client = (await checkClientID(req.body.PNo, req)) as Array<any>;
+  if (client.length <= 0) {
+    return res.send({
+      message: `${req.body.PNo} is not Found!`,
+      success: false,
+      collectionID: null,
+    });
+  }
+
+  try {
+    if (!(await saveUserLogsCode(req, "edit", req.body.ORNo, "Collection"))) {
+      return res.send({ message: "Invalid User Code", success: false });
+    }
+
+    await deleteCollection(req.body.ORNo, req);
+    AddCollection(req);
+    res.send({
+      message: "Update Collection Successfully!",
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
     });
   }
 });
@@ -256,113 +184,6 @@ Collection.post("/add-collection", async (req, res) => {
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
       collectionID: null,
-    });
-  }
-});
-Collection.post("/get-collection-data-search", async (req, res) => {
-  try {
-    res.send({
-      message: "Search Collection Successfully",
-      success: true,
-      collection: await getSearchCollection(req.body.ORNo as string, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      collection: [],
-    });
-  }
-});
-Collection.get("/search-collection", async (req, res) => {
-  const { searchCollectionInput } = req.query;
-  try {
-    console.log(searchCollectionInput);
-    res.send({
-      message: "Search Collection Successfully",
-      success: true,
-      collection: await getCollections(searchCollectionInput as string, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      collection: [],
-    });
-  }
-});
-Collection.post("/search-collection", async (req, res) => {
-  try {
-    res.send({
-      message: "Search Collection Successfully",
-      success: true,
-      data: await getCollections(req.body.search, req),
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-      collection: [],
-    });
-  }
-});
-Collection.post("/update-collection", async (req, res) => {
-  const { userAccess }: any = await VerifyToken(
-    req.cookies["up-ac-login"] as string,
-    process.env.USER_ACCESS as string
-  );
-  if (userAccess.includes("ADMIN")) {
-    return res.send({
-      message: `CAN'T UPDATE, ADMIN IS FOR VIEWING ONLY!`,
-      success: false,
-    });
-  }
-
-  const client = (await checkClientID(req.body.PNo, req)) as Array<any>;
-  if (client.length <= 0) {
-    return res.send({
-      message: `${req.body.PNo} is not Found!`,
-      success: false,
-      collectionID: null,
-    });
-  }
-
-  try {
-    if (!(await saveUserLogsCode(req, "edit", req.body.ORNo, "Collection"))) {
-      return res.send({ message: "Invalid User Code", success: false });
-    }
-
-    await deleteCollection(req.body.ORNo, req);
-    AddCollection(req);
-    res.send({
-      message: "Update Collection Successfully!",
-      success: true,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
-    });
-  }
-});
-Collection.post("/get-drcode-drtitle-from-collection", async (req, res) => {
-  try {
-    console.log(req.body);
-    const data = await getDrCodeAndTitle(req.body.code, req);
-    res.send({
-      message: "get DR Code and DR Title Collection Successfully!",
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.log(error.message);
-    res.send({
-      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
-      success: false,
     });
   }
 });
@@ -551,6 +372,122 @@ Collection.post("/print-or", async (req, res) => {
     res.send({
       message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
       success: false,
+    });
+  }
+});
+Collection.post("/get-search-checks-from-client-id", async (req, res) => {
+  try {
+    console.log(req.body);
+
+    const data = await getSearchCheckFromClientId(
+      req.body.checkNo,
+      req.body.PNo
+    );
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/save-debit-check", async (req, res) => {
+  try {
+    console.log(req.body);
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data: await prisma.$queryRawUnsafe(
+        `select * from transaction_code LEFT JOIN chart_account ON transaction_code.Acct_Code = chart_account.Acct_Code WHERE Code = 'CHK'`
+      ),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      data: [],
+    });
+  }
+});
+Collection.post("/save-credit", async (req, res) => {
+  try {
+    const data: Array<any> = await prisma.$queryRawUnsafe(
+      `SELECT * FROM transaction_code where Description = ?`,
+      req.body.transactionRef
+    );
+    if (data.length <= 0) {
+      return res.send({
+        message: "Transaction not yet defined!",
+        success: false,
+      });
+    }
+    res.send({
+      message: "Transaction is defined!.",
+      success: true,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/get-collection-data-search", async (req, res) => {
+  try {
+    res.send({
+      message: "Search Collection Successfully",
+      success: true,
+      collection: await getSearchCollection(req.body.ORNo as string, req),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      collection: [],
+    });
+  }
+});
+Collection.post("/search-checks-from-client-id", async (req, res) => {
+  try {
+    console.log(req.body);
+    const data = await searchCheckFromClientId(req.body.search, req.body.PNo);
+    res.send({
+      message: "get Data Successfully",
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      clientCheckedList: [],
+    });
+  }
+});
+Collection.post("/search-collection", async (req, res) => {
+  try {
+    res.send({
+      message: "Search Collection Successfully",
+      success: true,
+      data: await getCollections(req.body.search, req),
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    res.send({
+      message: `We're experiencing a server issue. Please try again in a few minutes. If the issue continues, report it to IT with the details of what you were doing at the time.`,
+      success: false,
+      collection: [],
     });
   }
 });
