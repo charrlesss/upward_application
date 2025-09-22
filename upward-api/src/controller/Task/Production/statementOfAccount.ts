@@ -372,14 +372,28 @@ StatementOfAccount.post("/soa/search-soa-selected", async (req, res) => {
     req.body.reference_no
   );
   const data = await prisma.$queryRawUnsafe(
-    ` SELECT 
-          b.PolicyType,
+    ` 
+
+    SELECT 
+          b.*
+      FROM soa_policy a
+      left join (
+      SELECT 
+	 'PA',
+	  a.endorsement_no as PolicyNo,
+	  date_format(a.dateissued,'%m/%d/%Y') as DateIssued,
+	  b.IDNo,
+	  a.name as Shortname
+ FROM upward_insurance_umis.gpa_endorsement a
+ left join policy b on a.policyNo = b.PolicyNo and PolicyType = 'PA'
+ union all 
+  SELECT  
+    b.PolicyType,
           b.PolicyNo,
           date_format(b.DateIssued,'%m/%d/%Y') as DateIssued,
           c.IDNo,
           c.Shortname
-      FROM soa_policy a
-      left join policy b on a.policy_no = b.PolicyNo
+  From policy b 
       left join (
       SELECT 
         "Client" as IDType,
@@ -441,7 +455,10 @@ StatementOfAccount.post("/soa/search-soa-selected", async (req, res) => {
       FROM
         entry_others aa
       )  c on c.IDNo = b.IDNo
-where a.reference_no = ?;`,
+      ) as b on a.policy_no  = b.PolicyNo
+     
+where a.reference_no = ?
+    `,
     req.body.reference_no
   );
 
