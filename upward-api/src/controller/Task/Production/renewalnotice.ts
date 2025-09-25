@@ -1080,8 +1080,8 @@ async function PDFCOM(res: Response, req: Request) {
         }
       );
 
-      doc.text(
-        "Address | i- Telephone Numbers | 8441 - 8977 to 78 | 8374 - 0742 Mobile Number | 0919 - 078 - 5547 / 0919 - 078 - 5543",
+            doc.text(
+        "Address | 1197 Azure Business Center EDSA Muñoz, Quezon City - Telephone Numbers | 8441 - 8977 to 78 | 8374 - 0742 Mobile Number | 0919 - 078 - 5547 / 0919 - 078 - 5543",
         30,
         pdfReportGenerator.PAGE_HEIGHT - 35,
         {
@@ -1089,6 +1089,17 @@ async function PDFCOM(res: Response, req: Request) {
           width: PAGE_WIDTH_WITH_MARGIN,
         }
       );
+
+
+      // doc.text(
+      //   "Address | i- Telephone Numbers | 8441 - 8977 to 78 | 8374 - 0742 Mobile Number | 0919 - 078 - 5547 / 0919 - 078 - 5543",
+      //   30,
+      //   pdfReportGenerator.PAGE_HEIGHT - 35,
+      //   {
+      //     align: "center",
+      //     width: PAGE_WIDTH_WITH_MARGIN,
+      //   }
+      // );
 
       // SIGNATURE OVER PRINTED NAME
     },
@@ -1257,7 +1268,7 @@ async function PDFFIRE(res: Response, req: Request) {
       });
 
       doc.text(
-        " With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
+        " With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date.",
         30,
         250,
         {
@@ -1606,7 +1617,7 @@ async function PDFMAR(res: Response, req: Request) {
       });
 
       doc.text(
-        "With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
+        "With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date.",
         30,
         250,
         {
@@ -1965,7 +1976,7 @@ async function PDFPA(res: Response, req: Request) {
       });
 
       doc.text(
-        "Indicated below. With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date. Also, your insurance coverage is adjusted to the current market value.",
+        "Indicated below. With that, we are hoping that you will continue to trust our company by rendering good insurance service, and for being covered and protected beyond that date.",
         30,
         250,
         {

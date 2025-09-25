@@ -8,12 +8,11 @@ import { PrismaList } from "../../../model/connection";
 import PDFReportGenerator from "../../../lib/pdf-generator";
 
 import { drawExcel } from "../../../lib/excel-generator";
-import { arch } from "os";
 
 const ProductionReports = express.Router();
 
 const { CustomPrismaClient } = PrismaList();
-
+ 
 ProductionReports.post("/production-report", async (req, res) => {
   try {
     const isucsmi = process.env.DEPARTMENT === "UCSMI";
@@ -629,7 +628,6 @@ ProductionReports.post("/production-report", async (req, res) => {
           );
 
           return {
-            // DateIssued: format(new Date(itm.DateIssued), "MM/dd/yyyy"),
             DateIssued: itm.DateIssued,
             PolicyNo: itm.PolicyNo,
             AssuredName: itm.AssuredName,
@@ -657,7 +655,6 @@ ProductionReports.post("/production-report", async (req, res) => {
           itm.DateIssued = format(new Date(itm.DateIssued), "MM/dd/yyyy");
           return itm;
         });
-
         combined.push({
           DateIssued: `No. of Records: ${combined.length}`,
           PolicyNo: "",
@@ -670,7 +667,6 @@ ProductionReports.post("/production-report", async (req, res) => {
           LGovTax: formatNumber(getSum(combined, "LGovTax")),
           TotalDue: formatNumber(getSum(combined, "TotalDue")),
         });
-
         const props: any = {
           data: combined,
           columnWidths: [90, 150, 250, 90, 90, 90, 90, 90, 90, 90],
@@ -2475,7 +2471,6 @@ ProductionReports.post("/production-report-to-excel", async (req, res) => {
     res.send({ message: "SERVER ERROR", success: false, data: [] });
   }
 });
-
 ProductionReports.get("/policy-account", async (req, res) => {
   try {
     const prisma = CustomPrismaClient(req.cookies["up-dpm-login"]);
@@ -2494,7 +2489,6 @@ ProductionReports.get("/policy-account", async (req, res) => {
     res.send({ message: "SERVER ERROR", success: false, data: [] });
   }
 });
-
 ProductionReports.post("/get-production-report-desk", async (req, res) => {
   try {
     console.log(req.body);

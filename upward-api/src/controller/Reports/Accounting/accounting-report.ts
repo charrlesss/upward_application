@@ -1038,7 +1038,10 @@ async function ScheduleAccounts(req: Request, res: Response) {
     subsiText,
     insurance,
     title,
+    accountName
   } = req.body;
+  console.log(req.body)
+
   const dateFormatted = format(new Date(date), "yyyy-MM-dd");
   let qry = "";
   let imHere = 0;
@@ -1257,6 +1260,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
         `;
     }
   }
+
   const data = (await prisma.$queryRawUnsafe(qry)) as Array<any>;
 
   const formatReport = (data: Array<any>) => {
@@ -1299,7 +1303,7 @@ async function ScheduleAccounts(req: Request, res: Response) {
             glAcct: "sym",
             mShort: "",
             Sub_Acct: "",
-            ID_No: `${itm[0]} (${itm[1][0].mShort})`,
+            ID_No: `${itm[0]} (${report === 'GL Account (Detailed)' ? accountName  : itm[1][0].mShort })`,
             mID: "",
             Debit: "",
             Credit: "",
